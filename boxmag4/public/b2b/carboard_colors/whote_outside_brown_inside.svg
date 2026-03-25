@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 134.34 134.34">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #f9f9f9;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6 {
+        stroke-width: 0px;
+      }
+
+      .cls-7 {
+        mix-blend-mode: darken;
+        opacity: .71;
+      }
+
+      .cls-8 {
+        isolation: isolate;
+      }
+
+      .cls-2 {
+        fill: #ada8a8;
+      }
+
+      .cls-9 {
+        filter: url(#luminosity-invert);
+      }
+
+      .cls-3 {
+        fill: #bf9e73;
+      }
+
+      .cls-4 {
+        fill: #e2e2e2;
+      }
+
+      .cls-5 {
+        fill: #dbb882;
+      }
+
+      .cls-10 {
+        mask: url(#mask-1);
+      }
+
+      .cls-11 {
+        mask: url(#mask);
+      }
+
+      .cls-12 {
+        filter: url(#luminosity-invert-2);
+      }
+
+      .cls-6 {
+        fill: #7a604e;
+      }
+    </style>
+    <filter id="luminosity-invert" x="64.66" y="-2.56" width="72" height="139" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feColorMatrix result="cm" values="-1 0 0 0 1 0 -1 0 0 1 0 0 -1 0 1 0 0 0 1 0"/>
+    </filter>
+    <mask id="mask" x="64.66" y="-2.56" width="72" height="139" maskUnits="userSpaceOnUse">
+      <g class="cls-9">
+        <use transform="translate(64.66 -2.56)" xlink:href="#image"/>
+      </g>
+    </mask>
+    <filter id="luminosity-invert-2" x="-2.34" y="-2.56" width="72" height="139" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feColorMatrix result="cm" values="-1 0 0 0 1 0 -1 0 0 1 0 0 -1 0 1 0 0 0 1 0"/>
+    </filter>
+    <mask id="mask-1" x="-2.34" y="-2.56" width="72" height="139" maskUnits="userSpaceOnUse">
+      <g class="cls-12">
+        <use transform="translate(-2.34 -2.56)" xlink:href="#image"/>
+      </g>
+    </mask>
+    <image id="image" width="72" height="139" xlink:href="data:image/png;base64,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"/>
+  </defs>
+  <g class="cls-8">
+    <g id="Layer_2" data-name="Layer 2">
+      <g id="Layer_1-2" data-name="Layer 1">
+        <g>
+          <g>
+            <g>
+              <rect class="cls-5" x="67.17" width="67.17" height="134.34"/>
+              <g class="cls-11">
+                <g class="cls-7">
+                  <rect class="cls-6" x="67.17" width="67.17" height="134.34"/>
+                </g>
+              </g>
+            </g>
+            <g>
+              <rect class="cls-3" x="131.85" y="0" width="1.49" height="134.34" transform="translate(265.19 134.35) rotate(180)"/>
+              <rect class="cls-3" x="128.41" y="0" width="1.49" height="134.34" transform="translate(258.31 134.35) rotate(180)"/>
+              <rect class="cls-3" x="124.97" y="0" width="1.49" height="134.34" transform="translate(251.42 134.35) rotate(180)"/>
+              <rect class="cls-3" x="121.52" y="0" width="1.49" height="134.34" transform="translate(244.53 134.35) rotate(180)"/>
+              <rect class="cls-3" x="118.08" y="0" width="1.49" height="134.34" transform="translate(237.65 134.35) rotate(180)"/>
+              <rect class="cls-3" x="114.64" y="0" width="1.49" height="134.34" transform="translate(230.76 134.35) rotate(180)"/>
+              <rect class="cls-3" x="111.19" y="0" width="1.49" height="134.34" transform="translate(223.87 134.35) rotate(180)"/>
+              <rect class="cls-3" x="107.75" y="0" width="1.49" height="134.34" transform="translate(216.99 134.35) rotate(180)"/>
+              <rect class="cls-3" x="104.31" y="0" width="1.49" height="134.34" transform="translate(210.1 134.35) rotate(180)"/>
+              <rect class="cls-3" x="100.86" y="0" width="1.49" height="134.34" transform="translate(203.21 134.35) rotate(180)"/>
+              <rect class="cls-3" x="97.42" y="0" width="1.49" height="134.34" transform="translate(196.33 134.35) rotate(180)"/>
+              <rect class="cls-3" x="93.98" y="0" width="1.49" height="134.34" transform="translate(189.44 134.35) rotate(180)"/>
+              <rect class="cls-3" x="90.53" y="0" width="1.49" height="134.34" transform="translate(182.55 134.35) rotate(180)"/>
+              <rect class="cls-3" x="87.09" y="0" width="1.49" height="134.34" transform="translate(175.66 134.35) rotate(180)"/>
+              <rect class="cls-3" x="83.65" y="0" width="1.49" height="134.34" transform="translate(168.78 134.35) rotate(180)"/>
+              <rect class="cls-3" x="80.2" y="0" width="1.49" height="134.34" transform="translate(161.89 134.35) rotate(180)"/>
+              <rect class="cls-3" x="76.76" y="0" width="1.49" height="134.34" transform="translate(155 134.35) rotate(180)"/>
+              <rect class="cls-3" x="73.32" y="0" width="1.49" height="134.34" transform="translate(148.12 134.35) rotate(180)"/>
+              <rect class="cls-3" x="69.87" y="0" width="1.49" height="134.34" transform="translate(141.23 134.35) rotate(180)"/>
+              <rect class="cls-3" x="67.17" width=".74" height="134.34"/>
+            </g>
+          </g>
+          <g>
+            <g>
+              <rect class="cls-1" y="0" width="67.17" height="134.34"/>
+              <g class="cls-10">
+                <g class="cls-7">
+                  <rect class="cls-2" y="0" width="67.17" height="134.34"/>
+                </g>
+              </g>
+            </g>
+            <g>
+              <rect class="cls-4" x="66.42" y="0" width=".75" height="134.34"/>
+              <rect class="cls-4" x="62.98" y="0" width="1.49" height="134.34" transform="translate(127.45 134.35) rotate(180)"/>
+              <rect class="cls-4" x="59.54" y="0" width="1.49" height="134.34" transform="translate(120.56 134.35) rotate(180)"/>
+              <rect class="cls-4" x="56.09" y="0" width="1.49" height="134.34" transform="translate(113.67 134.35) rotate(180)"/>
+              <rect class="cls-4" x="52.65" y="0" width="1.49" height="134.34" transform="translate(106.79 134.35) rotate(180)"/>
+              <rect class="cls-4" x="49.21" y="0" width="1.49" height="134.34" transform="translate(99.9 134.35) rotate(180)"/>
+              <rect class="cls-4" x="45.76" y="0" width="1.49" height="134.34" transform="translate(93.01 134.35) rotate(180)"/>
+              <rect class="cls-4" x="42.32" y="0" width="1.49" height="134.34" transform="translate(86.13 134.35) rotate(180)"/>
+              <rect class="cls-4" x="38.88" y="0" width="1.49" height="134.34" transform="translate(79.24 134.35) rotate(180)"/>
+              <rect class="cls-4" x="35.43" y="0" width="1.49" height="134.34" transform="translate(72.35 134.35) rotate(180)"/>
+              <rect class="cls-4" x="31.99" y="0" width="1.49" height="134.34" transform="translate(65.46 134.35) rotate(180)"/>
+              <rect class="cls-4" x="28.55" y="0" width="1.49" height="134.34" transform="translate(58.58 134.35) rotate(180)"/>
+              <rect class="cls-4" x="25.1" y="0" width="1.49" height="134.34" transform="translate(51.69 134.35) rotate(180)"/>
+              <rect class="cls-4" x="21.66" y="0" width="1.49" height="134.34" transform="translate(44.8 134.35) rotate(180)"/>
+              <rect class="cls-4" x="18.22" y="0" width="1.49" height="134.34" transform="translate(37.92 134.35) rotate(180)"/>
+              <rect class="cls-4" x="14.77" y="0" width="1.49" height="134.34" transform="translate(31.03 134.35) rotate(180)"/>
+              <rect class="cls-4" x="11.33" y="0" width="1.49" height="134.34" transform="translate(24.14 134.35) rotate(180)"/>
+              <rect class="cls-4" x="7.88" y="0" width="1.49" height="134.34" transform="translate(17.26 134.35) rotate(180)"/>
+              <rect class="cls-4" x="4.44" y="0" width="1.49" height="134.34" transform="translate(10.37 134.35) rotate(180)"/>
+              <rect class="cls-4" x="1" y="0" width="1.49" height="134.34" transform="translate(3.48 134.35) rotate(180)"/>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>
