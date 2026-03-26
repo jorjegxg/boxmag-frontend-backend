@@ -114,8 +114,8 @@ function TestimonialSection() {
   const review = TESTIMONIALS[currentIndex];
 
   return (
-    <section className="bg-teal-500 py-16 px-6 lg:px-20 w-full">
-      <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+    <section className="bg-teal-500 py-16 w-full">
+      <div className="grid lg:grid-cols-2 gap-12 items-center pl-6 lg:pl-20 pr-0">
         {/* LEFT: Quote, stars, review text, name, dots */}
         <div className="relative text-white">
           <FaQuoteLeft className="absolute -top-2 left-0 w-12 h-12 lg:w-16 lg:h-16 text-teal-600 opacity-90" />
@@ -156,7 +156,7 @@ function TestimonialSection() {
         </div>
 
         {/* RIGHT: Hands holding box image */}
-        <div className="flex justify-center lg:justify-end">
+        <div className="flex justify-end">
           <img
             src="/b2b/boxes/hand-holdign-box.png"
             alt="Customer holding REKO Packaging box"
