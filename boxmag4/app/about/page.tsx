@@ -95,21 +95,21 @@ export default function AboutPage() {
             </p>
             <div className="flex flex-wrap justify-center items-end gap-6 lg:gap-10">
               <Image
-                src="/b2b/boxes/adjustable.png"
+                src="/b2b/boxes/sqashed.png"
                 alt="BOXFIX box flattened"
                 width={180}
                 height={140}
                 className="object-contain max-h-40 w-auto"
               />
               <Image
-                src="/b2b/boxes/ecommerce.png"
+                src="/b2b/boxes/open-box.png"
                 alt="BOXFIX box open"
                 width={180}
                 height={140}
                 className="object-contain max-h-40 w-auto"
               />
               <Image
-                src="/b2b/boxes/felco.png"
+                src="/b2b/boxes/box.png"
                 alt="BOXFIX box closed"
                 width={180}
                 height={140}
