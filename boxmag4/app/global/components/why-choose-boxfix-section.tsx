@@ -38,7 +38,7 @@ export function WhyChooseBoxfixSection() {
         <div className="flex justify-center lg:justify-end">
           <div className="bg-my-yellow rounded-3xl p-8 w-full max-w-lg relative min-h-[320px] flex items-center justify-center">
             <img
-              src="/placeholders/box.png"
+              src="/b2b/boxes/open-box.png"
               alt="REKO Packaging box open"
               className="absolute top-8 left-8 w-2/5 max-w-[140px] object-contain drop-shadow-md"
             />
@@ -48,7 +48,7 @@ export function WhyChooseBoxfixSection() {
               className="absolute top-8 right-8 w-2/5 max-w-[140px] object-contain drop-shadow-md"
             />
             <img
-              src="/placeholders/box.png"
+              src="/b2b/boxes/sqashed.png"
               alt="REKO Packaging box flat"
               className="absolute bottom-8 left-1/2 -translate-x-1/2 w-2/5 max-w-[180px] object-contain drop-shadow-md"
             />

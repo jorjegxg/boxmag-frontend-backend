@@ -81,7 +81,7 @@ function HeroSizeSection() {
           <div className="flex-1 flex items-center justify-center">
             <div className="w-full max-w-md">
               <Image
-                src="/placeholders/box.png"
+                src="/b2b/boxes/ecommerce.png"
                 alt="Open e-commerce shipping box"
                 width={600}
                 height={400}
@@ -158,7 +158,7 @@ function TestimonialSection() {
         {/* RIGHT: Hands holding box image */}
         <div className="flex justify-center lg:justify-end">
           <img
-            src="/placeholders/box.png"
+            src="/b2b/boxes/hand-holdign-box.png"
             alt="Customer holding REKO Packaging box"
             className="w-full max-w-md object-contain"
           />
@@ -182,7 +182,7 @@ function CorrugatedEnvelopesSection({
         <div className="relative flex justify-center lg:justify-start">
           <div className="bg-my-yellow rounded-3xl p-8 lg:p-10 w-full max-w-md aspect-4/5 flex items-center justify-center overflow-hidden">
             <Image
-              src="/placeholders/box.png"
+              src="/b2b/boxes/envelope.png"
               alt="Corrugated cardboard envelopes with box form capabilities"
               width={400}
               height={500}

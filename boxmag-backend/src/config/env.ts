@@ -1,6 +1,8 @@
 import dotenv from "dotenv";
+import path from "path";
 
-dotenv.config();
+const rootEnvPath = path.resolve(__dirname, "../../../.env");
+dotenv.config({ path: rootEnvPath });
 
 function toNumber(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
