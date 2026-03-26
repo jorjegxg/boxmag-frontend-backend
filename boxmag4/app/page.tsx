@@ -25,7 +25,7 @@ export default function Home() {
       <HeroSizeSection />
       <ProducersBanner />
       <BoxfixSection onSeeNow={() => router.push("/shop")} />
-      <CorrugatedEnvelopesSection onSeeNow={() => router.push("/shop")} />
+      <CorrugatedEnvelopesSection onSeeNow={() => router.push("/shop-2")} />
       <WhyChooseBoxfixSection />
       <TestimonialSection />
       <FeaturesSection />

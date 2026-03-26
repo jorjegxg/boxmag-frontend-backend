@@ -42,16 +42,16 @@ export default function ShopPage() {
             <div className="mt-10 grid grid-cols-[1fr_1fr_1fr] lg:grid-cols-3 gap-6 lg:gap-10 items-center max-sm:hidden">
               {[
                 {
-                  src: "/b2b/carboard_types/b_wave.svg",
-                  alt: "Box type B wave",
+                  src: "/b2b/boxes/sqashed.png",
+                  alt: "Flattened box with tear strip",
                 },
                 {
-                  src: "/b2b/carboard_types/e_wave.svg",
-                  alt: "Box type E wave",
+                  src: "/b2b/boxes/open-box.png",
+                  alt: "Open e-commerce shipping box",
                 },
                 {
-                  src: "/b2b/carboard_types/c_wave.svg",
-                  alt: "Box type C wave",
+                  src: "/b2b/boxes/box.png",
+                  alt: "Closed shipping box",
                 },
               ].map(({ src, alt }, i) => (
                 <div
@@ -111,8 +111,8 @@ export default function ShopPage() {
       <div className="pt-16"></div>
       <WhyChooseBoxfixSection />
       {/* <TrainingProductVideoSection /> */}
-      <ServicesSection />
       <HaveAQuestion />
+      <ServicesSection />
       <NewsletterSubscribe />
     </div>
   );
