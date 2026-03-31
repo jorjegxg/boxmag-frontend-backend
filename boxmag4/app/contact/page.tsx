@@ -17,6 +17,7 @@ import { useLanguage } from "../i18n/language-context";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
+const VAT_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
 
 export default function ContactUsPage() {
   const { t } = useLanguage();
@@ -30,7 +31,82 @@ export default function ContactUsPage() {
   const [message, setMessage] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitMessage("");
+    setSubmitError("");
+
+    if (
+      !firstName.trim() ||
+      !surname.trim() ||
+      !email.trim() ||
+      !phone.trim() ||
+      !country.trim() ||
+      !message.trim()
+    ) {
+      setSubmitError("Please complete all required fields.");
+      return;
+    }
+
+    if (!acceptTerms) {
+      setSubmitError("Please accept terms and privacy policy.");
+      return;
+    }
+
+    if (vatNumber.trim() && !VAT_REGEX.test(vatNumber.trim().toUpperCase())) {
+      setSubmitError(
+        "Invalid VAT number format. Use country code plus 2-12 letters/digits (e.g. RO12345678).",
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          surname,
+          companyName,
+          vatNumber,
+          email,
+          phone,
+          country,
+          message,
+          acceptTerms,
+          fileName,
+        }),
+      });
+
+      const data = (await response.json()) as { message?: string };
+      if (!response.ok) {
+        setSubmitError(data.message ?? "Unable to send your message.");
+        return;
+      }
+
+      setSubmitMessage(data.message ?? "Message sent successfully.");
+      setFirstName("");
+      setSurname("");
+      setCompanyName("");
+      setVatNumber("");
+      setEmail("");
+      setPhone("");
+      setCountry("");
+      setMessage("");
+      setAcceptTerms(false);
+      setFileName("");
+    } catch {
+      setSubmitError("Unable to send your message right now.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div>
@@ -60,7 +136,17 @@ export default function ContactUsPage() {
       {/* FormSection */}
       <section className="w-full bg-white px-6 lg:px-20 py-10">
         <div className="max-w-4xl mx-auto rounded-[28px] border border-black/15 bg-white px-6 py-8 lg:px-10 lg:py-10">
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            {submitError ? (
+              <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-700">
+                {submitError}
+              </div>
+            ) : null}
+            {submitMessage ? (
+              <div className="rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-green-700">
+                {submitMessage}
+              </div>
+            ) : null}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label
@@ -125,6 +211,8 @@ export default function ContactUsPage() {
                   value={vatNumber}
                   onChange={(e) => setVatNumber(e.target.value)}
                   placeholder={t("contact.vatNumber")}
+                  pattern="[A-Za-z]{2}[A-Za-z0-9]{2,12}"
+                  title="Use country code plus 2-12 letters/digits (e.g. RO12345678)"
                   className={inputClass}
                 />
               </div>
@@ -257,9 +345,10 @@ export default function ContactUsPage() {
             <div className="pt-2">
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-my-yellow hover:bg-my-yellow-bright text-black font-bold uppercase tracking-wide transition-colors"
               >
-                {t("contact.send")}
+                {isSubmitting ? "Sending..." : t("contact.send")}
                 <span className="text-lg">→</span>
               </button>
             </div>
