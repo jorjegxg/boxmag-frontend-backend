@@ -22,6 +22,7 @@ import { Bar } from "./components/Bar";
 import { useRouter, useSearchParams } from "next/navigation";
 import useBusinessStore from "./store/business_store";
 import useBusinessOrderStore from "../stores/business_order_store";
+import { useNotification } from "../global/components/notification-center";
 
 const BussinessPage = () => {
   const router = useRouter();
@@ -35,7 +36,6 @@ const BussinessPage = () => {
   const [quantity, setQuantity] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [notification, setNotification] = useState("");
 
   const boxes = useBusinessStore((state) => state.boxes);
   const cardboardTypes = useBusinessStore((state) => state.carboarbonTypeOptions);
@@ -44,6 +44,7 @@ const BussinessPage = () => {
   const typeOfSizes = useBusinessStore((state) => state.typeOfSizes);
   const transportOptions = useBusinessStore((state) => state.transportOptions);
   const setBusinessOrderDraft = useBusinessOrderStore((state) => state.setDraft);
+  const { notify } = useNotification();
 
   const hasAnyError = Object.keys(errors).length > 0;
 
@@ -111,7 +112,7 @@ const BussinessPage = () => {
     const firstErrorKey = errorOrder.find((key) => nextErrors[key]);
 
     if (firstErrorKey) {
-      setNotification(nextErrors[firstErrorKey]);
+      notify({ type: "error", message: nextErrors[firstErrorKey] });
       const sectionId = sectionByError[firstErrorKey];
       const target = document.getElementById(sectionId);
       if (target) {
@@ -120,7 +121,6 @@ const BussinessPage = () => {
       return;
     }
 
-    setNotification("");
     if (Object.keys(nextErrors).length === 0) {
       setBusinessOrderDraft({
         length,
@@ -162,14 +162,6 @@ const BussinessPage = () => {
             link="/shop"
           />
         </div>
-        {hasAnyError ? (
-          <div
-            role="alert"
-            className="mt-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-700"
-          >
-            {notification || "Please complete all required fields before continuing."}
-          </div>
-        ) : null}
         {errors.boxType ? <p className="mt-3 text-sm text-red-600">{errors.boxType}</p> : null}
         <Pt16 />
         <div id="section-box-type-cards">
@@ -388,18 +380,6 @@ const BussinessPage = () => {
       <ServicesSection />
       <HaveAQuestion />
       <NewsletterSubscribe />
-
-      {hasAnyError && notification ? (
-        <div className="fixed bottom-4 right-4 z-50 w-[calc(100%-2rem)] max-w-sm">
-          <div
-            role="alert"
-            aria-live="assertive"
-            className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-700 shadow-lg"
-          >
-            {notification}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 

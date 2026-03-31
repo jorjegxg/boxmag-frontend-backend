@@ -14,6 +14,7 @@ import {
   FaEnvelope,
 } from "react-icons/fa";
 import { useLanguage } from "../i18n/language-context";
+import { useNotification } from "../global/components/notification-center";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -23,6 +24,7 @@ const shouldAutofillContactForm =
 
 export default function ContactUsPage() {
   const { t } = useLanguage();
+  const { notify } = useNotification();
   const [firstName, setFirstName] = useState(shouldAutofillContactForm ? "John" : "");
   const [surname, setSurname] = useState(shouldAutofillContactForm ? "Doe" : "");
   const [companyName, setCompanyName] = useState(
@@ -46,36 +48,48 @@ export default function ContactUsPage() {
   const [acceptTerms, setAcceptTerms] = useState(shouldAutofillContactForm);
   const [fileName, setFileName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState("");
-  const [submitError, setSubmitError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitMessage("");
-    setSubmitError("");
 
-    if (
-      !firstName.trim() ||
-      !surname.trim() ||
-      !email.trim() ||
-      !phone.trim() ||
-      !country.trim() ||
-      !message.trim()
-    ) {
-      setSubmitError("Please complete all required fields.");
+    const missingFields: string[] = [];
+    let firstMissingFieldId: string | null = null;
+
+    const registerMissingField = (fieldId: string, fieldLabel: string) => {
+      missingFields.push(fieldLabel);
+      if (!firstMissingFieldId) firstMissingFieldId = fieldId;
+    };
+
+    if (!firstName.trim()) registerMissingField("firstName", t("contact.firstName"));
+    if (!surname.trim()) registerMissingField("surname", t("contact.surname"));
+    if (!email.trim()) registerMissingField("email", t("contact.email"));
+    if (!phone.trim()) registerMissingField("phone", t("contact.phone"));
+    if (!country.trim()) registerMissingField("country", t("contact.country"));
+    if (!message.trim()) registerMissingField("message", t("contact.message"));
+
+    if (missingFields.length > 0) {
+      notify({
+        type: "error",
+        message: `Please complete the following fields: ${missingFields.join(", ")}.`,
+      });
+      if (firstMissingFieldId) {
+        document.getElementById(firstMissingFieldId)?.focus();
+      }
       return;
     }
 
     if (!acceptTerms) {
-      setSubmitError("Please accept terms and privacy policy.");
+      notify({ type: "error", message: "Please accept terms and privacy policy." });
       return;
     }
 
     if (vatNumber.trim() && !VAT_REGEX.test(vatNumber.trim().toUpperCase())) {
-      setSubmitError(
-        "Invalid VAT number format. Use country code plus 2-12 letters/digits (e.g. RO12345678).",
-      );
+      notify({
+        type: "error",
+        message:
+          "Invalid VAT number format. Use country code plus 2-12 letters/digits (e.g. RO12345678).",
+      });
       return;
     }
 
@@ -100,11 +114,11 @@ export default function ContactUsPage() {
 
       const data = (await response.json()) as { message?: string };
       if (!response.ok) {
-        setSubmitError(data.message ?? "Unable to send your message.");
+        notify({ type: "error", message: data.message ?? "Unable to send your message." });
         return;
       }
 
-      setSubmitMessage(data.message ?? "Message sent successfully.");
+      notify({ type: "success", message: data.message ?? "Message sent successfully." });
       setFirstName("");
       setSurname("");
       setCompanyName("");
@@ -116,7 +130,7 @@ export default function ContactUsPage() {
       setAcceptTerms(false);
       setFileName("");
     } catch {
-      setSubmitError("Unable to send your message right now.");
+      notify({ type: "error", message: "Unable to send your message right now." });
     } finally {
       setIsSubmitting(false);
     }
@@ -151,16 +165,6 @@ export default function ContactUsPage() {
       <section className="w-full bg-white px-6 lg:px-20 py-10">
         <div className="max-w-4xl mx-auto rounded-[28px] border border-black/15 bg-white px-6 py-8 lg:px-10 lg:py-10">
           <form className="space-y-4" onSubmit={handleSubmit}>
-            {submitError ? (
-              <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-700">
-                {submitError}
-              </div>
-            ) : null}
-            {submitMessage ? (
-              <div className="rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-green-700">
-                {submitMessage}
-              </div>
-            ) : null}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label
