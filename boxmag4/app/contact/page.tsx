@@ -18,18 +18,32 @@ import { useLanguage } from "../i18n/language-context";
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
 const VAT_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
+const shouldAutofillContactForm =
+  process.env.NEXT_PUBLIC_CONTACT_FORM_MODE?.toLowerCase() === "dev";
 
 export default function ContactUsPage() {
   const { t } = useLanguage();
-  const [firstName, setFirstName] = useState("");
-  const [surname, setSurname] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [vatNumber, setVatNumber] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [country, setCountry] = useState("");
-  const [message, setMessage] = useState("");
-  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [firstName, setFirstName] = useState(shouldAutofillContactForm ? "John" : "");
+  const [surname, setSurname] = useState(shouldAutofillContactForm ? "Doe" : "");
+  const [companyName, setCompanyName] = useState(
+    shouldAutofillContactForm ? "Boxmag Test SRL" : "",
+  );
+  const [vatNumber, setVatNumber] = useState(
+    shouldAutofillContactForm ? "RO12345678" : "",
+  );
+  const [email, setEmail] = useState(
+    shouldAutofillContactForm ? "yotrevorgxg@gmail.com" : "",
+  );
+  const [phone, setPhone] = useState(
+    shouldAutofillContactForm ? "+40799111222" : "",
+  );
+  const [country, setCountry] = useState(shouldAutofillContactForm ? "RO" : "");
+  const [message, setMessage] = useState(
+    shouldAutofillContactForm
+      ? "Hello! This is a test message generated in dev mode."
+      : "",
+  );
+  const [acceptTerms, setAcceptTerms] = useState(shouldAutofillContactForm);
   const [fileName, setFileName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
