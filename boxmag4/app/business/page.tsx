@@ -19,17 +19,18 @@ import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { FaEnvelope, FaPhoneAlt, FaClock } from "react-icons/fa";
 import { Bar } from "./components/Bar";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import useBusinessStore from "./store/business_store";
 import useBusinessOrderStore from "../stores/business_order_store";
 
 const BussinessPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachmentName, setAttachmentName] = useState("");
-  const [length, setLength] = useState("");
-  const [width, setWidth] = useState("");
-  const [height, setHeight] = useState("");
+  const [length, setLength] = useState(() => searchParams.get("length") ?? "");
+  const [width, setWidth] = useState(() => searchParams.get("width") ?? "");
+  const [height, setHeight] = useState(() => searchParams.get("height") ?? "");
   const [message, setMessage] = useState("");
   const [quantity, setQuantity] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -64,11 +65,11 @@ const BussinessPage = () => {
     ] as const;
 
     const sectionByError: Record<string, string> = {
-      boxType: "section-box-type",
-      cardboardType: "section-cardboard-type",
-      cardboardColor: "section-cardboard-color",
-      boxPrint: "section-box-print",
-      sizeType: "section-size-type",
+      boxType: "section-box-type-cards",
+      cardboardType: "section-cardboard-type-cards",
+      cardboardColor: "section-cardboard-color-cards",
+      boxPrint: "section-box-print-cards",
+      sizeType: "section-size-type-cards",
       length: "section-box-size",
       width: "section-box-size",
       height: "section-box-size",
@@ -114,7 +115,7 @@ const BussinessPage = () => {
       const sectionId = sectionByError[firstErrorKey];
       const target = document.getElementById(sectionId);
       if (target) {
-        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
       }
       return;
     }
@@ -151,14 +152,6 @@ const BussinessPage = () => {
 
       <div className="pt-8 md:pt-12 lg:pt-16" />
       <ResponsiveLayoutWithPadding>
-        {hasAnyError ? (
-          <div
-            role="alert"
-            className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-700"
-          >
-            {notification || "Please complete all required fields before continuing."}
-          </div>
-        ) : null}
         <Bar />
         <Pt16 />
 
@@ -169,41 +162,59 @@ const BussinessPage = () => {
             link="/shop"
           />
         </div>
-        <Pt16 />
-        <GridOfBoxes />
+        {hasAnyError ? (
+          <div
+            role="alert"
+            className="mt-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-700"
+          >
+            {notification || "Please complete all required fields before continuing."}
+          </div>
+        ) : null}
         {errors.boxType ? <p className="mt-3 text-sm text-red-600">{errors.boxType}</p> : null}
+        <Pt16 />
+        <div id="section-box-type-cards">
+          <GridOfBoxes />
+        </div>
         <Pt16 />
 
         <div id="section-cardboard-type">
           <RedTitle title="Select Cardboard Type" />
         </div>
-        <Pt16 />
-        <CarboardType />
         {errors.cardboardType ? <p className="mt-3 text-sm text-red-600">{errors.cardboardType}</p> : null}
+        <Pt16 />
+        <div id="section-cardboard-type-cards">
+          <CarboardType />
+        </div>
         <Pt16 />
 
         <div id="section-cardboard-color">
           <RedTitle title="Select Cardboard Colour" />
         </div>
-        <Pt16 />
-        <CarboardColors />
         {errors.cardboardColor ? <p className="mt-3 text-sm text-red-600">{errors.cardboardColor}</p> : null}
+        <Pt16 />
+        <div id="section-cardboard-color-cards">
+          <CarboardColors />
+        </div>
         <Pt16 />
 
         <div id="section-box-print">
           <RedTitle title="Box Print" />
         </div>
-        <Pt16 />
-        <BoxPrintButtons />
         {errors.boxPrint ? <p className="mt-3 text-sm text-red-600">{errors.boxPrint}</p> : null}
+        <Pt16 />
+        <div id="section-box-print-cards">
+          <BoxPrintButtons />
+        </div>
         <Pt16 />
 
         <div id="section-size-type">
           <RedTitle title="Type Of Sizes" />
         </div>
-        <Pt16 />
-        <TypeOfSizes />
         {errors.sizeType ? <p className="mt-3 text-sm text-red-600">{errors.sizeType}</p> : null}
+        <Pt16 />
+        <div id="section-size-type-cards">
+          <TypeOfSizes />
+        </div>
         <Pt16 />
 
         <div id="section-box-size">
@@ -244,9 +255,9 @@ const BussinessPage = () => {
         <div id="section-transport">
           <RedTitle title="Transport" />
         </div>
+        {errors.transport ? <p className="mt-3 text-sm text-red-600">{errors.transport}</p> : null}
         <Pt16 />
         <TransportOptions />
-        {errors.transport ? <p className="mt-3 text-sm text-red-600">{errors.transport}</p> : null}
 
         <Pt16 />
 
@@ -377,6 +388,18 @@ const BussinessPage = () => {
       <ServicesSection />
       <HaveAQuestion />
       <NewsletterSubscribe />
+
+      {hasAnyError && notification ? (
+        <div className="fixed bottom-4 right-4 z-50 w-[calc(100%-2rem)] max-w-sm">
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-700 shadow-lg"
+          >
+            {notification}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 
