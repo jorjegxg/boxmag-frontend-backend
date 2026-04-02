@@ -13,12 +13,15 @@ import {
   FaPhoneAlt,
   FaEnvelope,
 } from "react-icons/fa";
+import { checkVAT, countries } from "jsvat";
 import { useLanguage } from "../i18n/language-context";
 import { useNotification } from "../global/components/notification-center";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
-const VAT_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
+const MAX_ATTACHMENT_MB = 10;
+const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_MB * 1024 * 1024;
+const MAX_ATTACHMENTS = 5;
 const shouldAutofillContactForm =
   process.env.NEXT_PUBLIC_CONTACT_FORM_MODE?.toLowerCase() === "dev";
 
@@ -46,7 +49,7 @@ export default function ContactUsPage() {
       : "",
   );
   const [acceptTerms, setAcceptTerms] = useState(shouldAutofillContactForm);
-  const [fileName, setFileName] = useState("");
+  const [attachments, setAttachments] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,32 +87,52 @@ export default function ContactUsPage() {
       return;
     }
 
-    if (vatNumber.trim() && !VAT_REGEX.test(vatNumber.trim().toUpperCase())) {
+    const vatCheck = vatNumber.trim()
+      ? checkVAT(vatNumber.trim().toUpperCase(), countries)
+      : null;
+    if (vatCheck && !vatCheck.isValid && !vatCheck.isValidFormat) {
       notify({
         type: "error",
         message:
-          "Invalid VAT number format. Use country code plus 2-12 letters/digits (e.g. RO12345678).",
+          "Invalid VAT number. Please provide a valid VAT for the selected country (e.g. RO12345678).",
+      });
+      return;
+    }
+
+    if (attachments.length > MAX_ATTACHMENTS) {
+      notify({
+        type: "error",
+        message: `You can upload up to ${MAX_ATTACHMENTS} files.`,
+      });
+      return;
+    }
+
+    const oversizedFile = attachments.find((file) => file.size > MAX_ATTACHMENT_BYTES);
+    if (oversizedFile) {
+      notify({
+        type: "error",
+        message: `File "${oversizedFile.name}" is too large. Maximum allowed size is ${MAX_ATTACHMENT_MB} MB per file.`,
       });
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const formData = new FormData();
+      formData.append("firstName", firstName);
+      formData.append("surname", surname);
+      formData.append("companyName", companyName);
+      formData.append("vatNumber", vatNumber);
+      formData.append("email", email);
+      formData.append("phone", phone);
+      formData.append("country", country);
+      formData.append("message", message);
+      formData.append("acceptTerms", String(acceptTerms));
+      attachments.forEach((file) => formData.append("attachment", file));
+
       const response = await fetch("/api/contact", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName,
-          surname,
-          companyName,
-          vatNumber,
-          email,
-          phone,
-          country,
-          message,
-          acceptTerms,
-          fileName,
-        }),
+        body: formData,
       });
 
       const data = (await response.json()) as { message?: string };
@@ -128,7 +151,10 @@ export default function ContactUsPage() {
       setCountry("");
       setMessage("");
       setAcceptTerms(false);
-      setFileName("");
+      setAttachments([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     } catch {
       notify({ type: "error", message: "Unable to send your message right now." });
     } finally {
@@ -304,11 +330,17 @@ export default function ContactUsPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
+                  multiple
                   className="hidden"
-                  onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => setAttachments(Array.from(e.target.files ?? []))}
                 />
                 <span className="flex-1 rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-gray-500 text-sm truncate">
-                  {fileName || t("contact.noFile")}
+                  {attachments.length === 0
+                    ? t("contact.noFile")
+                    : attachments.length === 1
+                      ? attachments[0].name
+                      : `${attachments.length} files selected`}
                 </span>
                 <button
                   type="button"
@@ -318,6 +350,9 @@ export default function ContactUsPage() {
                   {t("contact.chooseFile")}
                 </button>
               </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Max file size: {MAX_ATTACHMENT_MB} MB per file (up to {MAX_ATTACHMENTS} files)
+              </p>
             </div>
             <div>
               <label

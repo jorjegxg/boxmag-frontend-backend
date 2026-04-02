@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import fs from "fs";
 import path from "path";
+import { checkVAT, countries } from "jsvat";
 
 type ContactPayload = {
   firstName: string;
@@ -15,7 +16,9 @@ type ContactPayload = {
   fileName?: string;
 };
 
-const VAT_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
+const MAX_ATTACHMENT_MB = 10;
+const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_MB * 1024 * 1024;
+const MAX_ATTACHMENTS = 5;
 const rootEnvPath = path.resolve(process.cwd(), "../.env");
 const rootEnv =
   fs.existsSync(rootEnvPath)
@@ -106,7 +109,30 @@ export async function POST(req: Request): Promise<Response> {
     }).catch(() => {});
     // #endregion
 
-    const body = (await req.json()) as ContactPayload;
+    const contentType = req.headers.get("content-type") ?? "";
+    let body: ContactPayload;
+    let attachmentFiles: File[] = [];
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      attachmentFiles = formData
+        .getAll("attachment")
+        .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+      body = {
+        firstName: String(formData.get("firstName") ?? ""),
+        surname: String(formData.get("surname") ?? ""),
+        companyName: String(formData.get("companyName") ?? ""),
+        vatNumber: String(formData.get("vatNumber") ?? ""),
+        email: String(formData.get("email") ?? ""),
+        phone: String(formData.get("phone") ?? ""),
+        country: String(formData.get("country") ?? ""),
+        message: String(formData.get("message") ?? ""),
+        acceptTerms: String(formData.get("acceptTerms") ?? "") === "true",
+        fileName: attachmentFiles.map((file) => file.name).join(", "),
+      };
+    } else {
+      body = (await req.json()) as ContactPayload;
+    }
     const requiredFields: Array<keyof ContactPayload> = [
       "firstName",
       "surname",
@@ -133,15 +159,32 @@ export async function POST(req: Request): Promise<Response> {
       );
     }
 
-    if (
-      typeof body.vatNumber === "string" &&
-      body.vatNumber.trim().length > 0 &&
-      !VAT_REGEX.test(body.vatNumber.trim().toUpperCase())
-    ) {
+    if (attachmentFiles.length > MAX_ATTACHMENTS) {
+      return Response.json(
+        { message: `You can upload up to ${MAX_ATTACHMENTS} files.` },
+        { status: 400 },
+      );
+    }
+
+    const oversizedFile = attachmentFiles.find((file) => file.size > MAX_ATTACHMENT_BYTES);
+    if (oversizedFile) {
+      return Response.json(
+        {
+          message: `File "${oversizedFile.name}" is too large. Maximum allowed size is ${MAX_ATTACHMENT_MB} MB per file.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const vatCheck =
+      typeof body.vatNumber === "string" && body.vatNumber.trim().length > 0
+        ? checkVAT(body.vatNumber.trim().toUpperCase(), countries)
+        : null;
+    if (vatCheck && !vatCheck.isValid && !vatCheck.isValidFormat) {
       return Response.json(
         {
           message:
-            "Invalid VAT number format. Use country code plus 2-12 letters/digits (e.g. RO12345678).",
+            "Invalid VAT number. Please provide a valid VAT for the selected country (e.g. RO12345678).",
         },
         { status: 400 },
       );
@@ -229,6 +272,16 @@ export async function POST(req: Request): Promise<Response> {
       },
     });
 
+    const attachments = [];
+    for (const attachmentFile of attachmentFiles) {
+      const bytes = await attachmentFile.arrayBuffer();
+      attachments.push({
+        filename: attachmentFile.name,
+        content: Buffer.from(bytes),
+        contentType: attachmentFile.type || undefined,
+      });
+    }
+
     await transporter.sendMail({
       from: `"Boxmag Contact Form" <${smtpUser}>`,
       to: contactTo,
@@ -242,11 +295,12 @@ export async function POST(req: Request): Promise<Response> {
         `Email: ${body.email}`,
         `Phone: ${body.phone}`,
         `Country: ${body.country}`,
-        `Attachment Name: ${body.fileName || "-"}`,
+        `Attachments: ${body.fileName || "-"}`,
         "",
         "Message:",
         body.message,
       ].join("\n"),
+      attachments,
     });
 
     return Response.json({ message: "Message sent successfully." }, { status: 200 });
