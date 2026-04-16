@@ -27,4 +27,3 @@ Backend default URL: `http://localhost:4000`
 
 - `GET /` basic service info
 - `GET /api/health` health payload + db config preview
-
