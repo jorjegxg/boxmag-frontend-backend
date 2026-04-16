@@ -46,7 +46,7 @@ export default function ShopPage() {
                   alt: "Flattened box with tear strip",
                 },
                 {
-                  src: "/b2b/boxes/open-box.png",
+                  src: "/b2b/boxes/ecommerce.png",
                   alt: "Open e-commerce shipping box",
                 },
                 {

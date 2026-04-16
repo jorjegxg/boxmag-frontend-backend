@@ -15,6 +15,8 @@ import useBusinessOrderStore from "../stores/business_order_store";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
+const shouldAutofillOrderSummary =
+  process.env.NEXT_PUBLIC_CONTACT_FORM_MODE?.toLowerCase() === "dev";
 
 function SummaryRow({
   label,
@@ -33,19 +35,29 @@ function SummaryRow({
 
 export default function OrderSummaryPage() {
   const { t } = useLanguage();
-  const [firstName, setFirstName] = useState("");
-  const [surname, setSurname] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [vatNumber, setVatNumber] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [postcode, setPostcode] = useState("");
-  const [city, setCity] = useState("");
-  const [country, setCountry] = useState("");
-  const [createAccount, setCreateAccount] = useState(false);
-  const [consentPhone, setConsentPhone] = useState(false);
-  const [consentEmail, setConsentEmail] = useState(false);
+  const [firstName, setFirstName] = useState(shouldAutofillOrderSummary ? "John" : "");
+  const [surname, setSurname] = useState(shouldAutofillOrderSummary ? "Doe" : "");
+  const [companyName, setCompanyName] = useState(
+    shouldAutofillOrderSummary ? "Boxmag Test SRL" : "",
+  );
+  const [vatNumber, setVatNumber] = useState(
+    shouldAutofillOrderSummary ? "RO12345678" : "",
+  );
+  const [email, setEmail] = useState(
+    shouldAutofillOrderSummary ? "yotrevorgxg@gmail.com" : "",
+  );
+  const [phone, setPhone] = useState(
+    shouldAutofillOrderSummary ? "+40799111222" : "",
+  );
+  const [address, setAddress] = useState(
+    shouldAutofillOrderSummary ? "Stefan cel Mare 131" : "",
+  );
+  const [postcode, setPostcode] = useState(shouldAutofillOrderSummary ? "725400" : "");
+  const [city, setCity] = useState(shouldAutofillOrderSummary ? "Radauti" : "");
+  const [country, setCountry] = useState(shouldAutofillOrderSummary ? "RO" : "");
+  const [createAccount, setCreateAccount] = useState(shouldAutofillOrderSummary);
+  const [consentPhone, setConsentPhone] = useState(shouldAutofillOrderSummary);
+  const [consentEmail, setConsentEmail] = useState(shouldAutofillOrderSummary);
 
   const boxes = useBusinessStore((s) => s.boxes);
   const carboardTypes = useBusinessStore((s) => s.carboarbonTypeOptions);
