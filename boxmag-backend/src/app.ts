@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import { env } from "./config/env";
 import { healthRouter } from "./routes/health.route";
+import { boxTypesRouter } from "./routes/box-types.route";
 
 export const app = express();
 
@@ -20,4 +21,5 @@ app.get("/", (_req, res) => {
 });
 
 app.use("/api/health", healthRouter);
+app.use("/api/box-types", boxTypesRouter);
 

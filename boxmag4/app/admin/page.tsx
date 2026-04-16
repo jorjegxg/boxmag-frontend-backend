@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { B2b } from "../global/components/b2b";
 
@@ -30,7 +31,66 @@ const mockOrders = [
   },
 ];
 
+type AdminBoxType = {
+  id: number;
+  key: string;
+  title: string;
+  priceEur: number | null;
+  imagePath: string;
+  isActive: boolean;
+};
+
 export default function AdminPage() {
+  const [boxTypes, setBoxTypes] = useState<AdminBoxType[]>([]);
+  const [isLoadingBoxTypes, setIsLoadingBoxTypes] = useState(true);
+  const [boxTypesError, setBoxTypesError] = useState<string | null>(null);
+
+  const backendBaseUrl = useMemo(() => {
+    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+    if (!value) return "http://localhost:3005";
+    return value.endsWith("/") ? value.slice(0, -1) : value;
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadBoxTypes() {
+      setIsLoadingBoxTypes(true);
+      setBoxTypesError(null);
+      try {
+        const response = await fetch(`${backendBaseUrl}/api/box-types`);
+        if (!response.ok) {
+          throw new Error(`Failed with status ${response.status}`);
+        }
+        const payload = (await response.json()) as {
+          ok: boolean;
+          data?: AdminBoxType[];
+          message?: string;
+        };
+        if (!payload.ok || !Array.isArray(payload.data)) {
+          throw new Error(payload.message ?? "Invalid response payload");
+        }
+        if (isMounted) {
+          setBoxTypes(payload.data);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setBoxTypesError(error instanceof Error ? error.message : "Failed to load box types");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingBoxTypes(false);
+        }
+      }
+    }
+
+    void loadBoxTypes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [backendBaseUrl]);
+
   return (
     <div>
       <B2b />
@@ -47,7 +107,7 @@ export default function AdminPage() {
 
       <section className="w-full bg-white px-6 lg:px-20 py-8">
         <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
-          <SectionTitle title="Box Types Management" subtitle="UI only - no functionality yet" />
+          <SectionTitle title="Box Types Management" subtitle="Data loaded from database" />
 
           <div className="p-6 lg:p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -91,39 +151,50 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-t border-gray-200">
-                      <td className="px-4 py-3">1</td>
-                      <td className="px-4 py-3">E-commerce Boxes Fefco 703</td>
-                      <td className="px-4 py-3">1.20 EUR</td>
-                      <td className="px-4 py-3">boxes/ecommerce.png</td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex rounded-full bg-green-100 text-green-700 px-2.5 py-1 text-xs font-medium">
-                          Active
-                        </span>
-                      </td>
-                    </tr>
-                    <tr className="border-t border-gray-200">
-                      <td className="px-4 py-3">2</td>
-                      <td className="px-4 py-3">Shipping Box Fefco 427</td>
-                      <td className="px-4 py-3">1.55 EUR</td>
-                      <td className="px-4 py-3">boxes/felco.png</td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex rounded-full bg-green-100 text-green-700 px-2.5 py-1 text-xs font-medium">
-                          Active
-                        </span>
-                      </td>
-                    </tr>
-                    <tr className="border-t border-gray-200">
-                      <td className="px-4 py-3">3</td>
-                      <td className="px-4 py-3">Pizza Box</td>
-                      <td className="px-4 py-3">0.88 EUR</td>
-                      <td className="px-4 py-3">boxes/pizza.png</td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex rounded-full bg-yellow-100 text-yellow-700 px-2.5 py-1 text-xs font-medium">
-                          Draft
-                        </span>
-                      </td>
-                    </tr>
+                    {isLoadingBoxTypes ? (
+                      <tr className="border-t border-gray-200">
+                        <td className="px-4 py-3 text-gray-500" colSpan={5}>
+                          Loading box types...
+                        </td>
+                      </tr>
+                    ) : null}
+                    {!isLoadingBoxTypes && boxTypesError ? (
+                      <tr className="border-t border-gray-200">
+                        <td className="px-4 py-3 text-red-600" colSpan={5}>
+                          Failed to load box types: {boxTypesError}
+                        </td>
+                      </tr>
+                    ) : null}
+                    {!isLoadingBoxTypes && !boxTypesError && boxTypes.length === 0 ? (
+                      <tr className="border-t border-gray-200">
+                        <td className="px-4 py-3 text-gray-500" colSpan={5}>
+                          No box types found.
+                        </td>
+                      </tr>
+                    ) : null}
+                    {!isLoadingBoxTypes && !boxTypesError
+                      ? boxTypes.map((boxType) => (
+                          <tr key={boxType.id} className="border-t border-gray-200">
+                            <td className="px-4 py-3">{boxType.id}</td>
+                            <td className="px-4 py-3">{boxType.title}</td>
+                            <td className="px-4 py-3">
+                              {boxType.priceEur == null ? "-" : `${boxType.priceEur.toFixed(2)} EUR`}
+                            </td>
+                            <td className="px-4 py-3">{boxType.imagePath}</td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                                  boxType.isActive
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-yellow-100 text-yellow-700"
+                                }`}
+                              >
+                                {boxType.isActive ? "Active" : "Draft"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      : null}
                   </tbody>
                 </table>
               </div>
