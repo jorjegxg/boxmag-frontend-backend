@@ -64,7 +64,7 @@ export default function AboutPage() {
             <div className="flex-1 bg-my-light-gray2 p-8 lg:p-10 relative">
               <FaQuoteLeft className="absolute top-6 left-6 w-10 h-10 text-my-red opacity-90" />
               <div className="w-full h-full flex items-center justify-center">
-                <p className="text-gray-800 text-base lg:text-lg leading-relaxed pt-4 max-w-xl">
+                <p className="text-gray-800 text-base lg:text-lg leading-relaxed pt-10 lg:pt-12 pl-6 lg:pl-8 max-w-xl">
                   {t("about.qualityText")}
                 </p>
               </div>
@@ -72,11 +72,11 @@ export default function AboutPage() {
             </div>
             <div className="w-full lg:w-[40%] min-h-[240px] bg-my-yellow flex items-center justify-center p-6 relative">
               <Image
-                src="/b2b/boxes/ecommerce.png"
+                src="/b2b/boxes/box-double-strip.png"
                 alt="E-commerce cardboard boxes"
                 width={320}
                 height={240}
-                className="object-contain max-h-64 w-auto"
+                className="object-contain max-h-72 w-auto"
               />
             </div>
           </div>
@@ -102,7 +102,7 @@ export default function AboutPage() {
                 className="object-contain max-h-40 w-auto"
               />
               <Image
-                src="/b2b/boxes/open-box.png"
+                src="/b2b/boxes/ecommerce.png"
                 alt="BOXFIX box open"
                 width={180}
                 height={140}
@@ -149,7 +149,7 @@ export default function AboutPage() {
             </h2>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <div className="rounded-2xl border-2 border-my-red p-6 lg:p-8 bg-white">
+              <div className="rounded-2xl border-2 border-my-red p-6 lg:p-8 bg-white w-full max-w-[560px] mx-auto text-center">
                 <p className="font-bold text-black mb-2">Boxmag.eu</p>
                 <p className="text-gray-800">Stefan cel Mare 131 street</p>
                 <p className="text-gray-800">RO-725400 Radauti, Suceava</p>
@@ -158,7 +158,7 @@ export default function AboutPage() {
                 <p className="mt-2 font-bold text-black">Mail:</p>
                 <p className="text-gray-800">info@boxmag.eu</p>
               </div>
-              <div className="rounded-2xl border-2 border-my-red p-6 lg:p-8 bg-white">
+              <div className="rounded-2xl border-2 border-my-red p-6 lg:p-8 bg-white w-full max-w-[560px] mx-auto text-center">
                 <p className="font-bold text-black mb-2">Boxmag.eu</p>
                 <p className="font-bold text-black mb-2">{t("about.officeTitle")}</p>
                 <p className="text-gray-800">Reko Packaging s.r.l.</p>
@@ -170,7 +170,7 @@ export default function AboutPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border-2 border-my-red p-6 lg:p-8 bg-white">
+            <div className="rounded-2xl border-2 border-my-red p-6 lg:p-8 bg-white w-full max-w-4xl mx-auto text-center">
               <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 sm:gap-6">
                 <div className="flex items-center gap-3">
                   <Image

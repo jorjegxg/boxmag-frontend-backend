@@ -3,7 +3,6 @@
 import { B2b } from "../global/components/b2b";
 import Link from "next/link";
 import { ServicesSection } from "../global/components/services-section";
-import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { useState, useRef } from "react";
 import Image from "next/image";
@@ -454,7 +453,6 @@ export default function ContactUsPage() {
       </section>
 
       <ServicesSection />
-      <HaveAQuestion />
       <NewsletterSubscribe />
     </div>
   );

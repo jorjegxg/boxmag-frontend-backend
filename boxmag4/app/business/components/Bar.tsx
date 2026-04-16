@@ -32,7 +32,7 @@ function Card({ step, title }: { step: number; title: string }) {
       {/* notch */}
       <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-full pointer-events-none">
         <div className="h-0 w-0 border-l-14 border-r-14 border-b-14 border-l-transparent border-r-transparent border-b-my-yellow" />
-        <div className="absolute left-1/2 top-0.5 h-0 w-0 -translate-x-1/2 border-l-12 border-r-12 border-b-12 border-l-transparent border-r-transparent border-b-my-white" />
+        <div className="absolute left-1/2 top-0.5 h-0 w-0 -translate-x-1/2 border-l-12 border-r-12 border-b-12 border-l-transparent border-r-transparent border-b-transparent" />
       </div>
 
       <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-my-gray">
