@@ -35,15 +35,23 @@ type AdminBoxType = {
   id: number;
   key: string;
   title: string;
-  priceEur: number | null;
   imagePath: string;
   isActive: boolean;
+};
+
+type EditableBoxType = Pick<AdminBoxType, "title" | "imagePath" | "isActive"> & {
+  imageFile: File | null;
+  previewImagePath: string;
 };
 
 export default function AdminPage() {
   const [boxTypes, setBoxTypes] = useState<AdminBoxType[]>([]);
   const [isLoadingBoxTypes, setIsLoadingBoxTypes] = useState(true);
   const [boxTypesError, setBoxTypesError] = useState<string | null>(null);
+  const [editingBoxId, setEditingBoxId] = useState<number | null>(null);
+  const [editingData, setEditingData] = useState<EditableBoxType | null>(null);
+  const [isSavingBoxType, setIsSavingBoxType] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -91,6 +99,66 @@ export default function AdminPage() {
     };
   }, [backendBaseUrl]);
 
+  function startEditing(boxType: AdminBoxType) {
+    setEditingBoxId(boxType.id);
+    setEditingData({
+      title: boxType.title,
+      imagePath: boxType.imagePath,
+      isActive: boxType.isActive,
+      imageFile: null,
+      previewImagePath: boxType.imagePath,
+    });
+    setSaveError(null);
+  }
+
+  function cancelEditing() {
+    if (editingData?.previewImagePath.startsWith("blob:")) {
+      URL.revokeObjectURL(editingData.previewImagePath);
+    }
+    setEditingBoxId(null);
+    setEditingData(null);
+    setSaveError(null);
+  }
+
+  async function saveEditedBoxType() {
+    if (editingBoxId == null || editingData == null) return;
+
+    setIsSavingBoxType(true);
+    setSaveError(null);
+    try {
+      const response = await fetch(`${backendBaseUrl}/api/box-types/${editingBoxId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(editingData),
+      });
+
+      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+      }
+
+      setBoxTypes((current) =>
+        current.map((boxType) =>
+          boxType.id === editingBoxId
+            ? {
+                ...boxType,
+                title: editingData.title,
+                imagePath: editingData.imagePath,
+                isActive: editingData.isActive,
+              }
+            : boxType
+        )
+      );
+      cancelEditing();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Failed to update box type");
+    } finally {
+      setIsSavingBoxType(false);
+    }
+  }
+
   return (
     <div>
       <B2b />
@@ -113,8 +181,7 @@ export default function AdminPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Field label="Box Type ID" placeholder="e.g. BF10" />
               <Field label="Title" placeholder="e.g. Boxfix Premium 500" />
-              <Field label="Price (EUR)" placeholder="e.g. 1.35" />
-              <Field label="Photo URL / Object Key" placeholder="e.g. boxes/premium-500.png" />
+              <ImagePickerField label="Box Image" />
             </div>
 
             <div className="flex flex-wrap gap-3">
@@ -123,18 +190,6 @@ export default function AdminPage() {
                 className="bg-my-yellow hover:bg-my-yellow-bright text-black font-semibold px-5 py-2.5 rounded-lg transition-colors"
               >
                 Add Box Type
-              </button>
-              <button
-                type="button"
-                className="bg-my-red hover:bg-red-700 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors"
-              >
-                Update Selected
-              </button>
-              <button
-                type="button"
-                className="border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold px-5 py-2.5 rounded-lg transition-colors"
-              >
-                Reset Fields
               </button>
             </div>
 
@@ -145,9 +200,9 @@ export default function AdminPage() {
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold">ID</th>
                       <th className="px-4 py-3 text-left font-semibold">Title</th>
-                      <th className="px-4 py-3 text-left font-semibold">Price</th>
                       <th className="px-4 py-3 text-left font-semibold">Photo</th>
                       <th className="px-4 py-3 text-left font-semibold">Status</th>
+                      <th className="px-4 py-3 text-left font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -176,25 +231,149 @@ export default function AdminPage() {
                       ? boxTypes.map((boxType) => (
                           <tr key={boxType.id} className="border-t border-gray-200">
                             <td className="px-4 py-3">{boxType.id}</td>
-                            <td className="px-4 py-3">{boxType.title}</td>
                             <td className="px-4 py-3">
-                              {boxType.priceEur == null ? "-" : `${boxType.priceEur.toFixed(2)} EUR`}
+                              {editingBoxId === boxType.id && editingData ? (
+                                <input
+                                  type="text"
+                                  value={editingData.title}
+                                  onChange={(event) =>
+                                    setEditingData((current) =>
+                                      current
+                                        ? {
+                                            ...current,
+                                            title: event.target.value,
+                                          }
+                                        : current
+                                    )
+                                  }
+                                  className="h-10 w-full min-w-48 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+                                />
+                              ) : (
+                                boxType.title
+                              )}
                             </td>
-                            <td className="px-4 py-3">{boxType.imagePath}</td>
                             <td className="px-4 py-3">
-                              <span
-                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-                                  boxType.isActive
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-yellow-100 text-yellow-700"
-                                }`}
-                              >
-                                {boxType.isActive ? "Active" : "Draft"}
-                              </span>
+                              {editingBoxId === boxType.id && editingData ? (
+                                <div className="space-y-2">
+                                  <img
+                                    src={editingData.previewImagePath}
+                                    alt={editingData.title}
+                                    className="h-12 w-12 rounded-md border border-gray-200 object-cover"
+                                  />
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(event) =>
+                                      setEditingData((current) => {
+                                        if (!current) return current;
+
+                                        if (current.previewImagePath.startsWith("blob:")) {
+                                          URL.revokeObjectURL(current.previewImagePath);
+                                        }
+
+                                        const file = event.target.files?.[0] ?? null;
+                                        if (!file) {
+                                          return {
+                                            ...current,
+                                            imageFile: null,
+                                            previewImagePath: current.imagePath,
+                                          };
+                                        }
+
+                                        return {
+                                          ...current,
+                                          imageFile: file,
+                                          previewImagePath: URL.createObjectURL(file),
+                                        };
+                                      })
+                                    }
+                                    className="h-10 w-full min-w-56 rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-900 file:mr-3 file:rounded-md file:border-0 file:bg-my-light-gray2 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-800 hover:file:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+                                  />
+                                  <span className="text-xs text-gray-500">
+                                    {editingData.imageFile
+                                      ? `Selected: ${editingData.imageFile.name}`
+                                      : "Current image will be kept unless upload handling is added."}
+                                  </span>
+                                </div>
+                              ) : (
+                                <img
+                                  src={boxType.imagePath}
+                                  alt={boxType.title}
+                                  className="h-12 w-12 rounded-md border border-gray-200 object-cover"
+                                />
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {editingBoxId === boxType.id && editingData ? (
+                                <select
+                                  value={editingData.isActive ? "active" : "draft"}
+                                  onChange={(event) =>
+                                    setEditingData((current) =>
+                                      current
+                                        ? {
+                                            ...current,
+                                            isActive: event.target.value === "active",
+                                          }
+                                        : current
+                                    )
+                                  }
+                                  className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+                                >
+                                  <option value="active">Active</option>
+                                  <option value="draft">Draft</option>
+                                </select>
+                              ) : (
+                                <span
+                                  className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                                    boxType.isActive
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-yellow-100 text-yellow-700"
+                                  }`}
+                                >
+                                  {boxType.isActive ? "Active" : "Draft"}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {editingBoxId === boxType.id ? (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => void saveEditedBoxType()}
+                                    disabled={isSavingBoxType}
+                                    className="rounded-md bg-my-red px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {isSavingBoxType ? "Saving..." : "Save"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={cancelEditing}
+                                    disabled={isSavingBoxType}
+                                    className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => startEditing(boxType)}
+                                  className="rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-my-yellow-bright"
+                                >
+                                  Edit
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))
                       : null}
+                    {saveError ? (
+                      <tr className="border-t border-gray-200">
+                        <td className="px-4 py-3 text-red-600" colSpan={5}>
+                          Failed to save box type: {saveError}
+                        </td>
+                      </tr>
+                    ) : null}
                   </tbody>
                 </table>
               </div>
@@ -264,6 +443,49 @@ function Field({ label, placeholder }: { label: string; placeholder: string }) {
         placeholder={placeholder}
         className="h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
       />
+    </label>
+  );
+}
+
+function ImagePickerField({ label }: { label: string }) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedFile);
+    setPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedFile]);
+
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-sm font-semibold text-gray-800">{label}</span>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+        className="h-11 rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-900 file:mr-3 file:rounded-md file:border-0 file:bg-my-light-gray2 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-800 hover:file:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+      />
+      {selectedFile ? (
+        <span className="text-xs text-gray-600 truncate">{selectedFile.name}</span>
+      ) : (
+        <span className="text-xs text-gray-400">No image selected</span>
+      )}
+      {previewUrl ? (
+        <img
+          src={previewUrl}
+          alt="Selected box preview"
+          className="h-16 w-16 rounded-md border border-gray-200 object-cover"
+        />
+      ) : null}
     </label>
   );
 }
