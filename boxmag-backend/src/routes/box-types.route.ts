@@ -10,6 +10,33 @@ type BoxTypeRow = RowDataPacket & {
   is_active: number;
 };
 
+type BoxTypeProductRow = RowDataPacket & {
+  id: number;
+  box_type_id: number;
+  item_no: string;
+  product_name: string;
+  internal_l_mm: number;
+  internal_w_mm: number;
+  internal_h_mm: number;
+  internal_h2_mm: number | null;
+  quality_cardboard: string;
+  pallet_l_cm: number;
+  pallet_w_cm: number;
+  pallet_h_cm: number;
+  weight_piece_gr: string;
+  weight_pallet_kg: string;
+  amount_qty_in_pcs: number;
+  pallet_pcs: number;
+};
+
+type BoxTypeProductPriceRow = RowDataPacket & {
+  id: number;
+  box_type_product_id: number;
+  price_name: string;
+  price_without_tax: string;
+  price_with_tax: string;
+};
+
 export const boxTypesRouter = Router();
 
 boxTypesRouter.get("/", async (_req, res) => {
@@ -36,6 +63,275 @@ boxTypesRouter.get("/", async (_req, res) => {
       ok: false,
       message: "Failed to load box types",
     });
+  }
+});
+
+boxTypesRouter.get("/:id/products", async (req, res) => {
+  const boxTypeId = Number(req.params.id);
+  if (!Number.isInteger(boxTypeId) || boxTypeId <= 0) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid box type id",
+    });
+    return;
+  }
+
+  try {
+    const [productRows] = await mysqlPool.query<BoxTypeProductRow[]>(
+      `SELECT id, box_type_id, item_no, product_name, internal_l_mm, internal_w_mm, internal_h_mm, internal_h2_mm,
+              quality_cardboard, pallet_l_cm, pallet_w_cm, pallet_h_cm, weight_piece_gr, weight_pallet_kg,
+              amount_qty_in_pcs, pallet_pcs
+       FROM box_type_products
+       WHERE box_type_id = ?
+       ORDER BY id ASC`,
+      [boxTypeId]
+    );
+
+    const productIds = productRows.map((row) => row.id);
+    const pricesByProductId = new Map<
+      number,
+      Array<{ id: number; name: string; withoutTax: number; withTax: number }>
+    >();
+
+    if (productIds.length > 0) {
+      const [priceRows] = await mysqlPool.query<BoxTypeProductPriceRow[]>(
+        `SELECT id, box_type_product_id, price_name, price_without_tax, price_with_tax
+         FROM box_type_product_prices
+         WHERE box_type_product_id IN (?)
+         ORDER BY id ASC`,
+        [productIds]
+      );
+
+      for (const row of priceRows) {
+        const existing = pricesByProductId.get(row.box_type_product_id);
+        const mappedPrice = {
+          id: row.id,
+          name: row.price_name,
+          withoutTax: Number(row.price_without_tax),
+          withTax: Number(row.price_with_tax),
+        };
+        if (existing) {
+          existing.push(mappedPrice);
+        } else {
+          pricesByProductId.set(row.box_type_product_id, [mappedPrice]);
+        }
+      }
+    }
+
+    res.json({
+      ok: true,
+      data: productRows.map((row) => ({
+        id: row.id,
+        boxTypeId: row.box_type_id,
+        itemNo: row.item_no,
+        productName: row.product_name,
+        internalDimensionsMM: {
+          l: row.internal_l_mm,
+          w: row.internal_w_mm,
+          h: row.internal_h_mm,
+          h2: row.internal_h2_mm,
+        },
+        qualityCardboard: row.quality_cardboard,
+        palletDimensionsCM: {
+          l: row.pallet_l_cm,
+          w: row.pallet_w_cm,
+          h: row.pallet_h_cm,
+        },
+        weightPieceGr: Number(row.weight_piece_gr),
+        weightPalletKg: Number(row.weight_pallet_kg),
+        amountQtyInPcs: row.amount_qty_in_pcs,
+        palletPcs: row.pallet_pcs,
+        prices: pricesByProductId.get(row.id) ?? [],
+      })),
+    });
+  } catch (error) {
+    console.error("Failed to load box type products", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to load box type products",
+    });
+  }
+});
+
+boxTypesRouter.put("/:id/products", async (req, res) => {
+  const boxTypeId = Number(req.params.id);
+  const payload = req.body as {
+    products?: Array<{
+      itemNo?: unknown;
+      productName?: unknown;
+      internalDimensionsMM?: { l?: unknown; w?: unknown; h?: unknown; h2?: unknown };
+      qualityCardboard?: unknown;
+      palletDimensionsCM?: { l?: unknown; w?: unknown; h?: unknown };
+      weightPieceGr?: unknown;
+      weightPalletKg?: unknown;
+      amountQtyInPcs?: unknown;
+      palletPcs?: unknown;
+      prices?: Array<{ name?: unknown; withoutTax?: unknown; withTax?: unknown }>;
+    }>;
+  };
+
+  if (!Number.isInteger(boxTypeId) || boxTypeId <= 0) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid box type id",
+    });
+    return;
+  }
+
+  if (!Array.isArray(payload.products)) {
+    res.status(400).json({
+      ok: false,
+      message: "products must be an array",
+    });
+    return;
+  }
+
+  const normalizedProducts: Array<{
+    itemNo: string;
+    productName: string;
+    internalDimensionsMM: { l: number; w: number; h: number; h2: number | null };
+    qualityCardboard: string;
+    palletDimensionsCM: { l: number; w: number; h: number };
+    weightPieceGr: number;
+    weightPalletKg: number;
+    amountQtyInPcs: number;
+    palletPcs: number;
+    prices: Array<{ name: string; withoutTax: number; withTax: number }>;
+  }> = [];
+
+  for (const product of payload.products) {
+    if (
+      typeof product.itemNo !== "string" ||
+      typeof product.productName !== "string" ||
+      typeof product.qualityCardboard !== "string" ||
+      typeof product.amountQtyInPcs !== "number" ||
+      typeof product.palletPcs !== "number" ||
+      typeof product.weightPieceGr !== "number" ||
+      typeof product.weightPalletKg !== "number" ||
+      typeof product.internalDimensionsMM?.l !== "number" ||
+      typeof product.internalDimensionsMM?.w !== "number" ||
+      typeof product.internalDimensionsMM?.h !== "number" ||
+      typeof product.palletDimensionsCM?.l !== "number" ||
+      typeof product.palletDimensionsCM?.w !== "number" ||
+      typeof product.palletDimensionsCM?.h !== "number" ||
+      !Array.isArray(product.prices)
+    ) {
+      res.status(400).json({
+        ok: false,
+        message: "Invalid product payload",
+      });
+      return;
+    }
+
+    const normalizedPrices: Array<{ name: string; withoutTax: number; withTax: number }> = [];
+    for (const price of product.prices) {
+      if (
+        typeof price.name !== "string" ||
+        typeof price.withoutTax !== "number" ||
+        typeof price.withTax !== "number"
+      ) {
+        res.status(400).json({
+          ok: false,
+          message: "Invalid price payload",
+        });
+        return;
+      }
+      normalizedPrices.push({
+        name: price.name,
+        withoutTax: price.withoutTax,
+        withTax: price.withTax,
+      });
+    }
+
+    normalizedProducts.push({
+      itemNo: product.itemNo,
+      productName: product.productName,
+      internalDimensionsMM: {
+        l: product.internalDimensionsMM.l,
+        w: product.internalDimensionsMM.w,
+        h: product.internalDimensionsMM.h,
+        h2: typeof product.internalDimensionsMM.h2 === "number" ? product.internalDimensionsMM.h2 : null,
+      },
+      qualityCardboard: product.qualityCardboard,
+      palletDimensionsCM: {
+        l: product.palletDimensionsCM.l,
+        w: product.palletDimensionsCM.w,
+        h: product.palletDimensionsCM.h,
+      },
+      weightPieceGr: product.weightPieceGr,
+      weightPalletKg: product.weightPalletKg,
+      amountQtyInPcs: product.amountQtyInPcs,
+      palletPcs: product.palletPcs,
+      prices: normalizedPrices,
+    });
+  }
+
+  const connection = await mysqlPool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    await connection.execute(
+      `DELETE p
+       FROM box_type_product_prices p
+       JOIN box_type_products btp ON btp.id = p.box_type_product_id
+       WHERE btp.box_type_id = ?`,
+      [boxTypeId]
+    );
+
+    await connection.execute(`DELETE FROM box_type_products WHERE box_type_id = ?`, [boxTypeId]);
+
+    for (const product of normalizedProducts) {
+      const [insertResult] = await connection.execute(
+        `INSERT INTO box_type_products
+          (box_type_id, item_no, product_name, internal_l_mm, internal_w_mm, internal_h_mm, internal_h2_mm,
+           quality_cardboard, pallet_l_cm, pallet_w_cm, pallet_h_cm, weight_piece_gr, weight_pallet_kg,
+           amount_qty_in_pcs, pallet_pcs)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          boxTypeId,
+          product.itemNo,
+          product.productName,
+          product.internalDimensionsMM.l,
+          product.internalDimensionsMM.w,
+          product.internalDimensionsMM.h,
+          product.internalDimensionsMM.h2,
+          product.qualityCardboard,
+          product.palletDimensionsCM.l,
+          product.palletDimensionsCM.w,
+          product.palletDimensionsCM.h,
+          product.weightPieceGr,
+          product.weightPalletKg,
+          product.amountQtyInPcs,
+          product.palletPcs,
+        ]
+      );
+
+      const insertedProductId = (insertResult as { insertId?: number }).insertId;
+      if (!insertedProductId) {
+        throw new Error("Failed to create product");
+      }
+
+      for (const price of product.prices) {
+        await connection.execute(
+          `INSERT INTO box_type_product_prices
+            (box_type_product_id, price_name, price_without_tax, price_with_tax)
+           VALUES (?, ?, ?, ?)`,
+          [insertedProductId, price.name, price.withoutTax, price.withTax]
+        );
+      }
+    }
+
+    await connection.commit();
+    res.json({ ok: true });
+  } catch (error) {
+    await connection.rollback();
+    console.error("Failed to save box type products", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to save box type products",
+    });
+  } finally {
+    connection.release();
   }
 });
 
