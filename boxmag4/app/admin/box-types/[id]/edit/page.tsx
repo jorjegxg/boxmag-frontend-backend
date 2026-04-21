@@ -329,14 +329,6 @@ export default function EditBoxTypePage() {
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => void handleSave({ redirectToAdmin: false })}
-                            disabled={isSaving}
-                            className="rounded-md bg-my-red px-2 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {isSaving ? "Saving..." : "Save product"}
-                          </button>
-                          <button
-                            type="button"
                             onClick={() => removeProduct(productIndex)}
                             className="rounded-md border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
                           >
@@ -540,13 +532,21 @@ export default function EditBoxTypePage() {
                             ))}
                           </tbody>
                         </table>
-                        <div className="p-2">
+                        <div className="flex items-center gap-2 p-2">
                           <button
                             type="button"
                             onClick={() => addPrice(productIndex)}
                             className="rounded border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                           >
                             Add price
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleSave({ redirectToAdmin: false })}
+                            disabled={isSaving}
+                            className="ml-auto rounded-md bg-my-red px-2 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isSaving ? "Saving..." : "Save product"}
                           </button>
                         </div>
                       </div>
