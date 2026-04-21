@@ -1,8 +1,46 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, type ChangeEvent, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { B2b } from "../global/components/b2b";
+import {
+  type AdminBoxType,
+  useAdminBoxTypesStore,
+} from "./use-admin-box-types-store";
+
+function sendDebugLog({
+  hypothesisId,
+  location,
+  message,
+  data,
+}: {
+  hypothesisId: string;
+  location: string;
+  message: string;
+  data: Record<string, unknown>;
+}) {
+  // #region agent log
+  fetch("http://127.0.0.1:7337/ingest/001632f5-f360-4660-a740-ac305c61ac19", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "52d9a7",
+    },
+    body: JSON.stringify({
+      sessionId: "52d9a7",
+      runId: "pre-fix",
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+}
+
+const pendingEditClickTimes = new Map<number, number>();
+let lastEditClickAt = 0;
 
 const mockOrders = [
   {
@@ -31,27 +69,13 @@ const mockOrders = [
   },
 ];
 
-type AdminBoxType = {
-  id: number;
-  key: string;
-  title: string;
-  imagePath: string;
-  isActive: boolean;
-};
-
-type EditableBoxType = Pick<AdminBoxType, "title" | "imagePath" | "isActive"> & {
-  imageFile: File | null;
-  previewImagePath: string;
-};
-
 export default function AdminPage() {
-  const [boxTypes, setBoxTypes] = useState<AdminBoxType[]>([]);
-  const [isLoadingBoxTypes, setIsLoadingBoxTypes] = useState(true);
-  const [boxTypesError, setBoxTypesError] = useState<string | null>(null);
-  const [editingBoxId, setEditingBoxId] = useState<number | null>(null);
-  const [editingData, setEditingData] = useState<EditableBoxType | null>(null);
-  const [isSavingBoxType, setIsSavingBoxType] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const boxTypes = useAdminBoxTypesStore((state) => state.boxTypes);
+  const isLoadingBoxTypes = useAdminBoxTypesStore((state) => state.isLoadingBoxTypes);
+  const boxTypesError = useAdminBoxTypesStore((state) => state.boxTypesError);
+  const saveError = useAdminBoxTypesStore((state) => state.saveError);
+  const setBackendBaseUrl = useAdminBoxTypesStore((state) => state.setBackendBaseUrl);
+  const loadBoxTypes = useAdminBoxTypesStore((state) => state.loadBoxTypes);
 
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -60,104 +84,63 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadBoxTypes() {
-      setIsLoadingBoxTypes(true);
-      setBoxTypesError(null);
-      try {
-        const response = await fetch(`${backendBaseUrl}/api/box-types`);
-        if (!response.ok) {
-          throw new Error(`Failed with status ${response.status}`);
-        }
-        const payload = (await response.json()) as {
-          ok: boolean;
-          data?: AdminBoxType[];
-          message?: string;
-        };
-        if (!payload.ok || !Array.isArray(payload.data)) {
-          throw new Error(payload.message ?? "Invalid response payload");
-        }
-        if (isMounted) {
-          setBoxTypes(payload.data);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setBoxTypesError(error instanceof Error ? error.message : "Failed to load box types");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingBoxTypes(false);
-        }
-      }
-    }
-
+    setBackendBaseUrl(backendBaseUrl);
     void loadBoxTypes();
+  }, [backendBaseUrl, loadBoxTypes, setBackendBaseUrl]);
+
+  useEffect(() => {
+    if (boxTypes.length > 0) {
+      sendDebugLog({
+        hypothesisId: "H4",
+        location: "page.tsx:AdminPage:boxTypesLoaded",
+        message: "box types loaded for table",
+        data: {
+          boxCount: boxTypes.length,
+        },
+      });
+    }
+  }, [boxTypes.length]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof PerformanceObserver === "undefined") return;
+
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        const timeSinceEditClick = performance.now() - lastEditClickAt;
+        if (timeSinceEditClick < 0 || timeSinceEditClick > 1500) continue;
+
+        sendDebugLog({
+          hypothesisId: "H6",
+          location: "page.tsx:AdminPage:longTaskAfterEdit",
+          message: "long task detected after edit click",
+          data: {
+            durationMs: Number(entry.duration.toFixed(2)),
+            startTimeMs: Number(entry.startTime.toFixed(2)),
+            timeSinceEditClickMs: Number(timeSinceEditClick.toFixed(2)),
+            entryType: entry.entryType,
+          },
+        });
+      }
+    });
+
+    try {
+      observer.observe({
+        type: "longtask",
+        buffered: true,
+      });
+    } catch {
+      sendDebugLog({
+        hypothesisId: "H6",
+        location: "page.tsx:AdminPage:longTaskObserverUnsupported",
+        message: "long task observer unsupported",
+        data: {},
+      });
+    }
 
     return () => {
-      isMounted = false;
+      observer.disconnect();
     };
-  }, [backendBaseUrl]);
-
-  function startEditing(boxType: AdminBoxType) {
-    setEditingBoxId(boxType.id);
-    setEditingData({
-      title: boxType.title,
-      imagePath: boxType.imagePath,
-      isActive: boxType.isActive,
-      imageFile: null,
-      previewImagePath: boxType.imagePath,
-    });
-    setSaveError(null);
-  }
-
-  function cancelEditing() {
-    if (editingData?.previewImagePath.startsWith("blob:")) {
-      URL.revokeObjectURL(editingData.previewImagePath);
-    }
-    setEditingBoxId(null);
-    setEditingData(null);
-    setSaveError(null);
-  }
-
-  async function saveEditedBoxType() {
-    if (editingBoxId == null || editingData == null) return;
-
-    setIsSavingBoxType(true);
-    setSaveError(null);
-    try {
-      const response = await fetch(`${backendBaseUrl}/api/box-types/${editingBoxId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(editingData),
-      });
-
-      const payload = (await response.json()) as { ok?: boolean; message?: string };
-      if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? `Failed with status ${response.status}`);
-      }
-
-      setBoxTypes((current) =>
-        current.map((boxType) =>
-          boxType.id === editingBoxId
-            ? {
-                ...boxType,
-                title: editingData.title,
-                imagePath: editingData.imagePath,
-                isActive: editingData.isActive,
-              }
-            : boxType
-        )
-      );
-      cancelEditing();
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Failed to update box type");
-    } finally {
-      setIsSavingBoxType(false);
-    }
-  }
+  }, []);
 
   return (
     <div>
@@ -229,142 +212,7 @@ export default function AdminPage() {
                     ) : null}
                     {!isLoadingBoxTypes && !boxTypesError
                       ? boxTypes.map((boxType) => (
-                          <tr key={boxType.id} className="border-t border-gray-200">
-                            <td className="px-4 py-3">{boxType.id}</td>
-                            <td className="px-4 py-3">
-                              {editingBoxId === boxType.id && editingData ? (
-                                <input
-                                  type="text"
-                                  value={editingData.title}
-                                  onChange={(event) =>
-                                    setEditingData((current) =>
-                                      current
-                                        ? {
-                                            ...current,
-                                            title: event.target.value,
-                                          }
-                                        : current
-                                    )
-                                  }
-                                  className="h-10 w-full min-w-48 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
-                                />
-                              ) : (
-                                boxType.title
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {editingBoxId === boxType.id && editingData ? (
-                                <div className="space-y-2">
-                                  <img
-                                    src={editingData.previewImagePath}
-                                    alt={editingData.title}
-                                    className="h-12 w-12 rounded-md border border-gray-200 object-cover"
-                                  />
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(event) =>
-                                      setEditingData((current) => {
-                                        if (!current) return current;
-
-                                        if (current.previewImagePath.startsWith("blob:")) {
-                                          URL.revokeObjectURL(current.previewImagePath);
-                                        }
-
-                                        const file = event.target.files?.[0] ?? null;
-                                        if (!file) {
-                                          return {
-                                            ...current,
-                                            imageFile: null,
-                                            previewImagePath: current.imagePath,
-                                          };
-                                        }
-
-                                        return {
-                                          ...current,
-                                          imageFile: file,
-                                          previewImagePath: URL.createObjectURL(file),
-                                        };
-                                      })
-                                    }
-                                    className="h-10 w-full min-w-56 rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-900 file:mr-3 file:rounded-md file:border-0 file:bg-my-light-gray2 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-800 hover:file:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
-                                  />
-                                  <span className="text-xs text-gray-500">
-                                    {editingData.imageFile
-                                      ? `Selected: ${editingData.imageFile.name}`
-                                      : "Current image will be kept unless upload handling is added."}
-                                  </span>
-                                </div>
-                              ) : (
-                                <img
-                                  src={boxType.imagePath}
-                                  alt={boxType.title}
-                                  className="h-12 w-12 rounded-md border border-gray-200 object-cover"
-                                />
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {editingBoxId === boxType.id && editingData ? (
-                                <select
-                                  value={editingData.isActive ? "active" : "draft"}
-                                  onChange={(event) =>
-                                    setEditingData((current) =>
-                                      current
-                                        ? {
-                                            ...current,
-                                            isActive: event.target.value === "active",
-                                          }
-                                        : current
-                                    )
-                                  }
-                                  className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
-                                >
-                                  <option value="active">Active</option>
-                                  <option value="draft">Draft</option>
-                                </select>
-                              ) : (
-                                <span
-                                  className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-                                    boxType.isActive
-                                      ? "bg-green-100 text-green-700"
-                                      : "bg-yellow-100 text-yellow-700"
-                                  }`}
-                                >
-                                  {boxType.isActive ? "Active" : "Draft"}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {editingBoxId === boxType.id ? (
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => void saveEditedBoxType()}
-                                    disabled={isSavingBoxType}
-                                    className="rounded-md bg-my-red px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                  >
-                                    {isSavingBoxType ? "Saving..." : "Save"}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={cancelEditing}
-                                    disabled={isSavingBoxType}
-                                    className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => startEditing(boxType)}
-                                  className="rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-my-yellow-bright"
-                                >
-                                  Edit
-                                </button>
-                              )}
-                            </td>
-                          </tr>
+                          <BoxTypeRow key={boxType.id} boxType={boxType} />
                         ))
                       : null}
                     {saveError ? (
@@ -425,6 +273,187 @@ export default function AdminPage() {
   );
 }
 
+const BoxTypeRow = memo(function BoxTypeRow({ boxType }: { boxType: AdminBoxType }) {
+  const isEditing = useAdminBoxTypesStore((state) => state.editingBoxId === boxType.id);
+  const editingData = useAdminBoxTypesStore((state) =>
+    state.editingBoxId === boxType.id ? state.editingData : null
+  );
+  const isSavingBoxType = useAdminBoxTypesStore((state) =>
+    state.editingBoxId === boxType.id ? state.isSavingBoxType : false
+  );
+  const startEditing = useAdminBoxTypesStore((state) => state.startEditing);
+  const cancelEditing = useAdminBoxTypesStore((state) => state.cancelEditing);
+  const updateEditingTitle = useAdminBoxTypesStore((state) => state.updateEditingTitle);
+  const updateEditingStatus = useAdminBoxTypesStore((state) => state.updateEditingStatus);
+  const updateEditingImageFile = useAdminBoxTypesStore((state) => state.updateEditingImageFile);
+  const saveEditedBoxType = useAdminBoxTypesStore((state) => state.saveEditedBoxType);
+
+  useEffect(() => {
+    sendDebugLog({
+      hypothesisId: "H1",
+      location: "page.tsx:BoxTypeRow:isEditingChanged",
+      message: "row edit mode changed",
+      data: {
+        rowId: boxType.id,
+        isEditing,
+      },
+    });
+  }, [boxType.id, isEditing]);
+
+  function handleEditClick() {
+    const clickStart = performance.now();
+    lastEditClickAt = clickStart;
+    pendingEditClickTimes.set(boxType.id, clickStart);
+    sendDebugLog({
+      hypothesisId: "H2",
+      location: "page.tsx:BoxTypeRow:handleEditClick",
+      message: "edit button clicked",
+      data: {
+        rowId: boxType.id,
+      },
+    });
+
+    startEditing(boxType);
+
+    requestAnimationFrame(() => {
+      sendDebugLog({
+        hypothesisId: "H2",
+        location: "page.tsx:BoxTypeRow:handleEditClick:nextPaint",
+        message: "time from edit click to next paint",
+        data: {
+          rowId: boxType.id,
+          elapsedMs: Number((performance.now() - clickStart).toFixed(2)),
+        },
+      });
+    });
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        sendDebugLog({
+          hypothesisId: "H5",
+          location: "page.tsx:BoxTypeRow:handleEditClick:doubleRaf",
+          message: "time from edit click to post-paint frame",
+          data: {
+            rowId: boxType.id,
+            elapsedMs: Number((performance.now() - clickStart).toFixed(2)),
+          },
+        });
+      });
+    });
+  }
+
+  useLayoutEffect(() => {
+    if (!isEditing) return;
+    const clickStart = pendingEditClickTimes.get(boxType.id);
+    sendDebugLog({
+      hypothesisId: "H5",
+      location: "page.tsx:BoxTypeRow:editControlsMounted",
+      message: "edit controls mounted in layout effect",
+      data: {
+        rowId: boxType.id,
+        elapsedMs:
+          clickStart == null ? null : Number((performance.now() - clickStart).toFixed(2)),
+      },
+    });
+  }, [boxType.id, isEditing]);
+
+  return (
+    <tr className="border-t border-gray-200">
+      <td className="px-4 py-3">{boxType.id}</td>
+      <td className="px-4 py-3">
+        {isEditing && editingData ? (
+          <input
+            type="text"
+            value={editingData.title}
+            onChange={(event) => updateEditingTitle(event.target.value)}
+            className="h-10 w-full min-w-48 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+          />
+        ) : (
+          boxType.title
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {isEditing && editingData ? (
+          <div className="space-y-2">
+            <img
+              src={editingData.previewImagePath}
+              alt={editingData.title}
+              className="h-12 w-12 rounded-md border border-gray-200 object-cover"
+            />
+            <FilePickerInput
+              inputId={`edit-box-image-${boxType.id}`}
+              selectedFileName={editingData.imageFile?.name ?? null}
+              onChange={(event) => updateEditingImageFile(event.target.files?.[0] ?? null)}
+              wrapperClassName="h-10 min-w-56"
+            />
+            <span className="text-xs text-gray-500">
+              {editingData.imageFile
+                ? `Selected: ${editingData.imageFile.name}`
+                : "Current image will be kept unless upload handling is added."}
+            </span>
+          </div>
+        ) : (
+          <img
+            src={boxType.imagePath}
+            alt={boxType.title}
+            className="h-12 w-12 rounded-md border border-gray-200 object-cover"
+          />
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {isEditing && editingData ? (
+          <select
+            value={editingData.isActive ? "active" : "draft"}
+            onChange={(event) => updateEditingStatus(event.target.value === "active")}
+            className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+          >
+            <option value="active">Active</option>
+            <option value="draft">Draft</option>
+          </select>
+        ) : (
+          <span
+            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+              boxType.isActive ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+            }`}
+          >
+            {boxType.isActive ? "Active" : "Draft"}
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {isEditing ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void saveEditedBoxType()}
+              disabled={isSavingBoxType}
+              className="rounded-md bg-my-red px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSavingBoxType ? "Saving..." : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={cancelEditing}
+              disabled={isSavingBoxType}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleEditClick}
+            className="rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-my-yellow-bright"
+          >
+            Edit
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+});
+
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="bg-my-red w-full flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 px-4 py-3 sm:pl-8 sm:pr-4 sm:py-4 text-my-white">
@@ -450,6 +479,7 @@ function Field({ label, placeholder }: { label: string; placeholder: string }) {
 function ImagePickerField({ label }: { label: string }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const inputId = "box-image-upload";
 
   useEffect(() => {
     if (!selectedFile) {
@@ -468,11 +498,10 @@ function ImagePickerField({ label }: { label: string }) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-sm font-semibold text-gray-800">{label}</span>
-      <input
-        type="file"
-        accept="image/*"
+      <FilePickerInput
+        inputId={inputId}
+        selectedFileName={selectedFile?.name ?? null}
         onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-        className="h-11 rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-900 file:mr-3 file:rounded-md file:border-0 file:bg-my-light-gray2 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-800 hover:file:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
       />
       {selectedFile ? (
         <span className="text-xs text-gray-600 truncate">{selectedFile.name}</span>
@@ -487,6 +516,35 @@ function ImagePickerField({ label }: { label: string }) {
         />
       ) : null}
     </label>
+  );
+}
+
+function FilePickerInput({
+  inputId,
+  selectedFileName,
+  onChange,
+  wrapperClassName = "h-11",
+}: {
+  inputId: string;
+  selectedFileName: string | null;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  wrapperClassName?: string;
+}) {
+  return (
+    <div
+      className={`flex items-center rounded-lg border border-gray-300 bg-white px-2 ${wrapperClassName}`}
+    >
+      <input id={inputId} type="file" accept="image/*" onChange={onChange} className="hidden" />
+      <label
+        htmlFor={inputId}
+        className="inline-flex h-8 cursor-pointer items-center rounded-md bg-my-light-gray2 px-3 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-200"
+      >
+        Choose File
+      </label>
+      <span className="ml-3 truncate text-sm text-gray-700">
+        {selectedFileName ? selectedFileName : "No file chosen"}
+      </span>
+    </div>
   );
 }
 
