@@ -120,8 +120,9 @@ export default function EditBoxTypePage() {
     };
   }, [previewImagePath]);
 
-  async function handleSave() {
+  async function handleSave(options?: { redirectToAdmin?: boolean }) {
     if (!boxType) return;
+    const redirectToAdmin = options?.redirectToAdmin ?? true;
 
     const trimmedTitle = title.trim();
     const trimmedImagePath = imagePath.trim();
@@ -166,7 +167,9 @@ export default function EditBoxTypePage() {
       }
 
       await loadBoxTypes();
-      router.push("/admin");
+      if (redirectToAdmin) {
+        router.push("/admin");
+      }
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Failed to save box type");
     } finally {
@@ -289,21 +292,6 @@ export default function EditBoxTypePage() {
                 </label>
 
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-semibold text-gray-800">Photo URL</span>
-                  <input
-                    type="text"
-                    value={imagePath}
-                    onChange={(event) => {
-                      setImagePath(event.target.value);
-                      if (!selectedImageFileName) {
-                        setPreviewImagePath(event.target.value);
-                      }
-                    }}
-                    className="h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
-                  />
-                </label>
-
-                <label className="flex flex-col gap-1.5">
                   <span className="text-sm font-semibold text-gray-800">Photo Upload (Preview only)</span>
                   <input
                     type="file"
@@ -338,13 +326,23 @@ export default function EditBoxTypePage() {
                     >
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-semibold text-gray-900">Product #{productIndex + 1}</h3>
-                        <button
-                          type="button"
-                          onClick={() => removeProduct(productIndex)}
-                          className="rounded-md border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
-                        >
-                          Remove product
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void handleSave({ redirectToAdmin: false })}
+                            disabled={isSaving}
+                            className="rounded-md bg-my-red px-2 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isSaving ? "Saving..." : "Save product"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeProduct(productIndex)}
+                            className="rounded-md border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                          >
+                            Remove product
+                          </button>
+                        </div>
                       </div>
 
                       <div className="rounded-lg border border-blue-200 bg-white p-3 space-y-3">
@@ -416,14 +414,14 @@ export default function EditBoxTypePage() {
                             }
                           />
                           <NumberField
-                            label="Weight gr"
+                            label="Weight Piece (gr)"
                             value={product.weightPieceGr}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({ ...current, weightPieceGr: value }))
                             }
                           />
                           <NumberField
-                            label="Weight kg"
+                            label="Weight Pallet (kg)"
                             value={product.weightPalletKg}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({ ...current, weightPalletKg: value }))
