@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, type ChangeEvent, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { memo, type ChangeEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { B2b } from "../global/components/b2b";
 import {
@@ -39,7 +39,6 @@ function sendDebugLog({
   // #endregion
 }
 
-const pendingEditClickTimes = new Map<number, number>();
 let lastEditClickAt = 0;
 
 const mockOrders = [
@@ -274,181 +273,36 @@ export default function AdminPage() {
 }
 
 const BoxTypeRow = memo(function BoxTypeRow({ boxType }: { boxType: AdminBoxType }) {
-  const isEditing = useAdminBoxTypesStore((state) => state.editingBoxId === boxType.id);
-  const editingData = useAdminBoxTypesStore((state) =>
-    state.editingBoxId === boxType.id ? state.editingData : null
-  );
-  const isSavingBoxType = useAdminBoxTypesStore((state) =>
-    state.editingBoxId === boxType.id ? state.isSavingBoxType : false
-  );
-  const startEditing = useAdminBoxTypesStore((state) => state.startEditing);
-  const cancelEditing = useAdminBoxTypesStore((state) => state.cancelEditing);
-  const updateEditingTitle = useAdminBoxTypesStore((state) => state.updateEditingTitle);
-  const updateEditingStatus = useAdminBoxTypesStore((state) => state.updateEditingStatus);
-  const updateEditingImageFile = useAdminBoxTypesStore((state) => state.updateEditingImageFile);
-  const saveEditedBoxType = useAdminBoxTypesStore((state) => state.saveEditedBoxType);
-
-  useEffect(() => {
-    sendDebugLog({
-      hypothesisId: "H1",
-      location: "page.tsx:BoxTypeRow:isEditingChanged",
-      message: "row edit mode changed",
-      data: {
-        rowId: boxType.id,
-        isEditing,
-      },
-    });
-  }, [boxType.id, isEditing]);
-
-  function handleEditClick() {
-    const clickStart = performance.now();
-    lastEditClickAt = clickStart;
-    pendingEditClickTimes.set(boxType.id, clickStart);
-    sendDebugLog({
-      hypothesisId: "H2",
-      location: "page.tsx:BoxTypeRow:handleEditClick",
-      message: "edit button clicked",
-      data: {
-        rowId: boxType.id,
-      },
-    });
-
-    startEditing(boxType);
-
-    requestAnimationFrame(() => {
-      sendDebugLog({
-        hypothesisId: "H2",
-        location: "page.tsx:BoxTypeRow:handleEditClick:nextPaint",
-        message: "time from edit click to next paint",
-        data: {
-          rowId: boxType.id,
-          elapsedMs: Number((performance.now() - clickStart).toFixed(2)),
-        },
-      });
-    });
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        sendDebugLog({
-          hypothesisId: "H5",
-          location: "page.tsx:BoxTypeRow:handleEditClick:doubleRaf",
-          message: "time from edit click to post-paint frame",
-          data: {
-            rowId: boxType.id,
-            elapsedMs: Number((performance.now() - clickStart).toFixed(2)),
-          },
-        });
-      });
-    });
-  }
-
-  useLayoutEffect(() => {
-    if (!isEditing) return;
-    const clickStart = pendingEditClickTimes.get(boxType.id);
-    sendDebugLog({
-      hypothesisId: "H5",
-      location: "page.tsx:BoxTypeRow:editControlsMounted",
-      message: "edit controls mounted in layout effect",
-      data: {
-        rowId: boxType.id,
-        elapsedMs:
-          clickStart == null ? null : Number((performance.now() - clickStart).toFixed(2)),
-      },
-    });
-  }, [boxType.id, isEditing]);
-
   return (
     <tr className="border-t border-gray-200">
       <td className="px-4 py-3">{boxType.id}</td>
+      <td className="px-4 py-3">{boxType.title}</td>
       <td className="px-4 py-3">
-        {isEditing && editingData ? (
-          <input
-            type="text"
-            value={editingData.title}
-            onChange={(event) => updateEditingTitle(event.target.value)}
-            className="h-10 w-full min-w-48 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
-          />
-        ) : (
-          boxType.title
-        )}
+        <img
+          src={boxType.imagePath}
+          alt={boxType.title}
+          className="h-12 w-12 rounded-md border border-gray-200 object-cover"
+        />
       </td>
       <td className="px-4 py-3">
-        {isEditing && editingData ? (
-          <div className="space-y-2">
-            <img
-              src={editingData.previewImagePath}
-              alt={editingData.title}
-              className="h-12 w-12 rounded-md border border-gray-200 object-cover"
-            />
-            <FilePickerInput
-              inputId={`edit-box-image-${boxType.id}`}
-              selectedFileName={editingData.imageFile?.name ?? null}
-              onChange={(event) => updateEditingImageFile(event.target.files?.[0] ?? null)}
-              wrapperClassName="h-10 min-w-56"
-            />
-            <span className="text-xs text-gray-500">
-              {editingData.imageFile
-                ? `Selected: ${editingData.imageFile.name}`
-                : "Current image will be kept unless upload handling is added."}
-            </span>
-          </div>
-        ) : (
-          <img
-            src={boxType.imagePath}
-            alt={boxType.title}
-            className="h-12 w-12 rounded-md border border-gray-200 object-cover"
-          />
-        )}
+        <span
+          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+            boxType.isActive ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+          }`}
+        >
+          {boxType.isActive ? "Active" : "Draft"}
+        </span>
       </td>
       <td className="px-4 py-3">
-        {isEditing && editingData ? (
-          <select
-            value={editingData.isActive ? "active" : "draft"}
-            onChange={(event) => updateEditingStatus(event.target.value === "active")}
-            className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
-          >
-            <option value="active">Active</option>
-            <option value="draft">Draft</option>
-          </select>
-        ) : (
-          <span
-            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-              boxType.isActive ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
-            }`}
-          >
-            {boxType.isActive ? "Active" : "Draft"}
-          </span>
-        )}
-      </td>
-      <td className="px-4 py-3">
-        {isEditing ? (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void saveEditedBoxType()}
-              disabled={isSavingBoxType}
-              className="rounded-md bg-my-red px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSavingBoxType ? "Saving..." : "Save"}
-            </button>
-            <button
-              type="button"
-              onClick={cancelEditing}
-              disabled={isSavingBoxType}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={handleEditClick}
-            className="rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-my-yellow-bright"
-          >
-            Edit
-          </button>
-        )}
+        <Link
+          href={`/admin/box-types/${boxType.id}/edit`}
+          onClick={() => {
+            lastEditClickAt = performance.now();
+          }}
+          className="inline-flex rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-my-yellow-bright"
+        >
+          Edit
+        </Link>
       </td>
     </tr>
   );
