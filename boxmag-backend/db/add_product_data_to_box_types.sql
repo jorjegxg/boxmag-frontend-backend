@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS box_type_products (
   internal_l_mm INT NOT NULL,
   internal_w_mm INT NOT NULL,
   internal_h_mm INT NOT NULL,
-  internal_h2_mm INT NULL,
   quality_cardboard VARCHAR(100) NOT NULL,
   pallet_l_cm INT NOT NULL,
   pallet_w_cm INT NOT NULL,

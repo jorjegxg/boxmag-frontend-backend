@@ -18,7 +18,6 @@ type BoxTypeProductRow = RowDataPacket & {
   internal_l_mm: number;
   internal_w_mm: number;
   internal_h_mm: number;
-  internal_h2_mm: number | null;
   quality_cardboard: string;
   pallet_l_cm: number;
   pallet_w_cm: number;
@@ -78,7 +77,7 @@ boxTypesRouter.get("/:id/products", async (req, res) => {
 
   try {
     const [productRows] = await mysqlPool.query<BoxTypeProductRow[]>(
-      `SELECT id, box_type_id, item_no, product_name, internal_l_mm, internal_w_mm, internal_h_mm, internal_h2_mm,
+      `SELECT id, box_type_id, item_no, product_name, internal_l_mm, internal_w_mm, internal_h_mm,
               quality_cardboard, pallet_l_cm, pallet_w_cm, pallet_h_cm, weight_piece_gr, weight_pallet_kg,
               amount_qty_in_pcs, pallet_pcs
        FROM box_type_products
@@ -129,7 +128,6 @@ boxTypesRouter.get("/:id/products", async (req, res) => {
           l: row.internal_l_mm,
           w: row.internal_w_mm,
           h: row.internal_h_mm,
-          h2: row.internal_h2_mm,
         },
         qualityCardboard: row.quality_cardboard,
         palletDimensionsCM: {
@@ -159,7 +157,7 @@ boxTypesRouter.put("/:id/products", async (req, res) => {
     products?: Array<{
       itemNo?: unknown;
       productName?: unknown;
-      internalDimensionsMM?: { l?: unknown; w?: unknown; h?: unknown; h2?: unknown };
+      internalDimensionsMM?: { l?: unknown; w?: unknown; h?: unknown };
       qualityCardboard?: unknown;
       palletDimensionsCM?: { l?: unknown; w?: unknown; h?: unknown };
       weightPieceGr?: unknown;
@@ -189,7 +187,7 @@ boxTypesRouter.put("/:id/products", async (req, res) => {
   const normalizedProducts: Array<{
     itemNo: string;
     productName: string;
-    internalDimensionsMM: { l: number; w: number; h: number; h2: number | null };
+    internalDimensionsMM: { l: number; w: number; h: number };
     qualityCardboard: string;
     palletDimensionsCM: { l: number; w: number; h: number };
     weightPieceGr: number;
@@ -250,7 +248,6 @@ boxTypesRouter.put("/:id/products", async (req, res) => {
         l: product.internalDimensionsMM.l,
         w: product.internalDimensionsMM.w,
         h: product.internalDimensionsMM.h,
-        h2: typeof product.internalDimensionsMM.h2 === "number" ? product.internalDimensionsMM.h2 : null,
       },
       qualityCardboard: product.qualityCardboard,
       palletDimensionsCM: {
@@ -283,10 +280,10 @@ boxTypesRouter.put("/:id/products", async (req, res) => {
     for (const product of normalizedProducts) {
       const [insertResult] = await connection.execute(
         `INSERT INTO box_type_products
-          (box_type_id, item_no, product_name, internal_l_mm, internal_w_mm, internal_h_mm, internal_h2_mm,
+          (box_type_id, item_no, product_name, internal_l_mm, internal_w_mm, internal_h_mm,
            quality_cardboard, pallet_l_cm, pallet_w_cm, pallet_h_cm, weight_piece_gr, weight_pallet_kg,
            amount_qty_in_pcs, pallet_pcs)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           boxTypeId,
           product.itemNo,
@@ -294,7 +291,6 @@ boxTypesRouter.put("/:id/products", async (req, res) => {
           product.internalDimensionsMM.l,
           product.internalDimensionsMM.w,
           product.internalDimensionsMM.h,
-          product.internalDimensionsMM.h2,
           product.qualityCardboard,
           product.palletDimensionsCM.l,
           product.palletDimensionsCM.w,

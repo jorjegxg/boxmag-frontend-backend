@@ -22,7 +22,6 @@ type EditableProduct = {
     l: number;
     w: number;
     h: number;
-    h2: number | null;
   };
   qualityCardboard: string;
   palletDimensionsCM: {
@@ -595,7 +594,7 @@ function createEmptyProduct(): EditableProduct {
   return {
     itemNo: "",
     productName: "",
-    internalDimensionsMM: { l: 0, w: 0, h: 0, h2: null },
+    internalDimensionsMM: { l: 0, w: 0, h: 0 },
     qualityCardboard: "",
     palletDimensionsCM: { l: 0, w: 0, h: 0 },
     weightPieceGr: 0,
