@@ -70,6 +70,10 @@ export default function EditBoxTypePage() {
   const [products, setProducts] = useState<EditableProduct[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
+  const [isRemoveProductConfirmOpen, setIsRemoveProductConfirmOpen] = useState(false);
+  const [pendingRemoveProductIndex, setPendingRemoveProductIndex] = useState<number | null>(null);
+  const [hideRemoveProductConfirm, setHideRemoveProductConfirm] = useState(false);
+  const [dontShowRemoveProductConfirmAgain, setDontShowRemoveProductConfirmAgain] = useState(false);
 
   useEffect(() => {
     if (!boxType) return;
@@ -120,9 +124,15 @@ export default function EditBoxTypePage() {
     };
   }, [previewImagePath]);
 
-  async function handleSave(options?: { redirectToAdmin?: boolean }) {
+  useEffect(() => {
+    const storedPreference = window.localStorage.getItem("boxmag_hide_remove_product_confirm");
+    setHideRemoveProductConfirm(storedPreference === "true");
+  }, []);
+
+  async function handleSave(options?: { redirectToAdmin?: boolean; productsOverride?: EditableProduct[] }) {
     if (!boxType) return;
     const redirectToAdmin = options?.redirectToAdmin ?? true;
+    const productsToSave = options?.productsOverride ?? products;
 
     const trimmedTitle = title.trim();
     const trimmedImagePath = imagePath.trim();
@@ -158,7 +168,7 @@ export default function EditBoxTypePage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          products,
+          products: productsToSave,
         }),
       });
       const productsPayload = (await productsResponse.json()) as { ok?: boolean; message?: string };
@@ -217,6 +227,43 @@ export default function EditBoxTypePage() {
 
   function removeProduct(productIndex: number) {
     setProducts((current) => current.filter((_, index) => index !== productIndex));
+  }
+
+  function requestRemoveProduct(productIndex: number) {
+    if (hideRemoveProductConfirm) {
+      const nextProducts = products.filter((_, index) => index !== productIndex);
+      setProducts(nextProducts);
+      void handleSave({ redirectToAdmin: false, productsOverride: nextProducts });
+      return;
+    }
+
+    setPendingRemoveProductIndex(productIndex);
+    setDontShowRemoveProductConfirmAgain(false);
+    setIsRemoveProductConfirmOpen(true);
+  }
+
+  async function confirmRemoveProduct() {
+    if (pendingRemoveProductIndex === null) return;
+
+    const nextProducts = products.filter((_, index) => index !== pendingRemoveProductIndex);
+    setProducts(nextProducts);
+
+    if (dontShowRemoveProductConfirmAgain) {
+      window.localStorage.setItem("boxmag_hide_remove_product_confirm", "true");
+      setHideRemoveProductConfirm(true);
+    }
+
+    setIsRemoveProductConfirmOpen(false);
+    setPendingRemoveProductIndex(null);
+    setDontShowRemoveProductConfirmAgain(false);
+
+    await handleSave({ redirectToAdmin: false, productsOverride: nextProducts });
+  }
+
+  function cancelRemoveProduct() {
+    setIsRemoveProductConfirmOpen(false);
+    setPendingRemoveProductIndex(null);
+    setDontShowRemoveProductConfirmAgain(false);
   }
 
   function addPrice(productIndex: number) {
@@ -329,7 +376,8 @@ export default function EditBoxTypePage() {
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => removeProduct(productIndex)}
+                            onClick={() => void requestRemoveProduct(productIndex)}
+                            disabled={isSaving}
                             className="rounded-md border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
                           >
                             Remove product
@@ -470,7 +518,7 @@ export default function EditBoxTypePage() {
                           <thead className="bg-amber-50/60">
                             <tr>
                               <th className="px-2 py-1 text-left">Price name</th>
-                              <th className="px-2 py-1 text-left">Without tax</th>
+                              <th className="px-2 py-1 text-left">Without tax (EUR)</th>
                               <th className="px-2 py-1 text-left">With tax</th>
                               <th className="px-2 py-1 text-left">Action</th>
                             </tr>
@@ -584,6 +632,40 @@ export default function EditBoxTypePage() {
           </div>
         </div>
       </section>
+
+      {isRemoveProductConfirmOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+            <h2 className="text-base font-semibold text-gray-900">Remove product?</h2>
+            <p className="mt-2 text-sm text-gray-700">Are you sure you want to remove this product?</p>
+            <label className="mt-4 flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={dontShowRemoveProductConfirmAgain}
+                onChange={(event) => setDontShowRemoveProductConfirmAgain(event.target.checked)}
+              />
+              <span>Don&apos;t show this again</span>
+            </label>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={cancelRemoveProduct}
+                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmRemoveProduct()}
+                disabled={isSaving}
+                className="rounded-md bg-my-red px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSaving ? "Saving..." : "Remove and save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
