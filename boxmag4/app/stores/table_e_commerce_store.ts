@@ -10,6 +10,8 @@ type TableStoreType = {
   decrement: (itemNo: string) => void;
 };
 const incrementNumber = 20;
+const configuredTaxPercent = Number(process.env.NEXT_PUBLIC_TAX_PERCENT ?? "21");
+const taxMultiplier = 1 + (Number.isFinite(configuredTaxPercent) ? configuredTaxPercent : 21) / 100;
 const useTableEComStore = create<TableStoreType>((set) => ({
   products: [],
   isLoading: false,
@@ -42,7 +44,7 @@ const useTableEComStore = create<TableStoreType>((set) => ({
           prices: prices.map((p: any) => ({
             name: String(p.name ?? ""),
             withoutTax: Number(p.withoutTax ?? 0),
-            withTax: Number(p.withTax ?? 0),
+            withTax: Number((Number(p.withoutTax ?? 0) * taxMultiplier).toFixed(2)),
           })),
           weightPieceGr: Number(row.weightPieceGr ?? 0),
           weightPalletKg: Number(row.weightPalletKg ?? 0),

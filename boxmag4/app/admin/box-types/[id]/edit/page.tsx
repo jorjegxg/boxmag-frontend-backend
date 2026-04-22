@@ -10,7 +10,6 @@ type EditablePrice = {
   id?: number;
   name: string;
   withoutTax: number;
-  withTax: number;
 };
 
 type EditableProduct = {
@@ -51,6 +50,11 @@ export default function EditBoxTypePage() {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
     if (!value) return "http://localhost:3005";
     return value.endsWith("/") ? value.slice(0, -1) : value;
+  }, []);
+
+  const taxPercent = useMemo(() => {
+    const value = Number(process.env.NEXT_PUBLIC_TAX_PERCENT ?? "21");
+    return Number.isFinite(value) ? value : 21;
   }, []);
 
   useEffect(() => {
@@ -281,6 +285,7 @@ export default function EditBoxTypePage() {
   }
 
   const showNotFound = !isLoadingBoxTypes && !boxTypesError && Number.isInteger(boxTypeId) && !boxType;
+  const taxMultiplier = 1 + taxPercent / 100;
 
   return (
     <div>
@@ -344,7 +349,7 @@ export default function EditBoxTypePage() {
                     type="file"
                     accept="image/*"
                     onChange={handleImageFileChange}
-                    className="h-11 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 file:mr-4 file:rounded-md file:border-0 file:bg-my-light-gray2 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-800 hover:file:bg-gray-200"
+                    className="h-11 rounded-lg border border-gray-300 bg-white px-3 py-0 text-sm leading-10 text-gray-900 file:mr-4 file:my-1 file:h-8 file:rounded-md file:border-0 file:bg-my-light-gray2 file:px-3 file:py-0 file:text-sm file:font-medium file:leading-8 file:text-gray-800 hover:file:bg-gray-200"
                   />
                   <span className="text-xs text-gray-500">
                     {selectedImageFileName
@@ -519,7 +524,7 @@ export default function EditBoxTypePage() {
                             <tr>
                               <th className="px-2 py-1 text-left">Price name</th>
                               <th className="px-2 py-1 text-left">Without tax (EUR)</th>
-                              <th className="px-2 py-1 text-left">With tax</th>
+                              <th className="px-2 py-1 text-left">With tax (EUR)</th>
                               <th className="px-2 py-1 text-left">Action</th>
                             </tr>
                           </thead>
@@ -554,18 +559,9 @@ export default function EditBoxTypePage() {
                                   />
                                 </td>
                                 <td className="px-2 py-1">
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    value={price.withTax}
-                                    onChange={(event) =>
-                                      updatePrice(productIndex, priceIndex, (current) => ({
-                                        ...current,
-                                        withTax: parseNumber(event.target.value),
-                                      }))
-                                    }
-                                    className="h-8 w-full rounded border border-gray-300 px-2"
-                                  />
+                                  <div className="h-8 w-full rounded border border-gray-200 bg-gray-50 px-2 text-sm leading-8 text-gray-700">
+                                    {(price.withoutTax * taxMultiplier).toFixed(2)}
+                                  </div>
                                 </td>
                                 <td className="px-2 py-1">
                                   <button
@@ -689,7 +685,6 @@ function createEmptyPrice(): EditablePrice {
   return {
     name: "",
     withoutTax: 0,
-    withTax: 0,
   };
 }
 

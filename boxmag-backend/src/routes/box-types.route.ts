@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { RowDataPacket } from "mysql2";
+import { env } from "../config/env";
 import { mysqlPool } from "../db/mysql";
 
 type BoxTypeRow = RowDataPacket & {
@@ -33,10 +34,14 @@ type BoxTypeProductPriceRow = RowDataPacket & {
   box_type_product_id: number;
   price_name: string;
   price_without_tax: string;
-  price_with_tax: string;
 };
 
 export const boxTypesRouter = Router();
+
+function calculateWithTax(withoutTax: number): number {
+  const taxMultiplier = 1 + env.taxPercent / 100;
+  return Number((withoutTax * taxMultiplier).toFixed(2));
+}
 
 boxTypesRouter.get("/", async (_req, res) => {
   try {
@@ -94,7 +99,7 @@ boxTypesRouter.get("/:id/products", async (req, res) => {
 
     if (productIds.length > 0) {
       const [priceRows] = await mysqlPool.query<BoxTypeProductPriceRow[]>(
-        `SELECT id, box_type_product_id, price_name, price_without_tax, price_with_tax
+        `SELECT id, box_type_product_id, price_name, price_without_tax
          FROM box_type_product_prices
          WHERE box_type_product_id IN (?)
          ORDER BY id ASC`,
@@ -107,7 +112,7 @@ boxTypesRouter.get("/:id/products", async (req, res) => {
           id: row.id,
           name: row.price_name,
           withoutTax: Number(row.price_without_tax),
-          withTax: Number(row.price_with_tax),
+          withTax: calculateWithTax(Number(row.price_without_tax)),
         };
         if (existing) {
           existing.push(mappedPrice);
@@ -164,7 +169,7 @@ boxTypesRouter.put("/:id/products", async (req, res) => {
       weightPalletKg?: unknown;
       amountQtyInPcs?: unknown;
       palletPcs?: unknown;
-      prices?: Array<{ name?: unknown; withoutTax?: unknown; withTax?: unknown }>;
+      prices?: Array<{ name?: unknown; withoutTax?: unknown }>;
     }>;
   };
 
@@ -194,7 +199,7 @@ boxTypesRouter.put("/:id/products", async (req, res) => {
     weightPalletKg: number;
     amountQtyInPcs: number;
     palletPcs: number;
-    prices: Array<{ name: string; withoutTax: number; withTax: number }>;
+    prices: Array<{ name: string; withoutTax: number }>;
   }> = [];
 
   for (const product of payload.products) {
@@ -221,13 +226,9 @@ boxTypesRouter.put("/:id/products", async (req, res) => {
       return;
     }
 
-    const normalizedPrices: Array<{ name: string; withoutTax: number; withTax: number }> = [];
+    const normalizedPrices: Array<{ name: string; withoutTax: number }> = [];
     for (const price of product.prices) {
-      if (
-        typeof price.name !== "string" ||
-        typeof price.withoutTax !== "number" ||
-        typeof price.withTax !== "number"
-      ) {
+      if (typeof price.name !== "string" || typeof price.withoutTax !== "number") {
         res.status(400).json({
           ok: false,
           message: "Invalid price payload",
@@ -237,7 +238,6 @@ boxTypesRouter.put("/:id/products", async (req, res) => {
       normalizedPrices.push({
         name: price.name,
         withoutTax: price.withoutTax,
-        withTax: price.withTax,
       });
     }
 
@@ -310,9 +310,9 @@ boxTypesRouter.put("/:id/products", async (req, res) => {
       for (const price of product.prices) {
         await connection.execute(
           `INSERT INTO box_type_product_prices
-            (box_type_product_id, price_name, price_without_tax, price_with_tax)
-           VALUES (?, ?, ?, ?)`,
-          [insertedProductId, price.name, price.withoutTax, price.withTax]
+            (box_type_product_id, price_name, price_without_tax)
+           VALUES (?, ?, ?)`,
+          [insertedProductId, price.name, price.withoutTax]
         );
       }
     }

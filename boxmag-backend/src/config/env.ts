@@ -14,6 +14,7 @@ export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: toNumber(process.env.PORT, 4000),
   corsOrigin: process.env.CORS_ORIGIN ?? "*",
+  taxPercent: toNumber(process.env.TAX_PERCENT, 21),
   dbHost: process.env.DB_HOST ?? "localhost",
   dbPort: toNumber(process.env.DB_PORT, 3306),
   dbName: process.env.DB_NAME ?? "boxmag4",
