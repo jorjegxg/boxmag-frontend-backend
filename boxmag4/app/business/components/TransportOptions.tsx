@@ -2,8 +2,10 @@
 
 import useBusinessStore from "../store/business_store";
 import MyOutlinedButton from "./MyOutlinedButton";
+import { useLanguage } from "../../i18n/language-context";
 
 const TransportOptions = () => {
+  const { t } = useLanguage();
   const transportOptions = useBusinessStore().transportOptions;
   const confirmTransportOption = useBusinessStore().confirmTransportOption;
 
@@ -14,7 +16,7 @@ const TransportOptions = () => {
           key={option.id}
           isSelected={option.isSelected || false}
           onClick={() => confirmTransportOption(option.id)}
-          textOnTheButton={option.name}
+          textOnTheButton={t(`business.options.transport.${option.key}`)}
           showArrow={false}
         />
       ))}

@@ -2,6 +2,7 @@
 import { MyInputField } from "./MyInputField";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useLanguage } from "../../i18n/language-context";
 
 type QuantityProps = {
   quantity: string;
@@ -20,15 +21,17 @@ const Quantity = ({
   quantityError,
   termsError,
 }: QuantityProps) => {
+  const { t } = useLanguage();
+
   return (
     <div>
       <div className="grid grid-cols-3 gap-x-8">
         <div className="col-span-1">
           <MyInputField
-            text={"Quantity"}
+            text={t("business.quantity")}
             id="boxes-quantity"
             type={"number"}
-            placeholder={"Quantity"}
+            placeholder={t("business.quantity")}
             value={quantity}
             onChange={onQuantityChange}
             error={quantityError}
@@ -49,7 +52,7 @@ const Quantity = ({
             checked={acceptedTerms}
           />
           <FieldLabel htmlFor="terms-checkbox-basic">
-            Accept terms and conditions
+            {t("business.acceptTerms")}
           </FieldLabel>
         </Field>
       </FieldGroup>

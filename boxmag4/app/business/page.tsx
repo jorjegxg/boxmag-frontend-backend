@@ -23,6 +23,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import useBusinessStore from "./store/business_store";
 import useBusinessOrderStore from "../stores/business_order_store";
 import { useNotification } from "../global/components/notification-center";
+import { useLanguage } from "../i18n/language-context";
 
 const BussinessPage = () => {
   const router = useRouter();
@@ -45,6 +46,7 @@ const BussinessPage = () => {
   const transportOptions = useBusinessStore((state) => state.transportOptions);
   const setBusinessOrderDraft = useBusinessOrderStore((state) => state.setDraft);
   const { notify } = useNotification();
+  const { t } = useLanguage();
 
   const hasAnyError = Object.keys(errors).length > 0;
 
@@ -68,7 +70,7 @@ const BussinessPage = () => {
     const sectionByError: Record<string, string> = {
       boxType: "section-box-type-cards",
       cardboardType: "section-cardboard-type-cards",
-      cardboardColor: "section-cardboard-color-cards",
+      cardboardColor: "section-cardboard-color",
       boxPrint: "section-box-print-cards",
       sizeType: "section-size-type-cards",
       length: "section-box-size",
@@ -81,31 +83,31 @@ const BussinessPage = () => {
     };
 
     if (!boxes.some((box) => box.isSelected)) {
-      nextErrors.boxType = "Please select a box type.";
+      nextErrors.boxType = t("business.errors.boxType");
     }
     if (!cardboardTypes.some((option) => option.isSelected)) {
-      nextErrors.cardboardType = "Please select a cardboard type.";
+      nextErrors.cardboardType = t("business.errors.cardboardType");
     }
     if (!boxColors.some((option) => option.isSelected)) {
-      nextErrors.cardboardColor = "Please select a cardboard colour.";
+      nextErrors.cardboardColor = t("business.errors.cardboardColor");
     }
     if (!boxPrintOptions.some((option) => option.isSelected)) {
-      nextErrors.boxPrint = "Please choose a box print option.";
+      nextErrors.boxPrint = t("business.errors.boxPrint");
     }
     if (!typeOfSizes.some((option) => option.isSelected)) {
-      nextErrors.sizeType = "Please choose a size type.";
+      nextErrors.sizeType = t("business.errors.sizeType");
     }
 
-    if (!length.trim()) nextErrors.length = "Length is required.";
-    if (!width.trim()) nextErrors.width = "Width is required.";
-    if (!height.trim()) nextErrors.height = "Height is required.";
+    if (!length.trim()) nextErrors.length = t("business.errors.lengthRequired");
+    if (!width.trim()) nextErrors.width = t("business.errors.widthRequired");
+    if (!height.trim()) nextErrors.height = t("business.errors.heightRequired");
 
     if (!transportOptions.some((option) => option.isSelected)) {
-      nextErrors.transport = "Please select a transport option.";
+      nextErrors.transport = t("business.errors.transport");
     }
-    if (!quantity.trim()) nextErrors.quantity = "Quantity is required.";
-    if (!message.trim()) nextErrors.message = "Message is required.";
-    if (!acceptedTerms) nextErrors.terms = "You must accept terms and conditions.";
+    if (!quantity.trim()) nextErrors.quantity = t("business.errors.quantityRequired");
+    if (!message.trim()) nextErrors.message = t("business.errors.messageRequired");
+    if (!acceptedTerms) nextErrors.terms = t("business.errors.terms");
 
     setErrors(nextErrors);
 
@@ -143,10 +145,10 @@ const BussinessPage = () => {
       <section className="w-full bg-white px-4 sm:px-6 lg:px-20 pt-6">
         <div className="max-w-7xl mx-auto text-xs lg:text-sm text-gray-500 uppercase tracking-wide">
           <Link href="/" className="hover:underline">
-            Home
+            {t("common.home")}
           </Link>{" "}
           <span className="mx-2">→</span>
-          <span className="text-gray-700 font-semibold">B2B</span>
+          <span className="text-gray-700 font-semibold">{t("common.b2b")}</span>
         </div>
       </section>
 
@@ -157,8 +159,8 @@ const BussinessPage = () => {
 
         <div id="section-box-type">
           <RedTitle
-            title="Select Box Type"
-            secondTitle="More Details"
+            title={t("business.selectBoxType")}
+            secondTitle={t("business.moreDetails")}
             link="/shop"
           />
         </div>
@@ -170,7 +172,7 @@ const BussinessPage = () => {
         <Pt16 />
 
         <div id="section-cardboard-type">
-          <RedTitle title="Select Cardboard Type" />
+          <RedTitle title={t("business.selectCardboardType")} />
         </div>
         {errors.cardboardType ? <p className="mt-3 text-sm text-red-600">{errors.cardboardType}</p> : null}
         <Pt16 />
@@ -180,7 +182,7 @@ const BussinessPage = () => {
         <Pt16 />
 
         <div id="section-cardboard-color">
-          <RedTitle title="Select Cardboard Colour" />
+          <RedTitle title={t("business.selectCardboardColor")} />
         </div>
         {errors.cardboardColor ? <p className="mt-3 text-sm text-red-600">{errors.cardboardColor}</p> : null}
         <Pt16 />
@@ -190,7 +192,7 @@ const BussinessPage = () => {
         <Pt16 />
 
         <div id="section-box-print">
-          <RedTitle title="Box Print" />
+          <RedTitle title={t("business.boxPrint")} />
         </div>
         {errors.boxPrint ? <p className="mt-3 text-sm text-red-600">{errors.boxPrint}</p> : null}
         <Pt16 />
@@ -200,7 +202,7 @@ const BussinessPage = () => {
         <Pt16 />
 
         <div id="section-size-type">
-          <RedTitle title="Type Of Sizes" />
+          <RedTitle title={t("business.typeOfSizes")} />
         </div>
         {errors.sizeType ? <p className="mt-3 text-sm text-red-600">{errors.sizeType}</p> : null}
         <Pt16 />
@@ -210,33 +212,33 @@ const BussinessPage = () => {
         <Pt16 />
 
         <div id="section-box-size">
-          <RedTitle title="Box Size" />
+          <RedTitle title={t("business.boxSize")} />
         </div>
         <Pt16 />
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-x-8">
           <MyInputField
-            text={"Length (mm)"}
+            text={t("business.lengthMm")}
             id="package-length"
             type={"number"}
-            placeholder={"Enter Package Length (mm)"}
+            placeholder={t("business.enterLengthMm")}
             value={length}
             onChange={setLength}
             error={errors.length}
           />
           <MyInputField
-            text={"Width (mm)"}
+            text={t("business.widthMm")}
             id="package-width"
             type={"number"}
-            placeholder={"Enter Package Width (mm)"}
+            placeholder={t("business.enterWidthMm")}
             value={width}
             onChange={setWidth}
             error={errors.width}
           />
           <MyInputField
-            text={"Height (mm)"}
+            text={t("business.heightMm")}
             id="package-height"
             type="number"
-            placeholder={"Enter Package Height (mm)"}
+            placeholder={t("business.enterHeightMm")}
             value={height}
             onChange={setHeight}
             error={errors.height}
@@ -245,7 +247,7 @@ const BussinessPage = () => {
         <Pt16 />
 
         <div id="section-transport">
-          <RedTitle title="Transport" />
+          <RedTitle title={t("business.transport")} />
         </div>
         {errors.transport ? <p className="mt-3 text-sm text-red-600">{errors.transport}</p> : null}
         <Pt16 />
@@ -254,7 +256,7 @@ const BussinessPage = () => {
         <Pt16 />
 
         <div id="section-quantity">
-          <RedTitle title="Quantity" />
+          <RedTitle title={t("business.quantity")} />
         </div>
         <Pt16 />
         <Quantity
@@ -267,11 +269,11 @@ const BussinessPage = () => {
         />
         <Pt16 />
 
-        <RedTitle title="Attachment" />
+        <RedTitle title={t("business.attachment")} />
         <Pt16 />
         <div className="w-full max-w-md">
           <label htmlFor="pdf" className="block text-sm font-semibold text-gray-800 mb-2">
-            Upload a file (optional)
+            {t("business.uploadFileOptional")}
           </label>
           <div className="flex rounded-xl border-2 border-gray-200 bg-white overflow-hidden focus-within:border-my-yellow focus-within:ring-2 focus-within:ring-my-yellow/30 transition-all">
             <input
@@ -287,26 +289,26 @@ const BussinessPage = () => {
               onClick={() => fileInputRef.current?.click()}
               className="shrink-0 px-5 py-3.5 bg-my-yellow hover:bg-my-yellow-bright text-black font-semibold text-sm transition-colors"
             >
-              Choose File
+              {t("business.chooseFile")}
             </button>
             <span className="flex-1 min-w-0 px-4 py-3.5 text-gray-600 text-sm truncate border-l border-gray-200">
-              {attachmentName || "No file chosen"}
+              {attachmentName || t("business.noFileChosen")}
             </span>
           </div>
           <p className="mt-2.5 text-sm text-my-gray">
-            Max file size: 18 MB. Allowed format: PDF
+            {t("business.maxFileSizePdf")}
           </p>
         </div>
 
         <Pt16 />
 
         <div id="section-message">
-          <RedTitle title="Message" />
+          <RedTitle title={t("business.message")} />
         </div>
         <Pt16 />
         <textarea
           className="w-full min-h-48 sm:min-h-60 p-3 rounded-lg border border-gray-300 bg-white text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red resize-y"
-          placeholder="Enter your message here..."
+          placeholder={t("business.enterMessageHere")}
           rows={5}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -320,7 +322,7 @@ const BussinessPage = () => {
             onClick={validateAndContinue}
             className="inline-flex items-center gap-2 bg-my-yellow hover:bg-my-yellow-bright text-black font-bold uppercase text-sm sm:text-base px-6 py-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-my-red focus:ring-offset-2"
           >
-            Next
+            {t("common.next")}
             <span aria-hidden>→</span>
           </button>
         </div>
@@ -342,16 +344,16 @@ const BussinessPage = () => {
             </div>
             <div>
               <h2 className="text-white text-base lg:text-lg font-normal uppercase tracking-wide">
-                B2B <span className="font-bold">Professionals</span>
+                B2B <span className="font-bold">{t("b2b.professionals")}</span>
               </h2>
               <p className="text-white/95 text-xs lg:text-sm mt-0.5">
-                Step By Step To The Best Offer
+                {t("b2b.tagline")}
               </p>
             </div>
           </div>
           <div className="lg:border-l lg:border-white/20 lg:pl-8 flex flex-col items-center lg:items-start text-center lg:text-left">
             <p className="text-my-yellow font-semibold text-sm lg:text-base mb-2">
-              Do you need more informations?
+              {t("business.needMoreInfo")}
             </p>
             <div className="space-y-1.5 text-white text-sm">
               <a

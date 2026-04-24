@@ -1,11 +1,10 @@
 "use client";
-import { FaArrowRight } from "react-icons/fa";
-import { LiaCheckDoubleSolid } from "react-icons/lia";
 import MyOutlinedButton from "./MyOutlinedButton";
-import { MouseEvent } from "react";
 import useBusinessStore from "../store/business_store";
+import { useLanguage } from "../../i18n/language-context";
 
 export function TypeOfSizes() {
+  const { t } = useLanguage();
   const typeOfSizes = useBusinessStore((state) => state.typeOfSizes);
   const confirmTypeOfSize = useBusinessStore(
     (state) => state.confirmTypeOfSize,
@@ -18,7 +17,7 @@ export function TypeOfSizes() {
           key={option.id}
           isSelected={option.isSelected || false}
           onClick={() => confirmTypeOfSize(option.id)}
-          textOnTheButton={option.name}
+          textOnTheButton={t(`business.options.sizeType.${option.key}`)}
           showArrow={false}
         />
       ))}

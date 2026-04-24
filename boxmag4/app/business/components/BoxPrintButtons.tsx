@@ -2,8 +2,10 @@
 
 import useBusinessStore from "../store/business_store";
 import MyOutlinedButton from "./MyOutlinedButton";
+import { useLanguage } from "../../i18n/language-context";
 
 export const BoxPrintButtons = () => {
+  const { t } = useLanguage();
   const boxPrintOptions = useBusinessStore((state) => state.boxPrintOptions);
   const confirmBoxPrintOption = useBusinessStore(
     (state) => state.confirmBoxPrintOption,
@@ -16,7 +18,7 @@ export const BoxPrintButtons = () => {
           key={option.id}
           isSelected={option.isSelected ?? false}
           onClick={() => confirmBoxPrintOption(option.id)}
-          textOnTheButton={option.name}
+          textOnTheButton={t(`business.options.boxPrint.${option.key}`)}
           showArrow={false}
         />
       ))}

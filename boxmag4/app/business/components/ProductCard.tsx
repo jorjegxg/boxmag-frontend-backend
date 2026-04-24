@@ -4,6 +4,7 @@ import React from "react";
 import { LiaCheckDoubleSolid } from "react-icons/lia";
 import useBusinessStore from "../store/business_store";
 import MyOutlinedButton from "./MyOutlinedButton";
+import { useLanguage } from "../../i18n/language-context";
 
 export function PrductCard({
   title,
@@ -21,6 +22,7 @@ export function PrductCard({
   confirmItem: (id: number) => void;
 }) {
   const handleClick = () => confirmItem(id);
+  const { t } = useLanguage();
 
   return (
     <div
@@ -63,8 +65,8 @@ export function PrductCard({
             e.stopPropagation();
             handleClick();
           }}
-          textOnTheButton="CONFIRM"
-          confirmedText="CONFIRMED"
+          textOnTheButton={t("business.confirm")}
+          confirmedText={t("business.confirmed")}
           className="w-full"
         />
       </div>

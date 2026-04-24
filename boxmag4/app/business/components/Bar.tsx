@@ -1,14 +1,16 @@
 "use client";
 
 import React from "react";
-
-const steps = [
-  { step: 1, title: "Choose The\nBox Type", active: true },
-  { step: 2, title: "Set The\nParameters" },
-  { step: 3, title: "Please Send Us\nYour Contact Details" },
-];
+import { useLanguage } from "../../i18n/language-context";
 
 function Step({ number, isLast }: { number: number; isLast?: boolean }) {
+  const { t } = useLanguage();
+  const steps = [
+    { step: 1, title: t("business.steps.chooseBoxType"), active: true },
+    { step: 2, title: t("business.steps.setParameters") },
+    { step: 3, title: t("business.steps.sendContactDetails") },
+  ];
+
   return (
     <div className="relative flex flex-1 min-w-0 flex-col items-center h-full">
       {/* Circle */}
@@ -27,6 +29,8 @@ function Step({ number, isLast }: { number: number; isLast?: boolean }) {
 }
 
 function Card({ step, title }: { step: number; title: string }) {
+  const { t } = useLanguage();
+
   return (
     <div className="relative mt-6 flex-1 flex flex-col min-h-0 w-full max-w-[240px] min-w-0 rounded-xl border-2 border-my-yellow px-4 py-4 sm:px-6 sm:py-6 text-center shadow-sm sm:max-w-60">
       {/* notch */}
@@ -36,10 +40,10 @@ function Card({ step, title }: { step: number; title: string }) {
       </div>
 
       <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-my-gray">
-        STEP {step}
+        {t("business.step")} {step}
       </div>
 
-      <div className="mt-2 whitespace-pre-line text-xs sm:text-sm font-extrabold leading-snug min-h-[4.5rem] sm:min-h-0">
+      <div className="mt-2 whitespace-pre-line text-xs sm:text-sm font-extrabold leading-snug min-h-18 sm:min-h-0">
         {title}
       </div>
     </div>

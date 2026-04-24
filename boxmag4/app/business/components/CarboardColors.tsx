@@ -2,8 +2,10 @@
 import useBusinessStore from "../store/business_store";
 import MyGrid from "./MyGrid";
 import { PrductCard } from "./ProductCard";
+import { useLanguage } from "../../i18n/language-context";
 
 export function CarboardColors() {
+  const { t } = useLanguage();
   const carboardColors = useBusinessStore((state) => state.boxColorOptions);
   const confirmBoxColorOption = useBusinessStore(
     (state) => state.confirmBoxColorOption,
@@ -15,7 +17,7 @@ export function CarboardColors() {
       {carboardColors.map((carboardColor) => (
         <PrductCard
           key={carboardColor.id}
-          title={carboardColor.name}
+          title={t(`business.options.boxColor.${carboardColor.key}`)}
           id={carboardColor.id}
           imagePath={carboardColor.imagePath}
           isSelected={carboardColor.isSelected}
