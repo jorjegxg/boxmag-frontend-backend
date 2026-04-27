@@ -4,6 +4,7 @@ import { Box, BoxColorOption, BoxPrint, BoxSize, BoxState, CarboardTypeState, Tr
 import { boxColorOptions, boxes, boxPrintOptions, boxSizes, carboarbonTypeOptions, transportOptions, typeOfSizes } from "./data/boxes";
 
 export type PageWithState = Box & BoxState;
+const isDevelopment = process.env.NODE_ENV === "development";
 
 type BusinessState = {
     boxes: PageWithState[];
@@ -29,14 +30,17 @@ type BusinessState = {
 };
 
 const useBusinessStore = create<BusinessState>((set, get) => ({
-    boxes: boxes.map((box) => ({ ...box, isSelected: false })),
+    boxes: boxes.map((box, index) => ({ ...box, isSelected: isDevelopment ? index === 0 : false })),
     confirmBox(id) {
         set((state) => ({
             boxes: state.boxes.map((box) => box.id === id ? { ...box, isSelected: true } : { ...box, isSelected: false })
         }));
     },
 
-    carboarbonTypeOptions: carboarbonTypeOptions,
+    carboarbonTypeOptions: carboarbonTypeOptions.map((option, index) => ({
+        ...option,
+        isSelected: isDevelopment ? index === 0 : option.isSelected,
+    })),
     confirmCarboardTypeOption(id) {
         console.log("confirmCarboardTypeOption ", id);
         set((state) => ({
@@ -45,7 +49,7 @@ const useBusinessStore = create<BusinessState>((set, get) => ({
         }));
     },
   
-    boxColorOptions: boxColorOptions.map((option) => ({ ...option, isSelected: false })),
+    boxColorOptions: boxColorOptions.map((option, index) => ({ ...option, isSelected: isDevelopment ? index === 0 : false })),
     confirmBoxColorOption(id) {
         console.log("confirmBoxColorOption ", id);
         set((state) => ({
@@ -53,7 +57,7 @@ const useBusinessStore = create<BusinessState>((set, get) => ({
         }));
     },
 
-    boxPrintOptions: boxPrintOptions.map((option) => ({ ...option, isSelected: false })),
+    boxPrintOptions: boxPrintOptions.map((option, index) => ({ ...option, isSelected: isDevelopment ? index === 0 : false })),
     confirmBoxPrintOption(id) {
         console.log("confirmBoxPrintOption ", id);
         set((state) => ({
@@ -61,7 +65,7 @@ const useBusinessStore = create<BusinessState>((set, get) => ({
         }));
     },
 
-    typeOfSizes: typeOfSizes.map((option) => ({ ...option, isSelected: false })),
+    typeOfSizes: typeOfSizes.map((option, index) => ({ ...option, isSelected: isDevelopment ? index === 0 : false })),
     confirmTypeOfSize(id) {
         console.log("confirmTypeOfSize ", id);
         set((state) => ({
@@ -70,7 +74,7 @@ const useBusinessStore = create<BusinessState>((set, get) => ({
     },
 
 
-    boxSizes: boxSizes.map((option) => ({ ...option, isSelected: false })),
+    boxSizes: boxSizes.map((option, index) => ({ ...option, isSelected: isDevelopment ? index === 0 : false })),
     confirmBoxSize(id) {
         console.log("confirmBoxSize ", id);
         set((state) => ({
@@ -79,7 +83,7 @@ const useBusinessStore = create<BusinessState>((set, get) => ({
     },
 
 
-    transportOptions: transportOptions.map((option) => ({...option , isSelected : false})),
+    transportOptions: transportOptions.map((option, index) => ({...option , isSelected : isDevelopment ? index === 0 : false})),
     confirmTransportOption: (id) => {
         set((state) => ({
             transportOptions: state.transportOptions.map((option) => option.id === id ? ({...option, isSelected : true}) : ({...option, isSelected : false})  )

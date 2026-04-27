@@ -1,7 +1,9 @@
 import { Router } from "express";
+import multer from "multer";
 import { RowDataPacket } from "mysql2";
 import { env } from "../config/env";
 import { mysqlPool } from "../db/mysql";
+import { uploadBoxImageToMinio } from "../services/minio";
 
 type BoxTypeRow = RowDataPacket & {
   id: number;
@@ -38,10 +40,56 @@ type BoxTypeProductPriceRow = RowDataPacket & {
 
 export const boxTypesRouter = Router();
 
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (_req, file, callback) => {
+    if (file.mimetype.startsWith("image/")) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error("Only image uploads are allowed"));
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+});
+
 function calculateWithTax(withoutTax: number): number {
   const taxMultiplier = 1 + env.taxPercent / 100;
   return Number((withoutTax * taxMultiplier).toFixed(2));
 }
+
+boxTypesRouter.post("/upload-image", imageUpload.single("image"), async (req, res) => {
+  if (!req.file) {
+    res.status(400).json({
+      ok: false,
+      message: "Image file is required",
+    });
+    return;
+  }
+
+  try {
+    const imagePath = await uploadBoxImageToMinio({
+      fileBuffer: req.file.buffer,
+      originalFileName: req.file.originalname,
+      mimeType: req.file.mimetype,
+    });
+
+    res.status(201).json({
+      ok: true,
+      data: {
+        imagePath,
+        fileName: req.file.originalname,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to upload image to MinIO", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to upload image",
+    });
+  }
+});
 
 boxTypesRouter.get("/", async (_req, res) => {
   try {
@@ -66,6 +114,83 @@ boxTypesRouter.get("/", async (_req, res) => {
     res.status(500).json({
       ok: false,
       message: "Failed to load box types",
+    });
+  }
+});
+
+boxTypesRouter.post("/", async (req, res) => {
+  const payload = req.body as {
+    key?: unknown;
+    title?: unknown;
+    imagePath?: unknown;
+    isActive?: unknown;
+  };
+
+  if (typeof payload.key !== "string" || payload.key.trim().length === 0) {
+    res.status(400).json({
+      ok: false,
+      message: "Key is required",
+    });
+    return;
+  }
+
+  if (typeof payload.title !== "string" || payload.title.trim().length === 0) {
+    res.status(400).json({
+      ok: false,
+      message: "Title is required",
+    });
+    return;
+  }
+
+  if (typeof payload.imagePath !== "string" || payload.imagePath.trim().length === 0) {
+    res.status(400).json({
+      ok: false,
+      message: "Image path is required",
+    });
+    return;
+  }
+
+  if (payload.isActive != null && typeof payload.isActive !== "boolean") {
+    res.status(400).json({
+      ok: false,
+      message: "isActive must be a boolean",
+    });
+    return;
+  }
+
+  try {
+    const [maxIdRows] = await mysqlPool.query<Array<RowDataPacket & { maxId: number | null }>>(
+      "SELECT MAX(id) AS maxId FROM box_types"
+    );
+    const nextId = (maxIdRows[0]?.maxId ?? 0) + 1;
+
+    await mysqlPool.execute(
+      `INSERT INTO box_types (id, \`key\`, title, image_path, is_active)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        nextId,
+        payload.key.trim(),
+        payload.title.trim(),
+        payload.imagePath.trim(),
+        payload.isActive === false ? 0 : 1,
+      ]
+    );
+
+    res.status(201).json({
+      ok: true,
+      data: {
+        id: nextId,
+        key: payload.key.trim(),
+        title: payload.title.trim(),
+        imagePath: payload.imagePath.trim(),
+        isActive: payload.isActive === false ? false : true,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to create box type", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to create box type",
     });
   }
 });

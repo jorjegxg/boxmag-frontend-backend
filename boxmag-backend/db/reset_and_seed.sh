@@ -15,4 +15,7 @@ echo "Resetting and seeding MySQL database..."
 docker compose -f "$COMPOSE_FILE" exec -T mysql sh -lc 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
   < "$SEED_FILE"
 
-echo "Done. Database was reset and seeded."
+echo "Uploading seed images to MinIO and updating image_path values..."
+node "$SCRIPT_DIR/seed_minio_images.js"
+
+echo "Done. Database was reset, seeded, and images uploaded to MinIO."

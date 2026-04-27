@@ -26,16 +26,19 @@ import { useNotification } from "../global/components/notification-center";
 import { useLanguage } from "../i18n/language-context";
 
 const BussinessPage = () => {
+  const isDevelopment = process.env.NODE_ENV === "development";
   const router = useRouter();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachmentName, setAttachmentName] = useState("");
-  const [length, setLength] = useState(() => searchParams.get("length") ?? "");
-  const [width, setWidth] = useState(() => searchParams.get("width") ?? "");
-  const [height, setHeight] = useState(() => searchParams.get("height") ?? "");
-  const [message, setMessage] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [length, setLength] = useState(() => searchParams.get("length") ?? (isDevelopment ? "400" : ""));
+  const [width, setWidth] = useState(() => searchParams.get("width") ?? (isDevelopment ? "300" : ""));
+  const [height, setHeight] = useState(() => searchParams.get("height") ?? (isDevelopment ? "200" : ""));
+  const [message, setMessage] = useState(() =>
+    isDevelopment ? "Test inquiry from development environment." : ""
+  );
+  const [quantity, setQuantity] = useState(() => (isDevelopment ? "500" : ""));
+  const [acceptedTerms, setAcceptedTerms] = useState(() => isDevelopment);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const boxes = useBusinessStore((state) => state.boxes);

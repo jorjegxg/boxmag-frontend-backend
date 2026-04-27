@@ -26,6 +26,12 @@ type AdminBoxTypesState = {
   saveError: string | null;
   setBackendBaseUrl: (value: string) => void;
   loadBoxTypes: () => Promise<void>;
+  createBoxType: (payload: {
+    key: string;
+    title: string;
+    imagePath: string;
+    isActive?: boolean;
+  }) => Promise<void>;
   startEditing: (boxType: AdminBoxType) => void;
   cancelEditing: () => void;
   updateEditingTitle: (value: string) => void;
@@ -78,6 +84,44 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
       set({
         boxTypesError: error instanceof Error ? error.message : "Failed to load box types",
         isLoadingBoxTypes: false,
+      });
+    }
+  },
+
+  createBoxType: async (payload) => {
+    const backendBaseUrl = get().backendBaseUrl;
+    set({ isSavingBoxType: true, saveError: null });
+    try {
+      const response = await fetch(`${backendBaseUrl}/api/box-types`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          key: payload.key,
+          title: payload.title,
+          imagePath: payload.imagePath,
+          isActive: payload.isActive ?? true,
+        }),
+      });
+      const body = (await response.json()) as {
+        ok?: boolean;
+        data?: AdminBoxType;
+        message?: string;
+      };
+      if (!response.ok || body.ok !== true || !body.data) {
+        throw new Error(body.message ?? `Failed with status ${response.status}`);
+      }
+
+      set((state) => ({
+        boxTypes: [...state.boxTypes, body.data as AdminBoxType],
+        isSavingBoxType: false,
+        saveError: null,
+      }));
+    } catch (error) {
+      set({
+        saveError: error instanceof Error ? error.message : "Failed to create box type",
+        isSavingBoxType: false,
       });
     }
   },

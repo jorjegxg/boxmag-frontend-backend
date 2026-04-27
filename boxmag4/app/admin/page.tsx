@@ -70,17 +70,106 @@ const mockOrders = [
 
 export default function AdminPage() {
   const boxTypes = useAdminBoxTypesStore((state) => state.boxTypes);
-  const isLoadingBoxTypes = useAdminBoxTypesStore((state) => state.isLoadingBoxTypes);
+  const isLoadingBoxTypes = useAdminBoxTypesStore(
+    (state) => state.isLoadingBoxTypes,
+  );
   const boxTypesError = useAdminBoxTypesStore((state) => state.boxTypesError);
   const saveError = useAdminBoxTypesStore((state) => state.saveError);
-  const setBackendBaseUrl = useAdminBoxTypesStore((state) => state.setBackendBaseUrl);
+  const isSavingBoxType = useAdminBoxTypesStore(
+    (state) => state.isSavingBoxType,
+  );
+  const setBackendBaseUrl = useAdminBoxTypesStore(
+    (state) => state.setBackendBaseUrl,
+  );
   const loadBoxTypes = useAdminBoxTypesStore((state) => state.loadBoxTypes);
+  const createBoxType = useAdminBoxTypesStore((state) => state.createBoxType);
+  const [boxTypeKey, setBoxTypeKey] = useState("");
+  const [boxTypeTitle, setBoxTypeTitle] = useState("");
+  const [boxImagePath, setBoxImagePath] = useState("");
+  const [selectedBoxImageFile, setSelectedBoxImageFile] = useState<File | null>(
+    null,
+  );
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
     if (!value) return "http://localhost:3005";
     return value.endsWith("/") ? value.slice(0, -1) : value;
   }, []);
+
+  const handleAddBoxType = async () => {
+    const trimmedKey = boxTypeKey.trim();
+    const trimmedTitle = boxTypeTitle.trim();
+    let trimmedImagePath = boxImagePath.trim();
+
+    if (!trimmedKey || !trimmedTitle) {
+      setFormError("Please fill in Box Type ID and Title.");
+      return;
+    }
+
+    setFormError(null);
+
+    if (selectedBoxImageFile) {
+      setIsUploadingImage(true);
+      try {
+        const formData = new FormData();
+        formData.append("image", selectedBoxImageFile);
+        const uploadResponse = await fetch(
+          `${backendBaseUrl}/api/box-types/upload-image`,
+          {
+            method: "POST",
+            body: formData,
+          },
+        );
+        const uploadBody = (await uploadResponse.json()) as {
+          ok?: boolean;
+          data?: { imagePath?: string };
+          message?: string;
+        };
+
+        if (
+          !uploadResponse.ok ||
+          uploadBody.ok !== true ||
+          !uploadBody.data?.imagePath
+        ) {
+          throw new Error(uploadBody.message ?? "Failed to upload image");
+        }
+
+        trimmedImagePath = uploadBody.data.imagePath.trim();
+        setBoxImagePath(trimmedImagePath);
+      } catch (error) {
+        setFormError(
+          error instanceof Error
+            ? error.message
+            : "Failed to upload image. Please try again.",
+        );
+        setIsUploadingImage(false);
+        return;
+      }
+      setIsUploadingImage(false);
+    }
+
+    if (!trimmedImagePath) {
+      setFormError("Please choose a Box Image before adding.");
+      return;
+    }
+
+    await createBoxType({
+      key: trimmedKey,
+      title: trimmedTitle,
+      imagePath: trimmedImagePath,
+      isActive: true,
+    });
+
+    const latestSaveError = useAdminBoxTypesStore.getState().saveError;
+    if (!latestSaveError) {
+      setBoxTypeKey("");
+      setBoxTypeTitle("");
+      setBoxImagePath("");
+      setSelectedBoxImageFile(null);
+    }
+  };
 
   useEffect(() => {
     setBackendBaseUrl(backendBaseUrl);
@@ -101,7 +190,11 @@ export default function AdminPage() {
   }, [boxTypes.length]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof PerformanceObserver === "undefined") return;
+    if (
+      typeof window === "undefined" ||
+      typeof PerformanceObserver === "undefined"
+    )
+      return;
 
     const observer = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
@@ -157,23 +250,50 @@ export default function AdminPage() {
 
       <section className="w-full bg-white px-6 lg:px-20 py-8">
         <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
-          <SectionTitle title="Box Types Management" subtitle="Data loaded from database" />
+          <SectionTitle
+            title="Box Types Management"
+            subtitle="Data loaded from database"
+          />
 
           <div className="p-6 lg:p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Field label="Box Type ID" placeholder="e.g. BF10" />
-              <Field label="Title" placeholder="e.g. Boxfix Premium 500" />
-              <ImagePickerField label="Box Image" />
+              <Field
+                label="Box Type ID"
+                placeholder="e.g. ecommerce_boxes_fefco_703"
+                value={boxTypeKey}
+                onChange={setBoxTypeKey}
+              />
+              <Field
+                label="Title"
+                placeholder="e.g. Boxfix Premium 500"
+                value={boxTypeTitle}
+                onChange={setBoxTypeTitle}
+              />
+              <ImagePickerField
+                label="Box Image"
+                selectedFile={selectedBoxImageFile}
+                imagePath={boxImagePath}
+                onFileChange={setSelectedBoxImageFile}
+              />
             </div>
 
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
+                onClick={() => void handleAddBoxType()}
+                disabled={isSavingBoxType || isUploadingImage}
                 className="bg-my-yellow hover:bg-my-yellow-bright text-black font-semibold px-5 py-2.5 rounded-lg transition-colors"
               >
-                Add Box Type
+                {isUploadingImage
+                  ? "Uploading image..."
+                  : isSavingBoxType
+                    ? "Adding..."
+                    : "Add Box Type"}
               </button>
             </div>
+            {formError ? (
+              <p className="text-sm text-red-600">{formError}</p>
+            ) : null}
 
             <div className="rounded-xl border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
@@ -181,10 +301,18 @@ export default function AdminPage() {
                   <thead className="bg-my-light-gray2 text-gray-800">
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold">ID</th>
-                      <th className="px-4 py-3 text-left font-semibold">Title</th>
-                      <th className="px-4 py-3 text-left font-semibold">Photo</th>
-                      <th className="px-4 py-3 text-left font-semibold">Status</th>
-                      <th className="px-4 py-3 text-left font-semibold">Actions</th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Title
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Photo
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -202,7 +330,9 @@ export default function AdminPage() {
                         </td>
                       </tr>
                     ) : null}
-                    {!isLoadingBoxTypes && !boxTypesError && boxTypes.length === 0 ? (
+                    {!isLoadingBoxTypes &&
+                    !boxTypesError &&
+                    boxTypes.length === 0 ? (
                       <tr className="border-t border-gray-200">
                         <td className="px-4 py-3 text-gray-500" colSpan={5}>
                           No box types found.
@@ -239,12 +369,24 @@ export default function AdminPage() {
                 <table className="min-w-full text-sm">
                   <thead className="bg-my-light-gray2 text-gray-800">
                     <tr>
-                      <th className="px-4 py-3 text-left font-semibold">Order ID</th>
-                      <th className="px-4 py-3 text-left font-semibold">Customer</th>
-                      <th className="px-4 py-3 text-left font-semibold">Box Type</th>
-                      <th className="px-4 py-3 text-left font-semibold">Quantity</th>
-                      <th className="px-4 py-3 text-left font-semibold">Total</th>
-                      <th className="px-4 py-3 text-left font-semibold">Status</th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Order ID
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Customer
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Box Type
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Quantity
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Total
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Status
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -267,12 +409,15 @@ export default function AdminPage() {
           </div>
         </div>
       </section>
-
     </div>
   );
 }
 
-const BoxTypeRow = memo(function BoxTypeRow({ boxType }: { boxType: AdminBoxType }) {
+const BoxTypeRow = memo(function BoxTypeRow({
+  boxType,
+}: {
+  boxType: AdminBoxType;
+}) {
   return (
     <tr className="border-t border-gray-200">
       <td className="px-4 py-3">{boxType.id}</td>
@@ -287,7 +432,9 @@ const BoxTypeRow = memo(function BoxTypeRow({ boxType }: { boxType: AdminBoxType
       <td className="px-4 py-3">
         <span
           className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-            boxType.isActive ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+            boxType.isActive
+              ? "bg-green-100 text-green-700"
+              : "bg-yellow-100 text-yellow-700"
           }`}
         >
           {boxType.isActive ? "Active" : "Draft"}
@@ -308,46 +455,72 @@ const BoxTypeRow = memo(function BoxTypeRow({ boxType }: { boxType: AdminBoxType
   );
 });
 
-function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
+function SectionTitle({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle?: string;
+}) {
   return (
     <div className="bg-my-red w-full flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 px-4 py-3 sm:pl-8 sm:pr-4 sm:py-4 text-my-white">
       <span className="font-bold text-base sm:text-lg">{title}</span>
-      {subtitle ? <span className="text-sm sm:text-base">{subtitle}</span> : null}
+      {subtitle ? (
+        <span className="text-sm sm:text-base">{subtitle}</span>
+      ) : null}
     </div>
   );
 }
 
-function Field({ label, placeholder }: { label: string; placeholder: string }) {
+function Field({
+  label,
+  placeholder,
+  value,
+  onChange,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-sm font-semibold text-gray-800">{label}</span>
       <input
         type="text"
         placeholder={placeholder}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
         className="h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
       />
     </label>
   );
 }
 
-function ImagePickerField({ label }: { label: string }) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+function ImagePickerField({
+  label,
+  selectedFile,
+  imagePath,
+  onFileChange,
+}: {
+  label: string;
+  selectedFile: File | null;
+  imagePath: string;
+  onFileChange: (file: File | null) => void;
+}) {
   const inputId = "box-image-upload";
+  const previewUrl = useMemo(
+    () => (selectedFile ? URL.createObjectURL(selectedFile) : imagePath),
+    [imagePath, selectedFile],
+  );
 
   useEffect(() => {
-    if (!selectedFile) {
-      setPreviewUrl(null);
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(selectedFile);
-    setPreviewUrl(objectUrl);
-
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      if (previewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(previewUrl);
+      }
     };
-  }, [selectedFile]);
+  }, [previewUrl]);
 
   return (
     <label className="flex flex-col gap-1.5">
@@ -355,10 +528,12 @@ function ImagePickerField({ label }: { label: string }) {
       <FilePickerInput
         inputId={inputId}
         selectedFileName={selectedFile?.name ?? null}
-        onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+        onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
       />
       {selectedFile ? (
-        <span className="text-xs text-gray-600 truncate">{selectedFile.name}</span>
+        <span className="text-xs text-gray-600 truncate">
+          {selectedFile.name}
+        </span>
       ) : (
         <span className="text-xs text-gray-400">No image selected</span>
       )}
@@ -388,7 +563,13 @@ function FilePickerInput({
     <div
       className={`flex items-center rounded-lg border border-gray-300 bg-white px-2 ${wrapperClassName}`}
     >
-      <input id={inputId} type="file" accept="image/*" onChange={onChange} className="hidden" />
+      <input
+        id={inputId}
+        type="file"
+        accept="image/*"
+        onChange={onChange}
+        className="hidden"
+      />
       <label
         htmlFor={inputId}
         className="inline-flex h-8 cursor-pointer items-center rounded-md bg-my-light-gray2 px-3 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-200"

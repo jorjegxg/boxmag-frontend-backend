@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "check": "tsc --noEmit",
-    "db:reset": "bash ./db/reset_and_seed.sh"
+    "db:reset": "bash ./db/reset_and_seed.sh",
+    "db:seed:images": "node ./db/seed_minio_images.js"
   },
   "keywords": [],
   "author": "Boxmag",
@@ -19,11 +20,13 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "minio": "^8.0.7",
+    "multer": "^2.1.1",
     "mysql2": "^3.15.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
     "@types/node": "^25.5.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^6.0.2"
