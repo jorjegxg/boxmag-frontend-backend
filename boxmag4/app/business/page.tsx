@@ -42,7 +42,6 @@ const BussinessPage = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const boxes = useBusinessStore((state) => state.boxes);
-  const isLoadingBoxes = useBusinessStore((state) => state.isLoadingBoxes);
   const boxesError = useBusinessStore((state) => state.boxesError);
   const loadBoxes = useBusinessStore((state) => state.loadBoxes);
   const cardboardTypes = useBusinessStore((state) => state.carboarbonTypeOptions);
@@ -182,9 +181,6 @@ const BussinessPage = () => {
         {errors.boxType ? <p className="mt-3 text-sm text-red-600">{errors.boxType}</p> : null}
         <Pt16 />
         <div id="section-box-type-cards">
-          {isLoadingBoxes ? (
-            <p className="text-sm text-gray-600">Loading box types...</p>
-          ) : null}
           {boxesError ? (
             <p className="text-sm text-red-600">Failed to load box types: {boxesError}</p>
           ) : null}
