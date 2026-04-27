@@ -20,6 +20,23 @@ function readRootEnvValue(key: string): string | undefined {
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.80.1"],
+  images: {
+    dangerouslyAllowLocalIP: true,
+    remotePatterns: [
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "9000",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "127.0.0.1",
+        port: "9000",
+        pathname: "/**",
+      },
+    ],
+  },
   env: {
     NEXT_PUBLIC_CONTACT_FORM_MODE:
       process.env.NEXT_PUBLIC_CONTACT_FORM_MODE ??

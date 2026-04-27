@@ -1,13 +1,15 @@
-import { stat } from "fs";
 import { create } from "zustand";
 import { Box, BoxColorOption, BoxPrint, BoxSize, BoxState, CarboardTypeState, TransportOption, TypeOfSize } from "./data/types";
-import { boxColorOptions, boxes, boxPrintOptions, boxSizes, carboarbonTypeOptions, transportOptions, typeOfSizes } from "./data/boxes";
+import { boxColorOptions, boxPrintOptions, boxSizes, carboarbonTypeOptions, transportOptions, typeOfSizes } from "./data/boxes";
 
 export type PageWithState = Box & BoxState;
 const isDevelopment = process.env.NODE_ENV === "development";
 
 type BusinessState = {
     boxes: PageWithState[];
+    isLoadingBoxes: boolean;
+    boxesError: string | null;
+    loadBoxes: (backendBaseUrl: string) => Promise<void>;
     confirmBox: (id: number) => void;
 
     carboarbonTypeOptions: CarboardTypeState[];
@@ -29,8 +31,41 @@ type BusinessState = {
     confirmTransportOption: (id: number) => void;
 };
 
-const useBusinessStore = create<BusinessState>((set, get) => ({
-    boxes: boxes.map((box, index) => ({ ...box, isSelected: isDevelopment ? index === 0 : false })),
+const useBusinessStore = create<BusinessState>((set) => ({
+    boxes: [],
+    isLoadingBoxes: true,
+    boxesError: null,
+    async loadBoxes(backendBaseUrl) {
+        set({ isLoadingBoxes: true, boxesError: null });
+        try {
+            const response = await fetch(`${backendBaseUrl}/api/box-types`);
+            const payload = (await response.json()) as {
+                ok?: boolean;
+                data?: Array<{ id: number; title: string; imagePath: string; isActive: boolean }>;
+                message?: string;
+            };
+            if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+                throw new Error(payload.message ?? `Failed with status ${response.status}`);
+            }
+
+            const mappedBoxes: PageWithState[] = payload.data
+                .filter((box) => box.isActive)
+                .map((box, index) => ({
+                    id: box.id,
+                    key: String(box.id),
+                    name: box.title,
+                    imagePath: box.imagePath,
+                    isSelected: isDevelopment ? index === 0 : false,
+                }));
+
+            set({ boxes: mappedBoxes, isLoadingBoxes: false, boxesError: null });
+        } catch (error) {
+            set({
+                isLoadingBoxes: false,
+                boxesError: error instanceof Error ? error.message : "Failed to load boxes",
+            });
+        }
+    },
     confirmBox(id) {
         set((state) => ({
             boxes: state.boxes.map((box) => box.id === id ? { ...box, isSelected: true } : { ...box, isSelected: false })

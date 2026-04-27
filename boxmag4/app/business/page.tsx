@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { IoIosArrowForward } from "react-icons/io";
 import Link from "next/link";
 import ResponsiveLayoutWithPadding from "../ResponsiveLayoutWithPadding";
@@ -42,6 +42,9 @@ const BussinessPage = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const boxes = useBusinessStore((state) => state.boxes);
+  const isLoadingBoxes = useBusinessStore((state) => state.isLoadingBoxes);
+  const boxesError = useBusinessStore((state) => state.boxesError);
+  const loadBoxes = useBusinessStore((state) => state.loadBoxes);
   const cardboardTypes = useBusinessStore((state) => state.carboarbonTypeOptions);
   const boxColors = useBusinessStore((state) => state.boxColorOptions);
   const boxPrintOptions = useBusinessStore((state) => state.boxPrintOptions);
@@ -50,6 +53,15 @@ const BussinessPage = () => {
   const setBusinessOrderDraft = useBusinessOrderStore((state) => state.setDraft);
   const { notify } = useNotification();
   const { t } = useLanguage();
+  const backendBaseUrl = useMemo(() => {
+    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+    if (!value) return "http://localhost:3005";
+    return value.endsWith("/") ? value.slice(0, -1) : value;
+  }, []);
+
+  useEffect(() => {
+    void loadBoxes(backendBaseUrl);
+  }, [backendBaseUrl, loadBoxes]);
 
   const hasAnyError = Object.keys(errors).length > 0;
 
@@ -170,6 +182,12 @@ const BussinessPage = () => {
         {errors.boxType ? <p className="mt-3 text-sm text-red-600">{errors.boxType}</p> : null}
         <Pt16 />
         <div id="section-box-type-cards">
+          {isLoadingBoxes ? (
+            <p className="text-sm text-gray-600">Loading box types...</p>
+          ) : null}
+          {boxesError ? (
+            <p className="text-sm text-red-600">Failed to load box types: {boxesError}</p>
+          ) : null}
           <GridOfBoxes />
         </div>
         <Pt16 />
