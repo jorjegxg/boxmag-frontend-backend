@@ -67,9 +67,11 @@ export default function EditBoxTypePage() {
   const [title, setTitle] = useState("");
   const [imagePath, setImagePath] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [selectedImageFileName, setSelectedImageFileName] = useState<string | null>(null);
   const [previewImagePath, setPreviewImagePath] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [products, setProducts] = useState<EditableProduct[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
@@ -85,6 +87,8 @@ export default function EditBoxTypePage() {
     setImagePath(boxType.imagePath);
     setPreviewImagePath(boxType.imagePath);
     setIsActive(boxType.isActive);
+    setSelectedImageFile(null);
+    setSelectedImageFileName(null);
   }, [boxType]);
 
   useEffect(() => {
@@ -139,7 +143,7 @@ export default function EditBoxTypePage() {
     const productsToSave = options?.productsOverride ?? products;
 
     const trimmedTitle = title.trim();
-    const trimmedImagePath = imagePath.trim();
+    let trimmedImagePath = imagePath.trim();
 
     if (!trimmedTitle || !trimmedImagePath) {
       setSaveError("Name and photo are required.");
@@ -149,6 +153,33 @@ export default function EditBoxTypePage() {
     setIsSaving(true);
     setSaveError(null);
     try {
+      if (selectedImageFile) {
+        setIsUploadingImage(true);
+        const formData = new FormData();
+        formData.append("image", selectedImageFile);
+        const uploadResponse = await fetch(
+          `${backendBaseUrl}/api/box-types/upload-image`,
+          {
+            method: "POST",
+            body: formData,
+          },
+        );
+        const uploadBody = (await uploadResponse.json()) as {
+          ok?: boolean;
+          data?: { imagePath?: string };
+          message?: string;
+        };
+        if (
+          !uploadResponse.ok ||
+          uploadBody.ok !== true ||
+          !uploadBody.data?.imagePath
+        ) {
+          throw new Error(uploadBody.message ?? "Failed to upload image");
+        }
+        trimmedImagePath = uploadBody.data.imagePath.trim();
+        setImagePath(trimmedImagePath);
+      }
+
       const response = await fetch(`${backendBaseUrl}/api/box-types/${boxType.id}`, {
         method: "PUT",
         headers: {
@@ -181,18 +212,22 @@ export default function EditBoxTypePage() {
       }
 
       await loadBoxTypes();
+      setSelectedImageFile(null);
+      setSelectedImageFileName(null);
       if (redirectToAdmin) {
         router.push("/admin");
       }
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Failed to save box type");
     } finally {
+      setIsUploadingImage(false);
       setIsSaving(false);
     }
   }
 
   function handleImageFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
+    setSelectedImageFile(file);
     setSelectedImageFileName(file?.name ?? null);
 
     if (previewImagePath?.startsWith("blob:")) {
@@ -227,10 +262,6 @@ export default function EditBoxTypePage() {
 
   function addProduct() {
     setProducts((current) => [...current, createEmptyProduct()]);
-  }
-
-  function removeProduct(productIndex: number) {
-    setProducts((current) => current.filter((_, index) => index !== productIndex));
   }
 
   function requestRemoveProduct(productIndex: number) {
@@ -344,7 +375,7 @@ export default function EditBoxTypePage() {
                 </label>
 
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-semibold text-gray-800">Photo Upload (Preview only)</span>
+                  <span className="text-sm font-semibold text-gray-800">Photo Upload</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -354,7 +385,7 @@ export default function EditBoxTypePage() {
                   <span className="text-xs text-gray-500">
                     {selectedImageFileName
                       ? `Selected: ${selectedImageFileName}`
-                      : "Image upload is preview-only; save uses the Photo URL value."}
+                      : "Choose a file to replace the current image on save."}
                   </span>
                 </label>
 
@@ -587,10 +618,14 @@ export default function EditBoxTypePage() {
                           <button
                             type="button"
                             onClick={() => void handleSave({ redirectToAdmin: false })}
-                            disabled={isSaving}
+                            disabled={isSaving || isUploadingImage}
                             className="ml-auto rounded-md bg-my-red px-2 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            {isSaving ? "Saving..." : "Save product"}
+                            {isUploadingImage
+                              ? "Uploading image..."
+                              : isSaving
+                                ? "Saving..."
+                                : "Save product"}
                           </button>
                         </div>
                       </div>
@@ -611,10 +646,14 @@ export default function EditBoxTypePage() {
                   <button
                     type="button"
                     onClick={() => void handleSave()}
-                    disabled={isSaving}
+                    disabled={isSaving || isUploadingImage}
                     className="rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isSaving ? "Saving..." : "Save"}
+                    {isUploadingImage
+                      ? "Uploading image..."
+                      : isSaving
+                        ? "Saving..."
+                        : "Save"}
                   </button>
                   <Link
                     href="/admin"
