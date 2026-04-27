@@ -297,7 +297,6 @@ const BussinessPage = () => {
               ref={fileInputRef}
               id="pdf"
               type="file"
-              accept="application/pdf"
               className="sr-only"
               onChange={(e) => setAttachmentName(e.target.files?.[0]?.name ?? "")}
             />

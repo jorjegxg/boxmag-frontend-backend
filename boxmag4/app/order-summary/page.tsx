@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { B2b } from "../global/components/b2b";
 import ResponsiveLayoutWithPadding from "../ResponsiveLayoutWithPadding";
 import { Bar } from "../business/components/Bar";
@@ -12,6 +13,7 @@ import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import useBusinessStore from "../business/store/business_store";
 import { useLanguage } from "../i18n/language-context";
 import useBusinessOrderStore from "../stores/business_order_store";
+import { useNotification } from "../global/components/notification-center";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -35,6 +37,8 @@ function SummaryRow({
 
 export default function OrderSummaryPage() {
   const { t } = useLanguage();
+  const router = useRouter();
+  const { notify } = useNotification();
   const [firstName, setFirstName] = useState(shouldAutofillOrderSummary ? "John" : "");
   const [surname, setSurname] = useState(shouldAutofillOrderSummary ? "Doe" : "");
   const [companyName, setCompanyName] = useState(
@@ -58,6 +62,7 @@ export default function OrderSummaryPage() {
   const [createAccount, setCreateAccount] = useState(shouldAutofillOrderSummary);
   const [consentPhone, setConsentPhone] = useState(shouldAutofillOrderSummary);
   const [consentEmail, setConsentEmail] = useState(shouldAutofillOrderSummary);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const boxes = useBusinessStore((s) => s.boxes);
   const carboardTypes = useBusinessStore((s) => s.carboarbonTypeOptions);
@@ -73,6 +78,11 @@ export default function OrderSummaryPage() {
   const selectedPrint = boxPrints.find((p) => p.isSelected);
   const selectedSizeType = typeOfSizes.find((t) => t.isSelected);
   const selectedTransport = transportOptions.find((t) => t.isSelected);
+  const backendBaseUrl = (() => {
+    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+    if (!value) return "http://localhost:3005";
+    return value.endsWith("/") ? value.slice(0, -1) : value;
+  })();
 
   const orderRows = [
     { label: t("orderSummary.boxType"), value: selectedBox?.name ?? "—" },
@@ -101,6 +111,102 @@ export default function OrderSummaryPage() {
       value: draft.message ? draft.message : t("orderSummary.no"),
     },
   ];
+
+  const handleSubmitOrder = async () => {
+    const requiredContactFields = [
+      firstName,
+      surname,
+      companyName,
+      email,
+      phone,
+      address,
+      postcode,
+      city,
+      country,
+    ];
+
+    if (requiredContactFields.some((value) => value.trim().length === 0)) {
+      notify({
+        type: "error",
+        message: "Please complete all required contact fields before sending the order.",
+      });
+      return;
+    }
+
+    if (!draft.acceptedTerms) {
+      notify({
+        type: "error",
+        message: "Please accept terms in Step 2 before sending the order.",
+      });
+      return;
+    }
+
+    if (!selectedBox || !selectedType || !selectedColor || !selectedPrint || !selectedSizeType || !selectedTransport) {
+      notify({
+        type: "error",
+        message: "Order details are incomplete. Please return to Step 2 and complete all fields.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${backendBaseUrl}/api/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          boxTypeId: selectedBox.id,
+          boxTypeName: selectedBox.name,
+          cardboardType: selectedType.name,
+          cardboardColour: selectedColor.name,
+          boxPrint: selectedPrint.name === "1 Color" ? "1 Colour" : selectedPrint.name,
+          lengthMm: draft.length,
+          widthMm: draft.width,
+          heightMm: draft.height,
+          sizeType: selectedSizeType.name,
+          transport: selectedTransport.name,
+          quantity: draft.quantity,
+          ftl: false,
+          attachmentName: draft.attachmentName || null,
+          message: draft.message,
+          acceptedTerms: draft.acceptedTerms,
+          firstName,
+          surname,
+          companyName,
+          vatNumber: vatNumber || null,
+          email,
+          phone,
+          address,
+          postcode,
+          city,
+          country,
+          createAccount,
+          consentPhone,
+          consentEmail,
+        }),
+      });
+
+      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+      }
+
+      notify({
+        type: "success",
+        message: "Order sent successfully.",
+      });
+      router.push("/");
+    } catch (error) {
+      notify({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to send order.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div>
@@ -233,8 +339,13 @@ export default function OrderSummaryPage() {
             <Link href="/business" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-my-red hover:bg-my-red/90 text-white font-semibold transition-colors">
               <span>←</span> {t("common.prev")}
             </Link>
-            <button type="button" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-my-red hover:bg-my-red/90 text-white font-semibold transition-colors">
-              {t("common.next")} <span>→</span>
+            <button
+              type="button"
+              onClick={() => void handleSubmitOrder()}
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-my-red hover:bg-my-red/90 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold transition-colors"
+            >
+              {isSubmitting ? "Sending..." : t("common.next")} <span>→</span>
             </button>
           </div>
         </div>
