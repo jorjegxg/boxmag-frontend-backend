@@ -83,7 +83,6 @@ export default function AdminPage() {
   );
   const loadBoxTypes = useAdminBoxTypesStore((state) => state.loadBoxTypes);
   const createBoxType = useAdminBoxTypesStore((state) => state.createBoxType);
-  const [boxTypeKey, setBoxTypeKey] = useState("");
   const [boxTypeTitle, setBoxTypeTitle] = useState("");
   const [boxImagePath, setBoxImagePath] = useState("");
   const [selectedBoxImageFile, setSelectedBoxImageFile] = useState<File | null>(
@@ -99,12 +98,11 @@ export default function AdminPage() {
   }, []);
 
   const handleAddBoxType = async () => {
-    const trimmedKey = boxTypeKey.trim();
     const trimmedTitle = boxTypeTitle.trim();
     let trimmedImagePath = boxImagePath.trim();
 
-    if (!trimmedKey || !trimmedTitle) {
-      setFormError("Please fill in Box Type ID and Title.");
+    if (!trimmedTitle) {
+      setFormError("Please fill in Title.");
       return;
     }
 
@@ -156,7 +154,6 @@ export default function AdminPage() {
     }
 
     await createBoxType({
-      key: trimmedKey,
       title: trimmedTitle,
       imagePath: trimmedImagePath,
       isActive: true,
@@ -164,7 +161,6 @@ export default function AdminPage() {
 
     const latestSaveError = useAdminBoxTypesStore.getState().saveError;
     if (!latestSaveError) {
-      setBoxTypeKey("");
       setBoxTypeTitle("");
       setBoxImagePath("");
       setSelectedBoxImageFile(null);
@@ -257,12 +253,6 @@ export default function AdminPage() {
 
           <div className="p-6 lg:p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Field
-                label="Box Type ID"
-                placeholder="e.g. ecommerce_boxes_fefco_703"
-                value={boxTypeKey}
-                onChange={setBoxTypeKey}
-              />
               <Field
                 label="Title"
                 placeholder="e.g. Boxfix Premium 500"

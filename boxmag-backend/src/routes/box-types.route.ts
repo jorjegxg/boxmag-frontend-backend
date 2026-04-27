@@ -7,7 +7,6 @@ import { uploadBoxImageToMinio } from "../services/minio";
 
 type BoxTypeRow = RowDataPacket & {
   id: number;
-  key: string;
   title: string;
   image_path: string;
   is_active: number;
@@ -94,7 +93,7 @@ boxTypesRouter.post("/upload-image", imageUpload.single("image"), async (req, re
 boxTypesRouter.get("/", async (_req, res) => {
   try {
     const [rows] = await mysqlPool.query<BoxTypeRow[]>(
-      `SELECT id, \`key\`, title, image_path, is_active
+      `SELECT id, title, image_path, is_active
        FROM box_types
        ORDER BY id ASC`
     );
@@ -103,7 +102,6 @@ boxTypesRouter.get("/", async (_req, res) => {
       ok: true,
       data: rows.map((row) => ({
         id: row.id,
-        key: row.key,
         title: row.title,
         imagePath: row.image_path,
         isActive: row.is_active === 1,
@@ -120,19 +118,10 @@ boxTypesRouter.get("/", async (_req, res) => {
 
 boxTypesRouter.post("/", async (req, res) => {
   const payload = req.body as {
-    key?: unknown;
     title?: unknown;
     imagePath?: unknown;
     isActive?: unknown;
   };
-
-  if (typeof payload.key !== "string" || payload.key.trim().length === 0) {
-    res.status(400).json({
-      ok: false,
-      message: "Key is required",
-    });
-    return;
-  }
 
   if (typeof payload.title !== "string" || payload.title.trim().length === 0) {
     res.status(400).json({
@@ -165,11 +154,10 @@ boxTypesRouter.post("/", async (req, res) => {
     const nextId = (maxIdRows[0]?.maxId ?? 0) + 1;
 
     await mysqlPool.execute(
-      `INSERT INTO box_types (id, \`key\`, title, image_path, is_active)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO box_types (id, title, image_path, is_active)
+       VALUES (?, ?, ?, ?)`,
       [
         nextId,
-        payload.key.trim(),
         payload.title.trim(),
         payload.imagePath.trim(),
         payload.isActive === false ? 0 : 1,
@@ -180,7 +168,6 @@ boxTypesRouter.post("/", async (req, res) => {
       ok: true,
       data: {
         id: nextId,
-        key: payload.key.trim(),
         title: payload.title.trim(),
         imagePath: payload.imagePath.trim(),
         isActive: payload.isActive === false ? false : true,

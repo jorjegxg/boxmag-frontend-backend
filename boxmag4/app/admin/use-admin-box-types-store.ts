@@ -4,7 +4,6 @@ import { create } from "zustand";
 
 export type AdminBoxType = {
   id: number;
-  key: string;
   title: string;
   imagePath: string;
   isActive: boolean;
@@ -27,7 +26,6 @@ type AdminBoxTypesState = {
   setBackendBaseUrl: (value: string) => void;
   loadBoxTypes: () => Promise<void>;
   createBoxType: (payload: {
-    key: string;
     title: string;
     imagePath: string;
     isActive?: boolean;
@@ -98,7 +96,6 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          key: payload.key,
           title: payload.title,
           imagePath: payload.imagePath,
           isActive: payload.isActive ?? true,
