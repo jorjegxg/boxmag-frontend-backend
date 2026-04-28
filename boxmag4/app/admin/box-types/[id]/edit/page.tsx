@@ -12,6 +12,8 @@ type EditablePrice = {
   withoutTax: number;
 };
 
+const FIXED_PRICE_NAMES = ["<100", "<300", "<500", "Pallet"] as const;
+
 type EditableProduct = {
   id?: number;
   boxTypeId?: number;
@@ -41,9 +43,13 @@ export default function EditBoxTypePage() {
   const boxTypeId = Number(params.id);
 
   const boxTypes = useAdminBoxTypesStore((state) => state.boxTypes);
-  const isLoadingBoxTypes = useAdminBoxTypesStore((state) => state.isLoadingBoxTypes);
+  const isLoadingBoxTypes = useAdminBoxTypesStore(
+    (state) => state.isLoadingBoxTypes,
+  );
   const boxTypesError = useAdminBoxTypesStore((state) => state.boxTypesError);
-  const setBackendBaseUrl = useAdminBoxTypesStore((state) => state.setBackendBaseUrl);
+  const setBackendBaseUrl = useAdminBoxTypesStore(
+    (state) => state.setBackendBaseUrl,
+  );
   const loadBoxTypes = useAdminBoxTypesStore((state) => state.loadBoxTypes);
 
   const backendBaseUrl = useMemo(() => {
@@ -68,7 +74,9 @@ export default function EditBoxTypePage() {
   const [imagePath, setImagePath] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
-  const [selectedImageFileName, setSelectedImageFileName] = useState<string | null>(null);
+  const [selectedImageFileName, setSelectedImageFileName] = useState<
+    string | null
+  >(null);
   const [previewImagePath, setPreviewImagePath] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -76,10 +84,17 @@ export default function EditBoxTypePage() {
   const [products, setProducts] = useState<EditableProduct[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
-  const [isRemoveProductConfirmOpen, setIsRemoveProductConfirmOpen] = useState(false);
-  const [pendingRemoveProductIndex, setPendingRemoveProductIndex] = useState<number | null>(null);
-  const [hideRemoveProductConfirm, setHideRemoveProductConfirm] = useState(false);
-  const [dontShowRemoveProductConfirmAgain, setDontShowRemoveProductConfirmAgain] = useState(false);
+  const [isRemoveProductConfirmOpen, setIsRemoveProductConfirmOpen] =
+    useState(false);
+  const [pendingRemoveProductIndex, setPendingRemoveProductIndex] = useState<
+    number | null
+  >(null);
+  const [hideRemoveProductConfirm, setHideRemoveProductConfirm] =
+    useState(false);
+  const [
+    dontShowRemoveProductConfirmAgain,
+    setDontShowRemoveProductConfirmAgain,
+  ] = useState(false);
 
   useEffect(() => {
     if (!boxType) return;
@@ -98,20 +113,37 @@ export default function EditBoxTypePage() {
       setIsLoadingProducts(true);
       setProductsError(null);
       try {
-        const response = await fetch(`${backendBaseUrl}/api/box-types/${boxTypeId}/products`);
+        const response = await fetch(
+          `${backendBaseUrl}/api/box-types/${boxTypeId}/products`,
+        );
         const payload = (await response.json()) as {
           ok?: boolean;
           message?: string;
           data?: unknown;
         };
-        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
-          throw new Error(payload.message ?? `Failed with status ${response.status}`);
+        if (
+          !response.ok ||
+          payload.ok !== true ||
+          !Array.isArray(payload.data)
+        ) {
+          throw new Error(
+            payload.message ?? `Failed with status ${response.status}`,
+          );
         }
         if (isCancelled) return;
-        setProducts(payload.data as EditableProduct[]);
+        setProducts(
+          (payload.data as EditableProduct[]).map((product) => ({
+            ...product,
+            prices: normalizePrices(product.prices),
+          })),
+        );
       } catch (error) {
         if (isCancelled) return;
-        setProductsError(error instanceof Error ? error.message : "Failed to load box type products");
+        setProductsError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load box type products",
+        );
       } finally {
         if (!isCancelled) {
           setIsLoadingProducts(false);
@@ -133,14 +165,24 @@ export default function EditBoxTypePage() {
   }, [previewImagePath]);
 
   useEffect(() => {
-    const storedPreference = window.localStorage.getItem("boxmag_hide_remove_product_confirm");
+    const storedPreference = window.localStorage.getItem(
+      "boxmag_hide_remove_product_confirm",
+    );
     setHideRemoveProductConfirm(storedPreference === "true");
   }, []);
 
-  async function handleSave(options?: { redirectToAdmin?: boolean; productsOverride?: EditableProduct[] }) {
+  async function handleSave(options?: {
+    redirectToAdmin?: boolean;
+    productsOverride?: EditableProduct[];
+  }) {
     if (!boxType) return;
     const redirectToAdmin = options?.redirectToAdmin ?? true;
-    const productsToSave = options?.productsOverride ?? products;
+    const productsToSave = (options?.productsOverride ?? products).map(
+      (product) => ({
+        ...product,
+        prices: normalizePrices(product.prices),
+      }),
+    );
 
     const trimmedTitle = title.trim();
     let trimmedImagePath = imagePath.trim();
@@ -180,35 +222,52 @@ export default function EditBoxTypePage() {
         setImagePath(trimmedImagePath);
       }
 
-      const response = await fetch(`${backendBaseUrl}/api/box-types/${boxType.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${backendBaseUrl}/api/box-types/${boxType.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: trimmedTitle,
+            imagePath: trimmedImagePath,
+            isActive,
+          }),
         },
-        body: JSON.stringify({
-          title: trimmedTitle,
-          imagePath: trimmedImagePath,
-          isActive,
-        }),
-      });
+      );
 
-      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+      };
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+        throw new Error(
+          payload.message ?? `Failed with status ${response.status}`,
+        );
       }
 
-      const productsResponse = await fetch(`${backendBaseUrl}/api/box-types/${boxType.id}/products`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+      const productsResponse = await fetch(
+        `${backendBaseUrl}/api/box-types/${boxType.id}/products`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            products: productsToSave,
+          }),
         },
-        body: JSON.stringify({
-          products: productsToSave,
-        }),
-      });
-      const productsPayload = (await productsResponse.json()) as { ok?: boolean; message?: string };
+      );
+      const productsPayload = (await productsResponse.json()) as {
+        ok?: boolean;
+        message?: string;
+      };
       if (!productsResponse.ok || productsPayload.ok !== true) {
-        throw new Error(productsPayload.message ?? `Failed with status ${productsResponse.status}`);
+        throw new Error(
+          productsPayload.message ??
+            `Failed with status ${productsResponse.status}`,
+        );
       }
 
       await loadBoxTypes();
@@ -218,7 +277,9 @@ export default function EditBoxTypePage() {
         router.push("/admin");
       }
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Failed to save box type");
+      setSaveError(
+        error instanceof Error ? error.message : "Failed to save box type",
+      );
     } finally {
       setIsUploadingImage(false);
       setIsSaving(false);
@@ -244,19 +305,25 @@ export default function EditBoxTypePage() {
 
   function updateProduct(
     productIndex: number,
-    updater: (current: EditableProduct) => EditableProduct
+    updater: (current: EditableProduct) => EditableProduct,
   ) {
-    setProducts((current) => current.map((product, index) => (index === productIndex ? updater(product) : product)));
+    setProducts((current) =>
+      current.map((product, index) =>
+        index === productIndex ? updater(product) : product,
+      ),
+    );
   }
 
   function updatePrice(
     productIndex: number,
     priceIndex: number,
-    updater: (current: EditablePrice) => EditablePrice
+    updater: (current: EditablePrice) => EditablePrice,
   ) {
     updateProduct(productIndex, (product) => ({
       ...product,
-      prices: product.prices.map((price, index) => (index === priceIndex ? updater(price) : price)),
+      prices: product.prices.map((price, index) =>
+        index === priceIndex ? updater(price) : price,
+      ),
     }));
   }
 
@@ -266,9 +333,14 @@ export default function EditBoxTypePage() {
 
   function requestRemoveProduct(productIndex: number) {
     if (hideRemoveProductConfirm) {
-      const nextProducts = products.filter((_, index) => index !== productIndex);
+      const nextProducts = products.filter(
+        (_, index) => index !== productIndex,
+      );
       setProducts(nextProducts);
-      void handleSave({ redirectToAdmin: false, productsOverride: nextProducts });
+      void handleSave({
+        redirectToAdmin: false,
+        productsOverride: nextProducts,
+      });
       return;
     }
 
@@ -280,7 +352,9 @@ export default function EditBoxTypePage() {
   async function confirmRemoveProduct() {
     if (pendingRemoveProductIndex === null) return;
 
-    const nextProducts = products.filter((_, index) => index !== pendingRemoveProductIndex);
+    const nextProducts = products.filter(
+      (_, index) => index !== pendingRemoveProductIndex,
+    );
     setProducts(nextProducts);
 
     if (dontShowRemoveProductConfirmAgain) {
@@ -292,7 +366,10 @@ export default function EditBoxTypePage() {
     setPendingRemoveProductIndex(null);
     setDontShowRemoveProductConfirmAgain(false);
 
-    await handleSave({ redirectToAdmin: false, productsOverride: nextProducts });
+    await handleSave({
+      redirectToAdmin: false,
+      productsOverride: nextProducts,
+    });
   }
 
   function cancelRemoveProduct() {
@@ -301,21 +378,11 @@ export default function EditBoxTypePage() {
     setDontShowRemoveProductConfirmAgain(false);
   }
 
-  function addPrice(productIndex: number) {
-    updateProduct(productIndex, (product) => ({
-      ...product,
-      prices: [...product.prices, createEmptyPrice()],
-    }));
-  }
-
-  function removePrice(productIndex: number, priceIndex: number) {
-    updateProduct(productIndex, (product) => ({
-      ...product,
-      prices: product.prices.filter((_, index) => index !== priceIndex),
-    }));
-  }
-
-  const showNotFound = !isLoadingBoxTypes && !boxTypesError && Number.isInteger(boxTypeId) && !boxType;
+  const showNotFound =
+    !isLoadingBoxTypes &&
+    !boxTypesError &&
+    Number.isInteger(boxTypeId) &&
+    !boxType;
   const taxMultiplier = 1 + taxPercent / 100;
 
   return (
@@ -346,14 +413,22 @@ export default function EditBoxTypePage() {
             {!Number.isInteger(boxTypeId) || boxTypeId <= 0 ? (
               <p className="text-red-600">Invalid box type id.</p>
             ) : null}
-            {isLoadingBoxTypes ? <p className="text-gray-600">Loading box type...</p> : null}
-            {boxTypesError ? <p className="text-red-600">Failed to load: {boxTypesError}</p> : null}
-            {showNotFound ? <p className="text-red-600">Box type not found.</p> : null}
+            {isLoadingBoxTypes ? (
+              <p className="text-gray-600">Loading box type...</p>
+            ) : null}
+            {boxTypesError ? (
+              <p className="text-red-600">Failed to load: {boxTypesError}</p>
+            ) : null}
+            {showNotFound ? (
+              <p className="text-red-600">Box type not found.</p>
+            ) : null}
 
             {boxType ? (
               <>
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-semibold text-gray-800">Name</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    Name
+                  </span>
                   <input
                     type="text"
                     value={title}
@@ -363,10 +438,14 @@ export default function EditBoxTypePage() {
                 </label>
 
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-semibold text-gray-800">Status</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    Status
+                  </span>
                   <select
                     value={isActive ? "active" : "draft"}
-                    onChange={(event) => setIsActive(event.target.value === "active")}
+                    onChange={(event) =>
+                      setIsActive(event.target.value === "active")
+                    }
                     className="h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
                   >
                     <option value="active">Active</option>
@@ -375,7 +454,9 @@ export default function EditBoxTypePage() {
                 </label>
 
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-semibold text-gray-800">Photo Upload</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    Photo Upload
+                  </span>
                   <input
                     type="file"
                     accept="image/*"
@@ -398,21 +479,33 @@ export default function EditBoxTypePage() {
                 ) : null}
 
                 <div className="rounded-xl border border-gray-200 p-4 space-y-3">
-                  <h2 className="text-sm font-semibold text-gray-900">Box Type Products and Prices</h2>
-                  <p className="text-xs text-gray-500">Save updates all products and prices for this box type.</p>
-                  {isLoadingProducts ? <p className="text-sm text-gray-600">Loading products...</p> : null}
-                  {productsError ? <p className="text-sm text-red-600">{productsError}</p> : null}
+                  <h2 className="text-sm font-semibold text-gray-900">
+                    Box Type Products and Prices
+                  </h2>
+                  <p className="text-xs text-gray-500">
+                    Save updates all products and prices for this box type.
+                  </p>
+                  {isLoadingProducts ? (
+                    <p className="text-sm text-gray-600">Loading products...</p>
+                  ) : null}
+                  {productsError ? (
+                    <p className="text-sm text-red-600">{productsError}</p>
+                  ) : null}
                   {products.map((product, productIndex) => (
                     <div
                       key={`${product.id ?? "new"}-${productIndex}`}
                       className="rounded-xl border-2 border-gray-300 bg-gray-50/40 p-4 space-y-4"
                     >
                       <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-gray-900">Product #{productIndex + 1}</h3>
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          Product #{productIndex + 1}
+                        </h3>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => void requestRemoveProduct(productIndex)}
+                            onClick={() =>
+                              void requestRemoveProduct(productIndex)
+                            }
                             disabled={isSaving}
                             className="rounded-md border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
                           >
@@ -423,14 +516,19 @@ export default function EditBoxTypePage() {
 
                       <div className="rounded-lg border border-blue-200 bg-white p-3 space-y-3">
                         <div className="border-b border-blue-100 pb-2">
-                          <h4 className="text-xs font-bold uppercase tracking-wide text-blue-700">Product details</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-wide text-blue-700">
+                            Product details
+                          </h4>
                         </div>
                         <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                           <input
                             type="text"
                             value={product.itemNo}
                             onChange={(event) =>
-                              updateProduct(productIndex, (current) => ({ ...current, itemNo: event.target.value }))
+                              updateProduct(productIndex, (current) => ({
+                                ...current,
+                                itemNo: event.target.value,
+                              }))
                             }
                             placeholder="Item no"
                             className="h-10 rounded-md border border-gray-300 px-2 text-sm"
@@ -439,7 +537,10 @@ export default function EditBoxTypePage() {
                             type="text"
                             value={product.productName}
                             onChange={(event) =>
-                              updateProduct(productIndex, (current) => ({ ...current, productName: event.target.value }))
+                              updateProduct(productIndex, (current) => ({
+                                ...current,
+                                productName: event.target.value,
+                              }))
                             }
                             placeholder="Product name"
                             className="h-10 rounded-md border border-gray-300 px-2 text-sm md:col-span-2"
@@ -448,7 +549,10 @@ export default function EditBoxTypePage() {
                             type="text"
                             value={product.qualityCardboard}
                             onChange={(event) =>
-                              updateProduct(productIndex, (current) => ({ ...current, qualityCardboard: event.target.value }))
+                              updateProduct(productIndex, (current) => ({
+                                ...current,
+                                qualityCardboard: event.target.value,
+                              }))
                             }
                             placeholder="Quality cardboard"
                             className="h-10 rounded-md border border-gray-300 px-2 text-sm md:col-span-3"
@@ -465,7 +569,10 @@ export default function EditBoxTypePage() {
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
                                 ...current,
-                                internalDimensionsMM: { ...current.internalDimensionsMM, l: value },
+                                internalDimensionsMM: {
+                                  ...current.internalDimensionsMM,
+                                  l: value,
+                                },
                               }))
                             }
                           />
@@ -475,7 +582,10 @@ export default function EditBoxTypePage() {
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
                                 ...current,
-                                internalDimensionsMM: { ...current.internalDimensionsMM, w: value },
+                                internalDimensionsMM: {
+                                  ...current.internalDimensionsMM,
+                                  w: value,
+                                },
                               }))
                             }
                           />
@@ -485,7 +595,10 @@ export default function EditBoxTypePage() {
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
                                 ...current,
-                                internalDimensionsMM: { ...current.internalDimensionsMM, h: value },
+                                internalDimensionsMM: {
+                                  ...current.internalDimensionsMM,
+                                  h: value,
+                                },
                               }))
                             }
                           />
@@ -493,14 +606,20 @@ export default function EditBoxTypePage() {
                             label="Weight Piece (gr)"
                             value={product.weightPieceGr}
                             onChange={(value) =>
-                              updateProduct(productIndex, (current) => ({ ...current, weightPieceGr: value }))
+                              updateProduct(productIndex, (current) => ({
+                                ...current,
+                                weightPieceGr: value,
+                              }))
                             }
                           />
                           <NumberField
                             label="Weight Pallet (kg)"
                             value={product.weightPalletKg}
                             onChange={(value) =>
-                              updateProduct(productIndex, (current) => ({ ...current, weightPalletKg: value }))
+                              updateProduct(productIndex, (current) => ({
+                                ...current,
+                                weightPalletKg: value,
+                              }))
                             }
                           />
                           <div className="col-span-full -mb-1 mt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
@@ -512,7 +631,10 @@ export default function EditBoxTypePage() {
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
                                 ...current,
-                                palletDimensionsCM: { ...current.palletDimensionsCM, l: value },
+                                palletDimensionsCM: {
+                                  ...current.palletDimensionsCM,
+                                  l: value,
+                                },
                               }))
                             }
                           />
@@ -522,7 +644,10 @@ export default function EditBoxTypePage() {
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
                                 ...current,
-                                palletDimensionsCM: { ...current.palletDimensionsCM, w: value },
+                                palletDimensionsCM: {
+                                  ...current.palletDimensionsCM,
+                                  w: value,
+                                },
                               }))
                             }
                           />
@@ -532,7 +657,10 @@ export default function EditBoxTypePage() {
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
                                 ...current,
-                                palletDimensionsCM: { ...current.palletDimensionsCM, h: value },
+                                palletDimensionsCM: {
+                                  ...current.palletDimensionsCM,
+                                  h: value,
+                                },
                               }))
                             }
                           />
@@ -540,7 +668,10 @@ export default function EditBoxTypePage() {
                             label="Pallet pcs"
                             value={product.palletPcs}
                             onChange={(value) =>
-                              updateProduct(productIndex, (current) => ({ ...current, palletPcs: value }))
+                              updateProduct(productIndex, (current) => ({
+                                ...current,
+                                palletPcs: value,
+                              }))
                             }
                           />
                         </div>
@@ -548,32 +679,32 @@ export default function EditBoxTypePage() {
 
                       <div className="rounded-lg border border-amber-200 bg-white overflow-hidden">
                         <div className="border-b border-amber-100 bg-amber-50 px-3 py-2">
-                          <h4 className="text-xs font-bold uppercase tracking-wide text-amber-700">Prices</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-wide text-amber-700">
+                            Prices
+                          </h4>
                         </div>
                         <table className="min-w-full text-xs">
                           <thead className="bg-amber-50/60">
                             <tr>
-                              <th className="px-2 py-1 text-left">Price name</th>
-                              <th className="px-2 py-1 text-left">Without tax (EUR)</th>
-                              <th className="px-2 py-1 text-left">With tax (EUR)</th>
-                              <th className="px-2 py-1 text-left">Action</th>
+                              <th className="w-1 whitespace-nowrap px-2 py-1 text-left">
+                                Price name
+                              </th>
+                              <th className="px-2 py-1 text-left">
+                                Without tax (EUR)
+                              </th>
+                              <th className="px-2 py-1 text-left">{`With tax (EUR, +${taxPercent}% VAT)`}</th>
                             </tr>
                           </thead>
                           <tbody>
                             {product.prices.map((price, priceIndex) => (
-                              <tr key={`${price.id ?? "new-price"}-${priceIndex}`} className="border-t border-gray-200">
-                                <td className="px-2 py-1">
-                                  <input
-                                    type="text"
-                                    value={price.name}
-                                    onChange={(event) =>
-                                      updatePrice(productIndex, priceIndex, (current) => ({
-                                        ...current,
-                                        name: event.target.value,
-                                      }))
-                                    }
-                                    className="h-8 w-full rounded border border-gray-300 px-2"
-                                  />
+                              <tr
+                                key={`${price.id ?? "new-price"}-${priceIndex}`}
+                                className="border-t border-gray-200"
+                              >
+                                <td className="w-1 whitespace-nowrap px-2 py-1">
+                                  <span className="inline-flex h-8 items-center px-1 text-xs font-medium text-gray-700">
+                                    {FIXED_PRICE_NAMES[priceIndex]}
+                                  </span>
                                 </td>
                                 <td className="px-2 py-1">
                                   <input
@@ -581,27 +712,26 @@ export default function EditBoxTypePage() {
                                     step="0.01"
                                     value={price.withoutTax}
                                     onChange={(event) =>
-                                      updatePrice(productIndex, priceIndex, (current) => ({
-                                        ...current,
-                                        withoutTax: parseNumber(event.target.value),
-                                      }))
+                                      updatePrice(
+                                        productIndex,
+                                        priceIndex,
+                                        (current) => ({
+                                          ...current,
+                                          withoutTax: parseNumber(
+                                            event.target.value,
+                                          ),
+                                        }),
+                                      )
                                     }
                                     className="h-8 w-full rounded border border-gray-300 px-2"
                                   />
                                 </td>
                                 <td className="px-2 py-1">
                                   <div className="h-8 w-full rounded border border-gray-200 bg-gray-50 px-2 text-sm leading-8 text-gray-700">
-                                    {(price.withoutTax * taxMultiplier).toFixed(2)}
+                                    {(price.withoutTax * taxMultiplier).toFixed(
+                                      2,
+                                    )}
                                   </div>
-                                </td>
-                                <td className="px-2 py-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => removePrice(productIndex, priceIndex)}
-                                    className="rounded border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50"
-                                  >
-                                    Remove
-                                  </button>
                                 </td>
                               </tr>
                             ))}
@@ -610,14 +740,9 @@ export default function EditBoxTypePage() {
                         <div className="flex items-center gap-2 p-2">
                           <button
                             type="button"
-                            onClick={() => addPrice(productIndex)}
-                            className="rounded border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                          >
-                            Add price
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handleSave({ redirectToAdmin: false })}
+                            onClick={() =>
+                              void handleSave({ redirectToAdmin: false })
+                            }
                             disabled={isSaving || isUploadingImage}
                             className="ml-auto rounded-md bg-my-red px-2 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                           >
@@ -671,13 +796,19 @@ export default function EditBoxTypePage() {
       {isRemoveProductConfirmOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
-            <h2 className="text-base font-semibold text-gray-900">Remove product?</h2>
-            <p className="mt-2 text-sm text-gray-700">Are you sure you want to remove this product?</p>
+            <h2 className="text-base font-semibold text-gray-900">
+              Remove product?
+            </h2>
+            <p className="mt-2 text-sm text-gray-700">
+              Are you sure you want to remove this product?
+            </p>
             <label className="mt-4 flex items-center gap-2 text-sm text-gray-700">
               <input
                 type="checkbox"
                 checked={dontShowRemoveProductConfirmAgain}
-                onChange={(event) => setDontShowRemoveProductConfirmAgain(event.target.checked)}
+                onChange={(event) =>
+                  setDontShowRemoveProductConfirmAgain(event.target.checked)
+                }
               />
               <span>Don&apos;t show this again</span>
             </label>
@@ -716,15 +847,16 @@ function createEmptyProduct(): EditableProduct {
     weightPalletKg: 0,
     amountQtyInPcs: 0,
     palletPcs: 0,
-    prices: [createEmptyPrice()],
+    prices: normalizePrices([]),
   };
 }
 
-function createEmptyPrice(): EditablePrice {
-  return {
-    name: "",
-    withoutTax: 0,
-  };
+function normalizePrices(prices: EditablePrice[]): EditablePrice[] {
+  return FIXED_PRICE_NAMES.map((name, index) => ({
+    id: prices[index]?.id,
+    name,
+    withoutTax: Number(prices[index]?.withoutTax ?? 0),
+  }));
 }
 
 function parseNumber(value: string): number {
