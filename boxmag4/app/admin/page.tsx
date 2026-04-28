@@ -41,31 +41,33 @@ function sendDebugLog({
 
 let lastEditClickAt = 0;
 
-const mockOrders = [
-  {
-    id: "ORD-1024",
-    customer: "Luminex Store",
-    boxType: "E-commerce Boxes Fefco 703",
-    quantity: 1200,
-    totalPrice: "2,180.00 EUR",
-    status: "Pending",
-  },
-  {
-    id: "ORD-1025",
-    customer: "Trendy Hub",
-    boxType: "Shipping Box Fefco 427",
-    quantity: 800,
-    totalPrice: "1,240.00 EUR",
-    status: "In Progress",
-  },
-  {
-    id: "ORD-1026",
-    customer: "Fresh Bites",
-    boxType: "Pizza Box",
-    quantity: 2000,
-    totalPrice: "1,760.00 EUR",
-    status: "Completed",
-  },
+type AdminOrder = {
+  id: number;
+  orderNumber: string;
+  customerName: string;
+  companyName: string;
+  boxTypeName: string;
+  cardboardType: string;
+  cardboardColour: string;
+  boxPrint: string;
+  size: string;
+  transport: string;
+  quantity: number;
+  attachmentName: string | null;
+  message: string;
+  status: string;
+  email: string;
+  phone: string;
+  city: string;
+  country: string;
+  createdAt: string;
+};
+type OrderStatusValue = "new" | "in progress" | "completed" | "done";
+const ORDER_STATUS_OPTIONS: OrderStatusValue[] = [
+  "new",
+  "in progress",
+  "completed",
+  "done",
 ];
 
 export default function AdminPage() {
@@ -90,6 +92,10 @@ export default function AdminPage() {
   );
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
 
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -173,6 +179,68 @@ export default function AdminPage() {
   }, [backendBaseUrl, loadBoxTypes, setBackendBaseUrl]);
 
   useEffect(() => {
+    const loadOrders = async () => {
+      setIsLoadingOrders(true);
+      setOrdersError(null);
+      try {
+        const response = await fetch(`${backendBaseUrl}/api/orders`);
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          data?: AdminOrder[];
+          message?: string;
+        };
+        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+          throw new Error(payload.message ?? `Failed with status ${response.status}`);
+        }
+        setOrders(payload.data);
+      } catch (error) {
+        setOrdersError(
+          error instanceof Error ? error.message : "Failed to load orders",
+        );
+      } finally {
+        setIsLoadingOrders(false);
+      }
+    };
+
+    void loadOrders();
+  }, [backendBaseUrl]);
+
+  const handleOrderStatusChange = async (
+    orderId: number,
+    nextStatus: OrderStatusValue,
+  ) => {
+    setUpdatingOrderId(orderId);
+    try {
+      const response = await fetch(`${backendBaseUrl}/api/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+      };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+      }
+
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.id === orderId ? { ...order, status: nextStatus } : order,
+        ),
+      );
+    } catch (error) {
+      setOrdersError(
+        error instanceof Error ? error.message : "Failed to update order status",
+      );
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
+  useEffect(() => {
     if (boxTypes.length > 0) {
       sendDebugLog({
         hypothesisId: "H4",
@@ -245,6 +313,95 @@ export default function AdminPage() {
       </section>
 
       <section className="w-full bg-white px-6 lg:px-20 py-8">
+        <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
+          <SectionTitle title="Orders" subtitle="Data loaded from orders + contacts" />
+
+          <div className="p-6 lg:p-8 space-y-6">
+            <div className="rounded-xl border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-my-light-gray2 text-gray-800">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Order ID
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Customer
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Company
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Box Type
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Quantity
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Details
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoadingOrders ? (
+                      <tr className="border-t border-gray-200">
+                        <td className="px-4 py-3 text-gray-500" colSpan={7}>
+                          Loading orders...
+                        </td>
+                      </tr>
+                    ) : null}
+                    {!isLoadingOrders && ordersError ? (
+                      <tr className="border-t border-gray-200">
+                        <td className="px-4 py-3 text-red-600" colSpan={7}>
+                          Failed to load orders: {ordersError}
+                        </td>
+                      </tr>
+                    ) : null}
+                    {!isLoadingOrders &&
+                    !ordersError &&
+                    orders.length === 0 ? (
+                      <tr className="border-t border-gray-200">
+                        <td className="px-4 py-3 text-gray-500" colSpan={7}>
+                          No orders found.
+                        </td>
+                      </tr>
+                    ) : null}
+                    {!isLoadingOrders && !ordersError
+                      ? orders.map((order) => (
+                          <tr key={order.id} className="border-t border-gray-200">
+                            <td className="px-4 py-3 font-medium">
+                              {order.orderNumber}
+                            </td>
+                            <td className="px-4 py-3">{order.customerName}</td>
+                            <td className="px-4 py-3">{order.companyName}</td>
+                            <td className="px-4 py-3">{order.boxTypeName}</td>
+                            <td className="px-4 py-3">{order.quantity}</td>
+                            <td className="px-4 py-3 text-xs text-gray-700">
+                              <OrderDetailsCell order={order} />
+                            </td>
+                            <td className="px-4 py-3">
+                              <OrderStatusControl
+                                orderId={order.id}
+                                status={order.status}
+                                disabled={updatingOrderId === order.id}
+                                onChange={handleOrderStatusChange}
+                              />
+                            </td>
+                          </tr>
+                        ))
+                      : null}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="w-full bg-white px-6 lg:px-20 pb-8">
         <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
           <SectionTitle
             title="Box Types Management"
@@ -341,57 +498,6 @@ export default function AdminPage() {
                         </td>
                       </tr>
                     ) : null}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="w-full bg-white px-6 lg:px-20 pb-8">
-        <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
-          <SectionTitle title="Orders" subtitle="Recent orders overview" />
-
-          <div className="p-6 lg:p-8">
-            <div className="rounded-xl border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-my-light-gray2 text-gray-800">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Order ID
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Customer
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Box Type
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Quantity
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Total
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockOrders.map((order) => (
-                      <tr key={order.id} className="border-t border-gray-200">
-                        <td className="px-4 py-3 font-medium">{order.id}</td>
-                        <td className="px-4 py-3">{order.customer}</td>
-                        <td className="px-4 py-3">{order.boxType}</td>
-                        <td className="px-4 py-3">{order.quantity}</td>
-                        <td className="px-4 py-3">{order.totalPrice}</td>
-                        <td className="px-4 py-3">
-                          <OrderStatusBadge status={order.status} />
-                        </td>
-                      </tr>
-                    ))}
                   </tbody>
                 </table>
               </div>
@@ -573,26 +679,80 @@ function FilePickerInput({
   );
 }
 
-function OrderStatusBadge({ status }: { status: string }) {
-  if (status === "Completed") {
-    return (
-      <span className="inline-flex rounded-full bg-green-100 text-green-700 px-2.5 py-1 text-xs font-medium">
-        {status}
-      </span>
-    );
-  }
-
-  if (status === "In Progress") {
-    return (
-      <span className="inline-flex rounded-full bg-blue-100 text-blue-700 px-2.5 py-1 text-xs font-medium">
-        {status}
-      </span>
-    );
-  }
+function OrderStatusControl({
+  orderId,
+  status,
+  disabled,
+  onChange,
+}: {
+  orderId: number;
+  status: string;
+  disabled: boolean;
+  onChange: (orderId: number, nextStatus: OrderStatusValue) => Promise<void>;
+}) {
+  const normalizedStatus = status.toLowerCase();
+  const selectedStatus = ORDER_STATUS_OPTIONS.includes(
+    normalizedStatus as OrderStatusValue,
+  )
+    ? (normalizedStatus as OrderStatusValue)
+    : "new";
 
   return (
-    <span className="inline-flex rounded-full bg-yellow-100 text-yellow-700 px-2.5 py-1 text-xs font-medium">
-      {status}
-    </span>
+    <select
+      value={selectedStatus}
+      disabled={disabled}
+      onChange={(event) =>
+        void onChange(orderId, event.target.value as OrderStatusValue)
+      }
+      className="h-8 rounded-md border border-gray-300 bg-white px-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red disabled:bg-gray-100 disabled:text-gray-500"
+    >
+      {ORDER_STATUS_OPTIONS.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function OrderDetailsCell({ order }: { order: AdminOrder }) {
+  const safeMessage = typeof order.message === "string" ? order.message : "";
+  const shortMessage = safeMessage.slice(0, 60);
+  const hasMoreMessage = safeMessage.length > 60;
+
+  return (
+    <details className="group">
+      <summary className="cursor-pointer list-none text-my-red font-semibold hover:underline">
+        View details
+      </summary>
+      <div className="mt-2 space-y-1.5 rounded-md bg-gray-50 p-2.5 text-[11px] leading-4">
+        <div>
+          <span className="font-semibold">Contact:</span> {order.email} / {order.phone}
+        </div>
+        <div>
+          <span className="font-semibold">Location:</span> {order.city}, {order.country}
+        </div>
+        <div>
+          <span className="font-semibold">Spec:</span> {order.cardboardType}, {order.cardboardColour}, {order.boxPrint}
+        </div>
+        <div>
+          <span className="font-semibold">Size:</span> {order.size}
+        </div>
+        <div>
+          <span className="font-semibold">Transport:</span> {order.transport}
+        </div>
+        <div>
+          <span className="font-semibold">Attachment:</span> {order.attachmentName ?? "No"}
+        </div>
+        <div>
+          <span className="font-semibold">Message:</span> {shortMessage || "No message"}
+          {hasMoreMessage ? "..." : ""}
+        </div>
+        <div>
+          <span className="font-semibold">Created:</span>{" "}
+          {new Date(order.createdAt).toLocaleString()}
+        </div>
+      </div>
+    </details>
   );
 }

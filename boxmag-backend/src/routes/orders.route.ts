@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ResultSetHeader } from "mysql2";
+import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { PoolConnection } from "mysql2/promise";
 import { mysqlPool } from "../db/mysql";
 
@@ -60,6 +60,88 @@ function toRequiredNumber(value: unknown): number | null {
 }
 
 export const ordersRouter = Router();
+const ALLOWED_ORDER_STATUSES = new Set([
+  "new",
+  "in progress",
+  "completed",
+  "done",
+]);
+
+type OrderListRow = RowDataPacket & {
+  id: number;
+  box_type_name: string;
+  cardboard_type: string;
+  cardboard_colour: string;
+  box_print: string;
+  length_mm: number | null;
+  width_mm: number | null;
+  height_mm: number | null;
+  size_type: string;
+  transport: string;
+  quantity: number;
+  attachment_name: string | null;
+  message: string | null;
+  status: string;
+  created_at: string;
+  first_name: string;
+  surname: string;
+  company_name: string;
+  email: string;
+  phone: string;
+  city: string;
+  country: string;
+};
+
+ordersRouter.get("/", async (_req, res) => {
+  try {
+    const [rows] = await mysqlPool.query<OrderListRow[]>(
+      `SELECT o.id, o.box_type_name, o.cardboard_type, o.cardboard_colour, o.box_print,
+              o.length_mm, o.width_mm, o.height_mm, o.size_type, o.transport,
+              o.quantity, o.attachment_name, o.message, o.status, o.created_at,
+              c.first_name, c.surname, c.company_name, c.email, c.phone, c.city, c.country
+       FROM orders o
+       LEFT JOIN contacts c ON c.order_id = o.id
+       ORDER BY o.created_at DESC, o.id DESC`
+    );
+
+    res.json({
+      ok: true,
+      data: rows.map((row) => ({
+        id: row.id,
+        orderNumber: `ORD-${String(row.id).padStart(4, "0")}`,
+        customerName:
+          [row.first_name, row.surname].filter(Boolean).join(" ").trim() ||
+          row.company_name ||
+          "Unknown customer",
+        companyName: row.company_name,
+        boxTypeName: row.box_type_name,
+        cardboardType: row.cardboard_type,
+        cardboardColour: row.cardboard_colour,
+        boxPrint: row.box_print,
+        size:
+          row.length_mm != null && row.width_mm != null && row.height_mm != null
+            ? `${row.length_mm} x ${row.width_mm} x ${row.height_mm} mm (${row.size_type})`
+            : `N/A (${row.size_type})`,
+        transport: row.transport,
+        quantity: row.quantity,
+        attachmentName: row.attachment_name,
+        message: row.message ?? "",
+        status: row.status,
+        email: row.email,
+        phone: row.phone,
+        city: row.city,
+        country: row.country,
+        createdAt: row.created_at,
+      })),
+    });
+  } catch (error) {
+    console.error("Failed to load orders", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to load orders",
+    });
+  }
+});
 
 ordersRouter.post("/", async (req, res) => {
   const payload = (req.body ?? {}) as CreateOrderPayload;
@@ -194,5 +276,56 @@ ordersRouter.post("/", async (req, res) => {
     });
   } finally {
     connection?.release();
+  }
+});
+
+ordersRouter.patch("/:orderId/status", async (req, res) => {
+  const orderId = Number(req.params.orderId);
+  const nextStatusRaw = toRequiredString((req.body ?? {}).status);
+  const nextStatus = nextStatusRaw?.toLowerCase() ?? null;
+
+  if (!Number.isInteger(orderId) || orderId <= 0 || !nextStatus) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid order status payload",
+    });
+    return;
+  }
+
+  if (!ALLOWED_ORDER_STATUSES.has(nextStatus)) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid order status value",
+    });
+    return;
+  }
+
+  try {
+    const [result] = await mysqlPool.execute<ResultSetHeader>(
+      `UPDATE orders SET status = ? WHERE id = ?`,
+      [nextStatus, orderId]
+    );
+
+    if (result.affectedRows === 0) {
+      res.status(404).json({
+        ok: false,
+        message: "Order not found",
+      });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      data: {
+        id: orderId,
+        status: nextStatus,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to update order status", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to update order status",
+    });
   }
 });
