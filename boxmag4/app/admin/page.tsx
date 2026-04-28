@@ -2,7 +2,6 @@
 
 import { memo, type ChangeEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { B2b } from "../global/components/b2b";
 import {
   type AdminBoxType,
   useAdminBoxTypesStore,
@@ -300,8 +299,6 @@ export default function AdminPage() {
 
   return (
     <div>
-      <B2b />
-
       <section className="w-full bg-white px-6 lg:px-20 pt-6">
         <div className="max-w-7xl mx-auto text-xs lg:text-sm text-gray-500 uppercase tracking-wide">
           <Link href="/" className="hover:underline">
