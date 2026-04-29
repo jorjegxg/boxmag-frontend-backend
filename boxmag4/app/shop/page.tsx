@@ -1,119 +1,243 @@
 "use client";
 
-import { ProductsTable } from "../components/ProductTable";
-import { B2b } from "../global/components/b2b";
-import { HaveAQuestion } from "../global/components/have-a-question";
-import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
-import { WhyChooseBoxfixSection } from "../global/components/why-choose-boxfix-section";
 import Link from "next/link";
-import Image from "next/image";
-import { ServicesSection } from "../global/components/services-section";
-import { TrainingProductVideoSection } from "../global/components/training-product-video-section";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLanguage } from "../i18n/language-context";
+
+type BoxType = {
+  id: number;
+  title: string;
+  imagePath: string;
+  isActive: boolean;
+};
+
+type BoxTypeProduct = {
+  id: number;
+  boxTypeId: number;
+  itemNo: string;
+  productName: string;
+  prices: Array<{
+    id: number;
+    name: string;
+    withoutTax: number;
+    withTax: number;
+  }>;
+};
+
+function normalizeImageUrl(baseUrl: string, imagePath: string): string {
+  const trimmed = imagePath.trim();
+  if (!trimmed) return "/placeholders/box4.png";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  const normalizedPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return `${baseUrl}${normalizedPath}`;
+}
 
 export default function ShopPage() {
   const { t } = useLanguage();
+  const searchParams = useSearchParams();
+  const [boxTypes, setBoxTypes] = useState<BoxType[]>([]);
+  const [products, setProducts] = useState<BoxTypeProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const backendBaseUrl = useMemo(() => {
+    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+    if (!value) return "http://localhost:3005";
+    return value.endsWith("/") ? value.slice(0, -1) : value;
+  }, []);
+
+  const selectedBoxTypeId = useMemo(() => {
+    const param = searchParams.get("boxTypeId");
+    if (!param) return null;
+    const parsed = Number(param);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }, [searchParams]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
+    const loadData = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const boxTypesResponse = await fetch(`${backendBaseUrl}/api/box-types`, {
+          signal: controller.signal,
+        });
+        const boxTypesPayload = (await boxTypesResponse.json()) as {
+          ok?: boolean;
+          message?: string;
+          data?: Array<{ id: number; title: string; imagePath: string; isActive: boolean }>;
+        };
+        if (
+          !boxTypesResponse.ok ||
+          boxTypesPayload.ok !== true ||
+          !Array.isArray(boxTypesPayload.data)
+        ) {
+          throw new Error(boxTypesPayload.message ?? "Failed to load box types");
+        }
+
+        const activeTypes = boxTypesPayload.data.filter((type) => type.isActive);
+        const typeMap = new Map(activeTypes.map((type) => [type.id, type]));
+        const targetTypes =
+          selectedBoxTypeId && typeMap.has(selectedBoxTypeId)
+            ? [typeMap.get(selectedBoxTypeId)!]
+            : activeTypes;
+
+        const allProducts = await Promise.all(
+          targetTypes.map(async (type) => {
+            const productsResponse = await fetch(
+              `${backendBaseUrl}/api/box-types/${type.id}/products`,
+              { signal: controller.signal },
+            );
+            const productsPayload = (await productsResponse.json()) as {
+              ok?: boolean;
+              message?: string;
+              data?: Array<{
+                id: number;
+                boxTypeId: number;
+                itemNo: string;
+                productName: string;
+                prices?: Array<{
+                  id: number;
+                  name: string;
+                  withoutTax: number;
+                  withTax: number;
+                }>;
+              }>;
+            };
+            if (
+              !productsResponse.ok ||
+              productsPayload.ok !== true ||
+              !Array.isArray(productsPayload.data)
+            ) {
+              throw new Error(productsPayload.message ?? "Failed to load products");
+            }
+
+            return productsPayload.data.map((product) => ({
+              id: product.id,
+              boxTypeId: type.id,
+              itemNo: String(product.itemNo ?? ""),
+              productName: String(product.productName ?? ""),
+              prices: Array.isArray(product.prices) ? product.prices : [],
+            }));
+          }),
+        );
+
+        if (cancelled) return;
+        setBoxTypes(activeTypes);
+        setProducts(allProducts.flat());
+      } catch (error) {
+        if (cancelled || controller.signal.aborted) return;
+        setLoadError(error instanceof Error ? error.message : "Failed to load shop");
+        setProducts([]);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadData();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [backendBaseUrl, selectedBoxTypeId]);
+
+  const activeBoxTypeById = useMemo(
+    () => new Map(boxTypes.map((type) => [type.id, type])),
+    [boxTypes],
+  );
 
   return (
-    <div>
-      <B2b />
-
-      {/* Current page section */}
-      <section className="w-full bg-white px-6 lg:px-20 pt-6">
-        <div className="max-w-7xl mx-auto text-xs lg:text-sm text-gray-500 uppercase tracking-wide">
+    <section className="w-full bg-white px-6 py-8 lg:px-20">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-6 text-xs uppercase tracking-wide text-gray-500 lg:text-sm">
           <Link href="/" className="hover:underline">
             {t("common.home")}
-          </Link>{" "}
+          </Link>
           <span className="mx-2">→</span>
-          <span className="text-gray-700 font-semibold">{t("footer.shop")}</span>{" "}
-          <span className="mx-2">→</span>
-          <span className="text-gray-700 font-semibold">BoxFix</span>
+          <span className="font-semibold text-gray-700">{t("footer.shop")}</span>
         </div>
-      </section>
 
-      {/* Packaging for e-commerce section (no dots) */}
-      <section className="w-full bg-white px-6 lg:px-20 pt-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="rounded-[28px] border border-black/15 bg-white px-6 py-10 lg:px-12 lg:py-12">
-            <h2 className="text-center text-3xl lg:text-5xl font-extrabold text-black uppercase tracking-wide">
-              {t("shop.packaging")}
-            </h2>
-
-            <div className="mt-10 grid grid-cols-[1fr_1fr_1fr] lg:grid-cols-3 gap-6 lg:gap-10 items-center max-sm:hidden">
-              {[
-                {
-                  src: "/b2b/boxes/sqashed.png",
-                  alt: "Flattened box with tear strip",
-                },
-                {
-                  src: "/b2b/boxes/ecommerce.png",
-                  alt: "Open e-commerce shipping box",
-                },
-                {
-                  src: "/b2b/boxes/box.png",
-                  alt: "Closed shipping box",
-                },
-              ].map(({ src, alt }, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-center rounded-2xl bg-white"
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr] lg:items-start">
+          <aside className="rounded-xl border border-my-light-gray bg-white p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Categorii
+            </p>
+            <div className="flex flex-wrap gap-2 lg:flex-col lg:gap-1">
+              <Link
+                href="/shop"
+                className={`rounded-md border px-3 py-2 text-sm transition lg:w-full ${
+                  selectedBoxTypeId == null
+                    ? "border-my-blue bg-my-blue text-white"
+                    : "border-my-light-gray text-black hover:bg-gray-50"
+                }`}
+              >
+                {t("common.all")}
+              </Link>
+              {boxTypes.map((type) => (
+                <Link
+                  key={type.id}
+                  href={`/shop?boxTypeId=${type.id}`}
+                  className={`rounded-md border px-3 py-2 text-sm transition lg:w-full ${
+                    selectedBoxTypeId === type.id
+                      ? "border-my-blue bg-my-blue text-white"
+                      : "border-my-light-gray text-black hover:bg-gray-50"
+                  }`}
                 >
-                  <div className="w-full max-w-[260px] aspect-4/3 flex items-center justify-center">
-                    <Image
-                      src={src}
-                      alt={alt}
-                      width={420}
-                      height={320}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                </div>
+                  {type.title}
+                </Link>
               ))}
             </div>
+          </aside>
 
-            <div className="mt-10 text-center">
-              <p className="text-my-red text-xl lg:text-2xl font-extrabold">
-                BOXFIX<sup className="align-top text-sm lg:text-base">®</sup>{" "}
-                <span className="font-semibold text-my-red">
-                  {t("shop.slogan")}
-                </span>
-              </p>
-              <p className="mt-5 text-gray-700 max-w-4xl mx-auto leading-relaxed text-sm lg:text-base">
-                {t("shop.boxfixDescription")}
-              </p>
-            </div>
+          <div>
+            {isLoading ? (
+              <p className="text-sm text-gray-500">Loading shop...</p>
+            ) : loadError ? (
+              <p className="text-sm text-red-600">{loadError}</p>
+            ) : products.length === 0 ? (
+              <p className="text-sm text-gray-500">Nu exista produse pentru filtrul selectat.</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                {products.map((product) => {
+                  const boxType = activeBoxTypeById.get(product.boxTypeId);
+                  const imageUrl = boxType
+                    ? normalizeImageUrl(backendBaseUrl, boxType.imagePath)
+                    : "/placeholders/box4.png";
+                  const firstPrice = product.prices[0];
+                  return (
+                    <article
+                      key={product.id}
+                      className="rounded-xl border border-my-light-gray bg-white p-4 shadow-sm"
+                    >
+                      <div className="mb-4 h-44 w-full overflow-hidden rounded-lg bg-my-light-gray2">
+                        <img
+                          src={imageUrl}
+                          alt={boxType?.title ?? product.productName}
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">
+                        {boxType?.title ?? "Box Type"}
+                      </p>
+                      <h2 className="mt-1 text-base font-semibold text-black">{product.productName}</h2>
+                      <p className="mt-1 text-sm text-gray-600">Cod: {product.itemNo}</p>
+                      <p className="mt-3 text-sm font-semibold text-black">
+                        {firstPrice ? `de la € ${firstPrice.withTax.toFixed(2)}` : "Pret la cerere"}
+                      </p>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
-      </section>
-
-      {/* Discover section */}
-      <section className="w-full bg-[#f36a45] mt-10">
-        <div className="max-w-7xl mx-auto px-6 lg:px-20 py-6">
-          <p className="text-center text-white font-bold uppercase leading-tight text-lg lg:text-2xl">
-            {t("shop.discoverLine1")}
-            <br />
-            {t("shop.discoverLine2")}
-          </p>
-        </div>
-      </section>
-
-      {/* BoxFix Products section */}
-      <section className="w-full px-4 py-10 sm:px-6 lg:px-20">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-xl font-bold text-black sm:text-2xl mb-6 pb-3 border-b border-black/10">
-            {t("shop.products")}
-          </h1>
-          <div className="-mx-4 sm:mx-0 min-w-0">
-            <ProductsTable />
-          </div>
-        </div>{" "}
-      </section>
-      <div className="pt-16"></div>
-      <WhyChooseBoxfixSection />
-      {/* <TrainingProductVideoSection /> */}
-      <HaveAQuestion />
-      <ServicesSection />
-      <NewsletterSubscribe />
-    </div>
+      </div>
+    </section>
   );
 }

@@ -10,7 +10,7 @@ import { ServicesSection } from "../global/components/services-section";
 import { useLanguage } from "../i18n/language-context";
 import { FaCheck } from "react-icons/fa";
 
-export default function Shop2Page() {
+export default function CorrugatedEnvelopesPage() {
   const { t } = useLanguage();
 
   return (

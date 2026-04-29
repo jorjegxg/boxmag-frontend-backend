@@ -20,7 +20,7 @@ Acest document listeaza lucrurile ramase de implementat/curatat, pe baza starii 
   - `boxmag4/app/components/Shop2ProductsTable.tsx`
 - [ ] Inlocuire imagini placeholder (`/placeholders/...`) cu asset-uri finale.
 - [ ] Curatare `console.log` si cod comentat ramas in paginile principale/stores.
-- [ ] Uniformizare UX intre fluxurile `shop`, `shop-2`, `checkout`, `business`.
+- [ ] Uniformizare UX intre fluxurile `shop`, `corrugated-envelopes`, `checkout`, `business`.
 - [ ] Clarificare consistenta taxe (`TAX_PERCENT` vs `NEXT_PUBLIC_TAX_PERCENT`) si unde se aplica exact in UI/API.
 
 ## Prioritate medie spre mica (P2/P3)
@@ -49,7 +49,7 @@ Acest document listeaza lucrurile ramase de implementat/curatat, pe baza starii 
 ## UX / business flow
 
 - [ ] Definire clara flux client:
-  - cand se foloseste `shop` vs `shop-2` vs `business`;
+  - cand se foloseste `shop` vs `corrugated-envelopes` vs `business`;
   - ce date intra in comanda si ce vine din DB;
   - ce vede utilizatorul dupa submit.
 - [ ] Confirmare comanda mai robusta (email de confirmare client + status tracking).
@@ -94,7 +94,7 @@ Obiectiv: tranzitie de la mock/placeholder la fluxuri reale, consistente.
 - [ ] Inlocuire date mock in `registration`, `account`, `checkout`, `Shop2ProductsTable`.
 - [ ] Inlocuire imagini placeholder cu asset-uri finale.
 - [ ] Curatare `console.log` si cod comentat nefolosit.
-- [ ] Uniformizare UX intre `shop`, `shop-2`, `checkout`, `business`.
+- [ ] Uniformizare UX intre `shop`, `corrugated-envelopes`, `checkout`, `business`.
 - [ ] Clarificare aplicare taxe in UI/API (`TAX_PERCENT` vs `NEXT_PUBLIC_TAX_PERCENT`).
 
 Livrabile:

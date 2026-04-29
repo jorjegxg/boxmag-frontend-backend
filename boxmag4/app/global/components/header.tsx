@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FaSearch } from "react-icons/fa";
+import { FaBars, FaSearch, FaTimes } from "react-icons/fa";
 import { useLanguage } from "../../i18n/language-context";
 
 type BoxType = {
@@ -28,7 +28,9 @@ export function Header() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const searchContainerRef = useRef<HTMLFormElement | null>(null);
+  const menuContainerRef = useRef<HTMLDivElement | null>(null);
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
     if (!value) return "http://localhost:3005";
@@ -47,12 +49,18 @@ export function Header() {
         data?: Array<{ id: number; title: string; isActive: boolean }>;
       };
       if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
-        throw new Error(payload.message ?? `Failed to load box types (${response.status})`);
+        throw new Error(
+          payload.message ?? `Failed to load box types (${response.status})`,
+        );
       }
-      const activeTypes = payload.data.filter((type) => type.isActive).slice(0, 8);
+      const activeTypes = payload.data
+        .filter((type) => type.isActive)
+        .slice(0, 8);
       setDefaultBoxTypes(activeTypes);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Failed to load box types");
+      setLoadError(
+        error instanceof Error ? error.message : "Failed to load box types",
+      );
       setDefaultBoxTypes([]);
     } finally {
       setIsLoading(false);
@@ -66,6 +74,12 @@ export function Header() {
         !searchContainerRef.current.contains(event.target as Node)
       ) {
         setIsDropdownOpen(false);
+      }
+      if (
+        menuContainerRef.current &&
+        !menuContainerRef.current.contains(event.target as Node)
+      ) {
+        setIsMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
@@ -89,9 +103,12 @@ export function Header() {
       setIsLoading(true);
       setLoadError(null);
       try {
-        const boxTypesResponse = await fetch(`${backendBaseUrl}/api/box-types`, {
-          signal: controller.signal,
-        });
+        const boxTypesResponse = await fetch(
+          `${backendBaseUrl}/api/box-types`,
+          {
+            signal: controller.signal,
+          },
+        );
         const boxTypesPayload = (await boxTypesResponse.json()) as {
           ok?: boolean;
           message?: string;
@@ -108,7 +125,9 @@ export function Header() {
           );
         }
 
-        const activeTypes = boxTypesPayload.data.filter((type) => type.isActive);
+        const activeTypes = boxTypesPayload.data.filter(
+          (type) => type.isActive,
+        );
         const matchingTypes = activeTypes.filter((type) =>
           type.title.toLowerCase().includes(trimmedQuery.toLowerCase()),
         );
@@ -129,7 +148,11 @@ export function Header() {
                 productName: string;
               }>;
             };
-            if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+            if (
+              !response.ok ||
+              payload.ok !== true ||
+              !Array.isArray(payload.data)
+            ) {
               throw new Error(
                 payload.message ??
                   `Failed to load box type products (${response.status})`,
@@ -179,6 +202,47 @@ export function Header() {
   return (
     <header className="w-full border-b border-my-light-gray bg-white">
       <div className="max-w-7xl mx-auto px-4 py-4 lg:px-8 flex gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative shrink-0" ref={menuContainerRef}>
+          <button
+            type="button"
+            aria-label="Open shop menu"
+            onClick={() => {
+              setIsMenuOpen((prev) => !prev);
+              void loadDefaultBoxTypes();
+            }}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-my-light-gray text-black hover:bg-gray-50"
+          >
+            {isMenuOpen ? <FaTimes className="h-5 w-5" /> : <FaBars className="h-5 w-5" />}
+          </button>
+          {isMenuOpen ? (
+            <div className="absolute left-0 top-[calc(100%+8px)] z-50 min-w-[240px] rounded-lg border border-my-light-gray bg-white p-3 shadow-lg">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                box_types
+              </p>
+              {isLoading ? (
+                <p className="text-sm text-gray-500">Loading...</p>
+              ) : loadError ? (
+                <p className="text-sm text-red-600">{loadError}</p>
+              ) : defaultBoxTypes.length === 0 ? (
+                <p className="text-sm text-gray-500">No box types found.</p>
+              ) : (
+                <ul className="space-y-1">
+                  {defaultBoxTypes.map((type) => (
+                    <li key={type.id}>
+                      <Link
+                        href={`/shop?boxTypeId=${type.id}`}
+                        className="block rounded px-2 py-1.5 text-sm text-black hover:bg-gray-100"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        {type.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
+        </div>
         {/* Logo */}
         <Link href="/" className="flex items-center shrink-0">
           <Image
@@ -306,7 +370,9 @@ export function Header() {
                 1
               </span>
             </span>
-            <span className="text-xs font-medium text-black">{t("header.cart")}</span>
+            <span className="text-xs font-medium text-black">
+              {t("header.cart")}
+            </span>
             <span className="text-xs font-bold text-black">€ 300.00</span>
           </Link>
 
@@ -324,13 +390,21 @@ export function Header() {
             />
             {language === "ro" ? (
               <>
-                <span className="text-xs font-medium text-black">{t("header.account")}</span>
-                <span className="text-xs font-medium text-black">{t("header.user").toLowerCase()}</span>
+                <span className="text-xs font-medium text-black">
+                  {t("header.account")}
+                </span>
+                <span className="text-xs font-medium text-black">
+                  {t("header.user").toLowerCase()}
+                </span>
               </>
             ) : (
               <>
-                <span className="text-xs font-medium text-black">{t("header.user")}</span>
-                <span className="text-xs font-medium text-black">{t("header.account")}</span>
+                <span className="text-xs font-medium text-black">
+                  {t("header.user")}
+                </span>
+                <span className="text-xs font-medium text-black">
+                  {t("header.account")}
+                </span>
               </>
             )}
           </Link>

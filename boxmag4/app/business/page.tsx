@@ -201,7 +201,7 @@ const BussinessPage = () => {
           <RedTitle
             title={t("business.selectBoxType")}
             secondTitle={t("business.moreDetails")}
-            link="/shop"
+            link="/boxesfetxo"
           />
         </div>
         {errors.boxType ? (

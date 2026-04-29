@@ -89,7 +89,7 @@ Porturi uzuale observate:
 
 - Home: `boxmag4/app/page.tsx`
 - Shop: `boxmag4/app/shop/page.tsx`
-- Shop 2: `boxmag4/app/shop-2/page.tsx`
+- Corrugated envelopes: `boxmag4/app/corrugated-envelopes/page.tsx`
 - Business (configurator B2B): `boxmag4/app/business/page.tsx`
 - Order summary: `boxmag4/app/order-summary/page.tsx`
 - Checkout: `boxmag4/app/checkout/page.tsx`
