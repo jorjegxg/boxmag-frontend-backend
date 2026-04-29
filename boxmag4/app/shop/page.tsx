@@ -17,6 +17,11 @@ type BoxTypeProduct = {
   boxTypeId: number;
   itemNo: string;
   productName: string;
+  internalDimensionsMM?: {
+    l: number;
+    w: number;
+    h: number;
+  };
   prices: Array<{
     id: number;
     name: string;
@@ -100,6 +105,11 @@ export default function ShopPage() {
                 boxTypeId: number;
                 itemNo: string;
                 productName: string;
+                internalDimensionsMM?: {
+                  l: number;
+                  w: number;
+                  h: number;
+                };
                 prices?: Array<{
                   id: number;
                   name: string;
@@ -121,6 +131,7 @@ export default function ShopPage() {
               boxTypeId: type.id,
               itemNo: String(product.itemNo ?? ""),
               productName: String(product.productName ?? ""),
+              internalDimensionsMM: product.internalDimensionsMM,
               prices: Array.isArray(product.prices) ? product.prices : [],
             }));
           }),
@@ -210,6 +221,12 @@ export default function ShopPage() {
                     ? normalizeImageUrl(backendBaseUrl, boxType.imagePath)
                     : "/placeholders/box4.png";
                   const firstPrice = product.prices[0];
+                  const size =
+                    typeof product.internalDimensionsMM?.l === "number" &&
+                    typeof product.internalDimensionsMM?.w === "number" &&
+                    typeof product.internalDimensionsMM?.h === "number"
+                      ? `${product.internalDimensionsMM.l} x ${product.internalDimensionsMM.w} x ${product.internalDimensionsMM.h} mm`
+                      : null;
                   return (
                     <article
                       key={product.id}
@@ -227,6 +244,7 @@ export default function ShopPage() {
                       </p>
                       <h2 className="mt-1 text-base font-semibold text-black">{product.productName}</h2>
                       <p className="mt-1 text-sm text-gray-600">Cod: {product.itemNo}</p>
+                      {size ? <p className="mt-1 text-sm text-gray-600">Size: {size}</p> : null}
                       <p className="mt-3 text-sm font-semibold text-black">
                         {firstPrice ? `de la € ${firstPrice.withTax.toFixed(2)}` : "Pret la cerere"}
                       </p>

@@ -11,6 +11,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 CREATE TABLE IF NOT EXISTS box_types (
   id INT UNSIGNED NOT NULL PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
+  `key` VARCHAR(100) NOT NULL,
   image_path VARCHAR(500) NOT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -97,16 +98,17 @@ CREATE TABLE IF NOT EXISTS contacts (
     ON DELETE CASCADE
 );
 
-INSERT INTO box_types (id, title, image_path, is_active)
+INSERT INTO box_types (id, title, `key`, image_path, is_active)
 VALUES
-  (1, 'Boxfix, E-commerce Boxes Fefco 703 - B Wave', '/b2b/boxes/ecommerce.png', 1),
-  (2, 'Flaps Box - Fefco 201', '/b2b/boxes/flaps_box.png', 1),
-  (3, 'Shipping Box With Tape And Tear Strip - Fefco 427 (Size: 343X245X47 mm) - B Wave', '/b2b/boxes/tear_strip.png', 1),
-  (4, 'Shipping Box - Fefco 427 (Size: 343X245X47 mm) - B Wave', '/b2b/boxes/felco.png', 1),
-  (5, 'Footwear shipping box - Boxfix (Size: 350x255x135 mm) - B Wave', '/b2b/boxes/footwear.png', 1),
-  (6, 'Flat Box (Size: 220x155x39 mm, A5 - DIN)', '/b2b/boxes/flat_box.png', 1),
-  (7, 'Pizza Box (Size: 325x325x39mm) - E Wave', '/b2b/boxes/pizza.png', 1),
-  (8, 'Height Adjustable Shipping Box - Fefco 710, B Wave', '/b2b/boxes/adjustable.png', 1);
+  (1, 'Boxfix, E-commerce Boxes Fefco 703 - B Wave', 'boxfix-fefco-703-b-wave', '/b2b/boxes/ecommerce.png', 1),
+  (2, 'Flaps Box - Fefco 201', 'flaps-box-fefco-201', '/b2b/boxes/flaps_box.png', 1),
+  (3, 'Shipping Box With Tape And Tear Strip - Fefco 427 (Size: 343X245X47 mm) - B Wave', 'shipping-box-tape-tear-strip-fefco-427', '/b2b/boxes/tear_strip.png', 1),
+  (4, 'Shipping Box - Fefco 427 (Size: 343X245X47 mm) - B Wave', 'shipping-box-fefco-427', '/b2b/boxes/felco.png', 1),
+  (5, 'Footwear shipping box - Boxfix (Size: 350x255x135 mm) - B Wave', 'footwear-shipping-box-boxfix', '/b2b/boxes/footwear.png', 1),
+  (6, 'Flat Box (Size: 220x155x39 mm, A5 - DIN)', 'flat-box-a5-din', '/b2b/boxes/flat_box.png', 1),
+  (7, 'Pizza Box (Size: 325x325x39mm) - E Wave', 'pizza-box-325x325x39-e-wave', '/b2b/boxes/pizza.png', 1),
+  (8, 'Height Adjustable Shipping Box - Fefco 710, B Wave', 'height-adjustable-shipping-box-fefco-710', '/b2b/boxes/adjustable.png', 1),
+  (9, 'Corrugated cardboard envelope', 'corrugated-cardboard-envelope', '/b2b/boxes/envelope.png', 1);
 
 INSERT INTO box_type_products
   (box_type_id, item_no, product_name, internal_l_mm, internal_w_mm, internal_h_mm, quality_cardboard, pallet_l_cm, pallet_w_cm, pallet_h_cm, weight_piece_gr, weight_pallet_kg, amount_qty_in_pcs, pallet_pcs)
@@ -126,7 +128,12 @@ VALUES
   (1, 'BF41', 'BF41 BOXFIX', 312, 230, 112, '1.21B-31', 120, 80, 160, 182, 165, 20, 800),
   (1, 'BF42', 'BF42 BOXFIX', 312, 230, 162, '1.21B-31', 120, 82, 160, 203, 182, 20, 800),
   (1, 'BF50', 'BF50 BOXFIX', 350, 255, 135, '1.21B-31', 123, 80, 160, 225, 200, 20, 800),
-  (1, 'BF55', 'BF55 BOXFIX', 392, 292, 180, '1.21B-31', 120, 80, 160, 305, 143, 20, 400);
+  (1, 'BF55', 'BF55 BOXFIX', 392, 292, 180, '1.21B-31', 120, 80, 160, 305, 143, 20, 400),
+  (9, 'M1-EV', 'M1-EV CARDBOARD ENVELOPE 255x220', 255, 220, 70, '1.20-21 E', 120, 80, 160, 84, 292, 25, 5000),
+  (9, 'M2-EV', 'M2-EV CARDBOARD ENVELOPE 250x165', 250, 165, 70, '1.20-21 E', 120, 80, 160, 84, 292, 25, 6000),
+  (9, 'M3-EV', 'M3-EV CARDBOARD ENVELOPE 282x205', 282, 205, 70, '1.20-21 E', 120, 80, 160, 84, 292, 25, 3000),
+  (9, 'M4-EV', 'M4-EV CARDBOARD ENVELOPE 312x250', 312, 250, 70, '1.20-21 E', 120, 80, 160, 84, 292, 25, 3000),
+  (9, 'M5-EV', 'M4-EV CARDBOARD ENVELOPE 350x250', 350, 250, 70, '1.20-21 E', 120, 80, 160, 84, 292, 25, 2400);
 
 INSERT INTO box_type_product_prices
   (box_type_product_id, price_name, price_without_tax)
@@ -197,5 +204,25 @@ JOIN (
   UNION ALL SELECT 'BF55','300',0.84
   UNION ALL SELECT 'BF55','500',0.84
   UNION ALL SELECT 'BF55','Pallet',0.84
+  UNION ALL SELECT 'M1-EV','100',0.84
+  UNION ALL SELECT 'M1-EV','300',0.84
+  UNION ALL SELECT 'M1-EV','500',0.84
+  UNION ALL SELECT 'M1-EV','Pallet',0.84
+  UNION ALL SELECT 'M2-EV','100',0.84
+  UNION ALL SELECT 'M2-EV','300',0.84
+  UNION ALL SELECT 'M2-EV','500',0.84
+  UNION ALL SELECT 'M2-EV','Pallet',0.84
+  UNION ALL SELECT 'M3-EV','100',0.84
+  UNION ALL SELECT 'M3-EV','300',0.84
+  UNION ALL SELECT 'M3-EV','500',0.84
+  UNION ALL SELECT 'M3-EV','Pallet',0.84
+  UNION ALL SELECT 'M4-EV','100',0.84
+  UNION ALL SELECT 'M4-EV','300',0.84
+  UNION ALL SELECT 'M4-EV','500',0.84
+  UNION ALL SELECT 'M4-EV','Pallet',0.84
+  UNION ALL SELECT 'M5-EV','100',0.84
+  UNION ALL SELECT 'M5-EV','300',0.84
+  UNION ALL SELECT 'M5-EV','500',0.84
+  UNION ALL SELECT 'M5-EV','Pallet',0.84
 ) p ON p.item_no = btp.item_no
-WHERE btp.box_type_id = 1;
+WHERE btp.box_type_id IN (1, 9);

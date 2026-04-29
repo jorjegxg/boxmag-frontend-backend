@@ -8,6 +8,7 @@ import { uploadBoxImageToMinio } from "../services/minio";
 type BoxTypeRow = RowDataPacket & {
   id: number;
   title: string;
+  key: string;
   image_path: string;
   is_active: number;
 };
@@ -93,7 +94,7 @@ boxTypesRouter.post("/upload-image", imageUpload.single("image"), async (req, re
 boxTypesRouter.get("/", async (_req, res) => {
   try {
     const [rows] = await mysqlPool.query<BoxTypeRow[]>(
-      `SELECT id, title, image_path, is_active
+      `SELECT id, title, \`key\`, image_path, is_active
        FROM box_types
        ORDER BY id ASC`
     );
@@ -103,6 +104,7 @@ boxTypesRouter.get("/", async (_req, res) => {
       data: rows.map((row) => ({
         id: row.id,
         title: row.title,
+        key: row.key,
         imagePath: row.image_path,
         isActive: row.is_active === 1,
       })),
@@ -119,6 +121,7 @@ boxTypesRouter.get("/", async (_req, res) => {
 boxTypesRouter.post("/", async (req, res) => {
   const payload = req.body as {
     title?: unknown;
+    key?: unknown;
     imagePath?: unknown;
     isActive?: unknown;
   };
@@ -139,6 +142,14 @@ boxTypesRouter.post("/", async (req, res) => {
     return;
   }
 
+  if (typeof payload.key !== "string" || payload.key.trim().length === 0) {
+    res.status(400).json({
+      ok: false,
+      message: "Key is required",
+    });
+    return;
+  }
+
   if (payload.isActive != null && typeof payload.isActive !== "boolean") {
     res.status(400).json({
       ok: false,
@@ -154,11 +165,12 @@ boxTypesRouter.post("/", async (req, res) => {
     const nextId = (maxIdRows[0]?.maxId ?? 0) + 1;
 
     await mysqlPool.execute(
-      `INSERT INTO box_types (id, title, image_path, is_active)
-       VALUES (?, ?, ?, ?)`,
+      `INSERT INTO box_types (id, title, \`key\`, image_path, is_active)
+       VALUES (?, ?, ?, ?, ?)`,
       [
         nextId,
         payload.title.trim(),
+        payload.key.trim(),
         payload.imagePath.trim(),
         payload.isActive === false ? 0 : 1,
       ]
@@ -169,6 +181,7 @@ boxTypesRouter.post("/", async (req, res) => {
       data: {
         id: nextId,
         title: payload.title.trim(),
+        key: payload.key.trim(),
         imagePath: payload.imagePath.trim(),
         isActive: payload.isActive === false ? false : true,
       },
@@ -447,6 +460,7 @@ boxTypesRouter.put("/:id", async (req, res) => {
   const boxTypeId = Number(req.params.id);
   const payload = req.body as {
     title?: unknown;
+    key?: unknown;
     imagePath?: unknown;
     isActive?: unknown;
   };
@@ -475,6 +489,14 @@ boxTypesRouter.put("/:id", async (req, res) => {
     return;
   }
 
+  if (typeof payload.key !== "string" || payload.key.trim().length === 0) {
+    res.status(400).json({
+      ok: false,
+      message: "Key is required",
+    });
+    return;
+  }
+
   if (typeof payload.isActive !== "boolean") {
     res.status(400).json({
       ok: false,
@@ -486,9 +508,9 @@ boxTypesRouter.put("/:id", async (req, res) => {
   try {
     const [result] = await mysqlPool.execute(
       `UPDATE box_types
-       SET title = ?, image_path = ?, is_active = ?
+       SET title = ?, \`key\` = ?, image_path = ?, is_active = ?
        WHERE id = ?`,
-      [payload.title.trim(), payload.imagePath.trim(), payload.isActive ? 1 : 0, boxTypeId]
+      [payload.title.trim(), payload.key.trim(), payload.imagePath.trim(), payload.isActive ? 1 : 0, boxTypeId]
     );
 
     const updateResult = result as { affectedRows?: number };
