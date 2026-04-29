@@ -26,16 +26,30 @@ import { useNotification } from "../global/components/notification-center";
 import { useLanguage } from "../i18n/language-context";
 
 const BussinessPage = () => {
-  const isDevelopment = process.env.NODE_ENV === "development";
+  const publicAppEnv = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase();
+  const effectiveEnv =
+    publicAppEnv === "development" ||
+    publicAppEnv === "production" ||
+    publicAppEnv === "dev"
+      ? publicAppEnv
+      : "unknown";
+  const isDevelopment =
+    effectiveEnv === "development" || effectiveEnv === "dev";
   const router = useRouter();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachmentName, setAttachmentName] = useState("");
-  const [length, setLength] = useState(() => searchParams.get("length") ?? (isDevelopment ? "400" : ""));
-  const [width, setWidth] = useState(() => searchParams.get("width") ?? (isDevelopment ? "300" : ""));
-  const [height, setHeight] = useState(() => searchParams.get("height") ?? (isDevelopment ? "200" : ""));
+  const [length, setLength] = useState(
+    () => searchParams.get("length") ?? (isDevelopment ? "400" : ""),
+  );
+  const [width, setWidth] = useState(
+    () => searchParams.get("width") ?? (isDevelopment ? "300" : ""),
+  );
+  const [height, setHeight] = useState(
+    () => searchParams.get("height") ?? (isDevelopment ? "200" : ""),
+  );
   const [message, setMessage] = useState(() =>
-    isDevelopment ? "Test inquiry from development environment." : ""
+    isDevelopment ? "Test inquiry from development environment." : "",
   );
   const [quantity, setQuantity] = useState(() => (isDevelopment ? "500" : ""));
   const [acceptedTerms, setAcceptedTerms] = useState(() => isDevelopment);
@@ -44,18 +58,28 @@ const BussinessPage = () => {
   const boxes = useBusinessStore((state) => state.boxes);
   const boxesError = useBusinessStore((state) => state.boxesError);
   const loadBoxes = useBusinessStore((state) => state.loadBoxes);
-  const cardboardTypes = useBusinessStore((state) => state.carboarbonTypeOptions);
+  const cardboardTypes = useBusinessStore(
+    (state) => state.carboarbonTypeOptions,
+  );
   const boxColors = useBusinessStore((state) => state.boxColorOptions);
   const boxPrintOptions = useBusinessStore((state) => state.boxPrintOptions);
   const typeOfSizes = useBusinessStore((state) => state.typeOfSizes);
   const transportOptions = useBusinessStore((state) => state.transportOptions);
-  const setBusinessOrderDraft = useBusinessOrderStore((state) => state.setDraft);
+  const setBusinessOrderDraft = useBusinessOrderStore(
+    (state) => state.setDraft,
+  );
   const { notify } = useNotification();
   const { t } = useLanguage();
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
     if (!value) return "http://localhost:3005";
     return value.endsWith("/") ? value.slice(0, -1) : value;
+  }, []);
+
+  useEffect(() => {
+    console.log(
+      `[BusinessPage] Environment mode: ${effectiveEnv} (NEXT_PUBLIC_APP_ENV=${publicAppEnv ?? "undefined"})`,
+    );
   }, []);
 
   useEffect(() => {
@@ -119,8 +143,10 @@ const BussinessPage = () => {
     if (!transportOptions.some((option) => option.isSelected)) {
       nextErrors.transport = t("business.errors.transport");
     }
-    if (!quantity.trim()) nextErrors.quantity = t("business.errors.quantityRequired");
-    if (!message.trim()) nextErrors.message = t("business.errors.messageRequired");
+    if (!quantity.trim())
+      nextErrors.quantity = t("business.errors.quantityRequired");
+    if (!message.trim())
+      nextErrors.message = t("business.errors.messageRequired");
     if (!acceptedTerms) nextErrors.terms = t("business.errors.terms");
 
     setErrors(nextErrors);
@@ -178,11 +204,15 @@ const BussinessPage = () => {
             link="/shop"
           />
         </div>
-        {errors.boxType ? <p className="mt-3 text-sm text-red-600">{errors.boxType}</p> : null}
+        {errors.boxType ? (
+          <p className="mt-3 text-sm text-red-600">{errors.boxType}</p>
+        ) : null}
         <Pt16 />
         <div id="section-box-type-cards">
           {boxesError ? (
-            <p className="text-sm text-red-600">Failed to load box types: {boxesError}</p>
+            <p className="text-sm text-red-600">
+              Failed to load box types: {boxesError}
+            </p>
           ) : null}
           <GridOfBoxes />
         </div>
@@ -191,7 +221,9 @@ const BussinessPage = () => {
         <div id="section-cardboard-type">
           <RedTitle title={t("business.selectCardboardType")} />
         </div>
-        {errors.cardboardType ? <p className="mt-3 text-sm text-red-600">{errors.cardboardType}</p> : null}
+        {errors.cardboardType ? (
+          <p className="mt-3 text-sm text-red-600">{errors.cardboardType}</p>
+        ) : null}
         <Pt16 />
         <div id="section-cardboard-type-cards">
           <CarboardType />
@@ -201,7 +233,9 @@ const BussinessPage = () => {
         <div id="section-cardboard-color">
           <RedTitle title={t("business.selectCardboardColor")} />
         </div>
-        {errors.cardboardColor ? <p className="mt-3 text-sm text-red-600">{errors.cardboardColor}</p> : null}
+        {errors.cardboardColor ? (
+          <p className="mt-3 text-sm text-red-600">{errors.cardboardColor}</p>
+        ) : null}
         <Pt16 />
         <div id="section-cardboard-color-cards">
           <CarboardColors />
@@ -211,7 +245,9 @@ const BussinessPage = () => {
         <div id="section-box-print">
           <RedTitle title={t("business.boxPrint")} />
         </div>
-        {errors.boxPrint ? <p className="mt-3 text-sm text-red-600">{errors.boxPrint}</p> : null}
+        {errors.boxPrint ? (
+          <p className="mt-3 text-sm text-red-600">{errors.boxPrint}</p>
+        ) : null}
         <Pt16 />
         <div id="section-box-print-cards">
           <BoxPrintButtons />
@@ -221,7 +257,9 @@ const BussinessPage = () => {
         <div id="section-size-type">
           <RedTitle title={t("business.typeOfSizes")} />
         </div>
-        {errors.sizeType ? <p className="mt-3 text-sm text-red-600">{errors.sizeType}</p> : null}
+        {errors.sizeType ? (
+          <p className="mt-3 text-sm text-red-600">{errors.sizeType}</p>
+        ) : null}
         <Pt16 />
         <div id="section-size-type-cards">
           <TypeOfSizes />
@@ -266,7 +304,9 @@ const BussinessPage = () => {
         <div id="section-transport">
           <RedTitle title={t("business.transport")} />
         </div>
-        {errors.transport ? <p className="mt-3 text-sm text-red-600">{errors.transport}</p> : null}
+        {errors.transport ? (
+          <p className="mt-3 text-sm text-red-600">{errors.transport}</p>
+        ) : null}
         <Pt16 />
         <TransportOptions />
 
@@ -289,7 +329,10 @@ const BussinessPage = () => {
         <RedTitle title={t("business.attachment")} />
         <Pt16 />
         <div className="w-full max-w-md">
-          <label htmlFor="pdf" className="block text-sm font-semibold text-gray-800 mb-2">
+          <label
+            htmlFor="pdf"
+            className="block text-sm font-semibold text-gray-800 mb-2"
+          >
             {t("business.uploadFileOptional")}
           </label>
           <div className="flex rounded-xl border-2 border-gray-200 bg-white overflow-hidden focus-within:border-my-yellow focus-within:ring-2 focus-within:ring-my-yellow/30 transition-all">
@@ -298,7 +341,9 @@ const BussinessPage = () => {
               id="pdf"
               type="file"
               className="sr-only"
-              onChange={(e) => setAttachmentName(e.target.files?.[0]?.name ?? "")}
+              onChange={(e) =>
+                setAttachmentName(e.target.files?.[0]?.name ?? "")
+              }
             />
             <button
               type="button"
@@ -329,7 +374,9 @@ const BussinessPage = () => {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
         />
-        {errors.message ? <p className="mt-2 text-sm text-red-600">{errors.message}</p> : null}
+        {errors.message ? (
+          <p className="mt-2 text-sm text-red-600">{errors.message}</p>
+        ) : null}
         <Pt16 />
 
         <div className="flex justify-start">

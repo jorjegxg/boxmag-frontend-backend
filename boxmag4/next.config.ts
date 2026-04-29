@@ -38,10 +38,10 @@ const nextConfig: NextConfig = {
     ],
   },
   env: {
-    NEXT_PUBLIC_CONTACT_FORM_MODE:
-      process.env.NEXT_PUBLIC_CONTACT_FORM_MODE ??
-      readRootEnvValue("CONTACT_FORM_MODE") ??
-      "prod",
+    NEXT_PUBLIC_APP_ENV:
+      process.env.NEXT_PUBLIC_APP_ENV ??
+      readRootEnvValue("NODE_ENV") ??
+      "development",
   },
 
   turbopack: {

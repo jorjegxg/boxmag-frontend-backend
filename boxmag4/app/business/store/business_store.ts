@@ -3,7 +3,14 @@ import { Box, BoxColorOption, BoxPrint, BoxSize, BoxState, CarboardTypeState, Tr
 import { boxColorOptions, boxPrintOptions, boxSizes, carboarbonTypeOptions, transportOptions, typeOfSizes } from "./data/boxes";
 
 export type PageWithState = Box & BoxState;
-const isDevelopment = process.env.NODE_ENV === "development";
+const publicAppEnv = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase();
+const effectiveEnv =
+    publicAppEnv === "development" ||
+    publicAppEnv === "production" ||
+    publicAppEnv === "dev"
+        ? publicAppEnv
+        : "unknown";
+const isDevelopment = effectiveEnv === "development" || effectiveEnv === "dev";
 
 type BusinessState = {
     boxes: PageWithState[];
@@ -74,7 +81,7 @@ const useBusinessStore = create<BusinessState>((set) => ({
 
     carboarbonTypeOptions: carboarbonTypeOptions.map((option, index) => ({
         ...option,
-        isSelected: isDevelopment ? index === 0 : option.isSelected,
+        isSelected: isDevelopment ? index === 0 : false,
     })),
     confirmCarboardTypeOption(id) {
         console.log("confirmCarboardTypeOption ", id);

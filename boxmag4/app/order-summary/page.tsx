@@ -17,8 +17,9 @@ import { useNotification } from "../global/components/notification-center";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
-const shouldAutofillOrderSummary =
-  process.env.NEXT_PUBLIC_CONTACT_FORM_MODE?.toLowerCase() === "dev";
+const shouldAutofillOrderSummary = ["dev", "development"].includes(
+  process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() ?? "",
+);
 
 function SummaryRow({
   label,
@@ -60,8 +61,10 @@ export default function OrderSummaryPage() {
   const [city, setCity] = useState(shouldAutofillOrderSummary ? "Radauti" : "");
   const [country, setCountry] = useState(shouldAutofillOrderSummary ? "RO" : "");
   const [createAccount, setCreateAccount] = useState(shouldAutofillOrderSummary);
-  const [consentPhone, setConsentPhone] = useState(shouldAutofillOrderSummary);
-  const [consentEmail, setConsentEmail] = useState(shouldAutofillOrderSummary);
+  const [consentPhone, setConsentPhone] = useState(true);
+  const [consentEmail, setConsentEmail] = useState(true);
+  const [consentPhoneError, setConsentPhoneError] = useState("");
+  const [consentEmailError, setConsentEmailError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const boxes = useBusinessStore((s) => s.boxes);
@@ -113,6 +116,9 @@ export default function OrderSummaryPage() {
   ];
 
   const handleSubmitOrder = async () => {
+    setConsentPhoneError("");
+    setConsentEmailError("");
+
     const requiredContactFields = [
       firstName,
       surname,
@@ -137,6 +143,20 @@ export default function OrderSummaryPage() {
       notify({
         type: "error",
         message: "Please accept terms in Step 2 before sending the order.",
+      });
+      return;
+    }
+
+    if (!consentPhone || !consentEmail) {
+      if (!consentPhone) {
+        setConsentPhoneError("Please accept phone consent before sending.");
+      }
+      if (!consentEmail) {
+        setConsentEmailError("Please accept email consent before sending.");
+      }
+      notify({
+        type: "error",
+        message: "Please accept both consent checkboxes before sending the order.",
       });
       return;
     }
@@ -324,17 +344,43 @@ export default function OrderSummaryPage() {
             <span className="text-sm text-gray-700">{t("orderSummary.createAccount")}</span>
           </label>
           <label className="flex gap-3 items-start cursor-pointer">
-            <input type="checkbox" checked={consentPhone} onChange={(e) => setConsentPhone(e.target.checked)} className="mt-1 h-5 w-5 shrink-0 rounded border-2 border-gray-300 bg-white accent-my-red focus:ring-my-red" />
+            <input
+              type="checkbox"
+              checked={consentPhone}
+              onChange={(e) => {
+                setConsentPhone(e.target.checked);
+                if (e.target.checked) setConsentPhoneError("");
+              }}
+              className={`mt-1 h-5 w-5 shrink-0 rounded border-2 bg-white accent-my-red focus:ring-my-red ${
+                consentPhoneError ? "border-red-500" : "border-gray-300"
+              }`}
+            />
             <span className="text-sm text-gray-600">
               {t("orderSummary.consentPhone")}
             </span>
           </label>
+          {consentPhoneError ? (
+            <p className="-mt-2 text-sm text-red-600">{consentPhoneError}</p>
+          ) : null}
           <label className="flex gap-3 items-start cursor-pointer">
-            <input type="checkbox" checked={consentEmail} onChange={(e) => setConsentEmail(e.target.checked)} className="mt-1 h-5 w-5 shrink-0 rounded border-2 border-gray-300 bg-white accent-my-red focus:ring-my-red" />
+            <input
+              type="checkbox"
+              checked={consentEmail}
+              onChange={(e) => {
+                setConsentEmail(e.target.checked);
+                if (e.target.checked) setConsentEmailError("");
+              }}
+              className={`mt-1 h-5 w-5 shrink-0 rounded border-2 bg-white accent-my-red focus:ring-my-red ${
+                consentEmailError ? "border-red-500" : "border-gray-300"
+              }`}
+            />
             <span className="text-sm text-gray-600">
               {t("orderSummary.consentEmail")}
             </span>
           </label>
+          {consentEmailError ? (
+            <p className="-mt-2 text-sm text-red-600">{consentEmailError}</p>
+          ) : null}
           <div className="flex flex-wrap justify-between gap-4 pt-4">
             <Link href="/business" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-my-red hover:bg-my-red/90 text-white font-semibold transition-colors">
               <span>←</span> {t("common.prev")}

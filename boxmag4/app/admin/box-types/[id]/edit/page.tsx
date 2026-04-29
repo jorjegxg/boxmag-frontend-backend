@@ -425,6 +425,21 @@ export default function EditBoxTypePage() {
 
             {boxType ? (
               <>
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void handleSave()}
+                    disabled={isSaving || isUploadingImage}
+                    className="rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isUploadingImage
+                      ? "Uploading image..."
+                      : isSaving
+                        ? "Saving..."
+                        : "Save"}
+                  </button>
+                </div>
+
                 <label className="flex flex-col gap-1.5">
                   <span className="text-sm font-semibold text-gray-800">
                     Name

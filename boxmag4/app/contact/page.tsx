@@ -21,8 +21,9 @@ const inputClass =
 const MAX_ATTACHMENT_MB = 10;
 const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_MB * 1024 * 1024;
 const MAX_ATTACHMENTS = 5;
-const shouldAutofillContactForm =
-  process.env.NEXT_PUBLIC_CONTACT_FORM_MODE?.toLowerCase() === "dev";
+const shouldAutofillContactForm = ["dev", "development"].includes(
+  process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() ?? "",
+);
 
 export default function ContactUsPage() {
   const { t } = useLanguage();

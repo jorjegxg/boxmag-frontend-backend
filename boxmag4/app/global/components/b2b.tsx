@@ -14,7 +14,7 @@ export function B2b() {
         <div className="shrink-0">
           <span className="bg-my-yellow rounded-xl h-11 w-11 lg:h-12 lg:w-12 flex items-center justify-center shadow-md border-2 border-white/30">
             <Image
-              src="svgs/shake_hands.svg"
+              src="/svgs/shake_hands.svg"
               alt="B2B handshake"
               width={24}
               height={24}
