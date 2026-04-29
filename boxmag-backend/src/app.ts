@@ -4,6 +4,7 @@ import { env } from "./config/env";
 import { healthRouter } from "./routes/health.route";
 import { boxTypesRouter } from "./routes/box-types.route";
 import { ordersRouter } from "./routes/orders.route";
+import { newsletterRouter } from "./routes/newsletter.route";
 
 export const app = express();
 
@@ -24,4 +25,5 @@ app.get("/", (_req, res) => {
 app.use("/api/health", healthRouter);
 app.use("/api/box-types", boxTypesRouter);
 app.use("/api/orders", ordersRouter);
+app.use("/api/newsletter", newsletterRouter);
 

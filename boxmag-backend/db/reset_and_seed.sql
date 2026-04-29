@@ -2,6 +2,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS box_type_product_prices;
 DROP TABLE IF EXISTS box_type_products;
+DROP TABLE IF EXISTS newsletter_subscribers;
 DROP TABLE IF EXISTS contacts;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS box_types;
@@ -96,6 +97,17 @@ CREATE TABLE IF NOT EXISTS contacts (
   CONSTRAINT fk_contacts_order
     FOREIGN KEY (order_id) REFERENCES orders(id)
     ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) NOT NULL,
+  consent TINYINT(1) NOT NULL DEFAULT 1,
+  locale VARCHAR(10) NULL,
+  source VARCHAR(120) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_newsletter_subscribers_email (email)
 );
 
 INSERT INTO box_types (id, title, `key`, image_path, is_active)
