@@ -51,6 +51,8 @@ function Card({ step, title }: { step: number; title: string }) {
 }
 
 export function Bar() {
+  const { t } = useLanguage();
+
   return (
     <div className="px-2 sm:px-6 overflow-x-auto">
       <div className="flex items-stretch justify-between min-w-[280px] sm:min-w-0 gap-2 sm:gap-4">
@@ -58,6 +60,9 @@ export function Bar() {
         <Step number={2} />
         <Step number={3} isLast />
       </div>
+      <p className="mt-4 text-center text-sm sm:text-base text-my-gray font-medium">
+        {t("business.relaxMessage")}
+      </p>
     </div>
   );
 }
