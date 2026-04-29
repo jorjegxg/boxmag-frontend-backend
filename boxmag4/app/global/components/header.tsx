@@ -2,11 +2,154 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaSearch } from "react-icons/fa";
 import { useLanguage } from "../../i18n/language-context";
 
+type BoxType = {
+  id: number;
+  title: string;
+  isActive: boolean;
+};
+
+type BoxTypeProduct = {
+  id: number;
+  boxTypeId: number;
+  itemNo: string;
+  productName: string;
+};
+
 export function Header() {
   const { t, language } = useLanguage();
+  const [query, setQuery] = useState("");
+  const [boxTypes, setBoxTypes] = useState<BoxType[]>([]);
+  const [boxTypeProducts, setBoxTypeProducts] = useState<BoxTypeProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLFormElement | null>(null);
+  const backendBaseUrl = useMemo(() => {
+    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+    if (!value) return "http://localhost:3005";
+    return value.endsWith("/") ? value.slice(0, -1) : value;
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
+
+  useEffect(() => {
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length < 2) {
+      setLoadError(null);
+      setBoxTypes([]);
+      setBoxTypeProducts([]);
+      return;
+    }
+
+    let isCancelled = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const boxTypesResponse = await fetch(`${backendBaseUrl}/api/box-types`, {
+          signal: controller.signal,
+        });
+        const boxTypesPayload = (await boxTypesResponse.json()) as {
+          ok?: boolean;
+          message?: string;
+          data?: Array<{ id: number; title: string; isActive: boolean }>;
+        };
+        if (
+          !boxTypesResponse.ok ||
+          boxTypesPayload.ok !== true ||
+          !Array.isArray(boxTypesPayload.data)
+        ) {
+          throw new Error(
+            boxTypesPayload.message ??
+              `Failed to load box types (${boxTypesResponse.status})`,
+          );
+        }
+
+        const activeTypes = boxTypesPayload.data.filter((type) => type.isActive);
+        const matchingTypes = activeTypes.filter((type) =>
+          type.title.toLowerCase().includes(trimmedQuery.toLowerCase()),
+        );
+
+        const productResponses = await Promise.all(
+          activeTypes.map(async (type) => {
+            const response = await fetch(
+              `${backendBaseUrl}/api/box-types/${type.id}/products`,
+              { signal: controller.signal },
+            );
+            const payload = (await response.json()) as {
+              ok?: boolean;
+              message?: string;
+              data?: Array<{
+                id: number;
+                boxTypeId: number;
+                itemNo: string;
+                productName: string;
+              }>;
+            };
+            if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+              throw new Error(
+                payload.message ??
+                  `Failed to load box type products (${response.status})`,
+              );
+            }
+            return payload.data.map((product) => ({
+              id: product.id,
+              boxTypeId: type.id,
+              itemNo: String(product.itemNo ?? ""),
+              productName: String(product.productName ?? ""),
+            }));
+          }),
+        );
+
+        const flattenedProducts = productResponses.flat();
+        const matchingProducts = flattenedProducts.filter((product) => {
+          const normalized = trimmedQuery.toLowerCase();
+          return (
+            product.productName.toLowerCase().includes(normalized) ||
+            product.itemNo.toLowerCase().includes(normalized)
+          );
+        });
+
+        if (!isCancelled) {
+          setBoxTypes(matchingTypes.slice(0, 6));
+          setBoxTypeProducts(matchingProducts.slice(0, 8));
+        }
+      } catch (error) {
+        if (controller.signal.aborted || isCancelled) return;
+        setLoadError(error instanceof Error ? error.message : "Search failed");
+        setBoxTypes([]);
+        setBoxTypeProducts([]);
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      isCancelled = true;
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [backendBaseUrl, query]);
 
   return (
     <header className="w-full border-b border-my-light-gray bg-white">
@@ -27,6 +170,7 @@ export function Header() {
         {/* Search bar - center on desktop */}
         <div className="  max-w-xl mx-auto lg:mx-8 w-full max-md:hidden">
           <form
+            ref={searchContainerRef}
             role="search"
             className="relative flex items-center"
             onSubmit={(e) => e.preventDefault()}
@@ -36,10 +180,61 @@ export function Header() {
               placeholder={t("header.searchPlaceholder")}
               className="w-full rounded-lg border border-my-light-gray bg-white py-2.5 pl-4 pr-10 text-sm text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-blue focus:border-my-blue"
               aria-label={t("header.searchAria")}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setIsDropdownOpen(true);
+              }}
+              onFocus={() => setIsDropdownOpen(true)}
             />
             <span className="absolute right-3 pointer-events-none text-my-red">
               <FaSearch className="h-5 w-5" />
             </span>
+            {isDropdownOpen && query.trim().length >= 2 ? (
+              <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 rounded-lg border border-my-light-gray bg-white p-3 shadow-lg">
+                {isLoading ? (
+                  <p className="text-sm text-gray-500">Searching...</p>
+                ) : loadError ? (
+                  <p className="text-sm text-red-600">{loadError}</p>
+                ) : boxTypes.length === 0 && boxTypeProducts.length === 0 ? (
+                  <p className="text-sm text-gray-500">No results found.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {boxTypes.length > 0 ? (
+                      <div>
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          box_types
+                        </p>
+                        <ul className="space-y-1">
+                          {boxTypes.map((type) => (
+                            <li key={type.id} className="text-sm text-black">
+                              {type.title}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {boxTypeProducts.length > 0 ? (
+                      <div>
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          box_type_products
+                        </p>
+                        <ul className="space-y-1">
+                          {boxTypeProducts.map((product) => (
+                            <li key={product.id} className="text-sm text-black">
+                              {product.productName}{" "}
+                              <span className="text-gray-500">
+                                ({product.itemNo})
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            ) : null}
           </form>
         </div>
 
