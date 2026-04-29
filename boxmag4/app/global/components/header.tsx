@@ -22,6 +22,7 @@ type BoxTypeProduct = {
 export function Header() {
   const { t, language } = useLanguage();
   const [query, setQuery] = useState("");
+  const [defaultBoxTypes, setDefaultBoxTypes] = useState<BoxType[]>([]);
   const [boxTypes, setBoxTypes] = useState<BoxType[]>([]);
   const [boxTypeProducts, setBoxTypeProducts] = useState<BoxTypeProduct[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,6 +34,30 @@ export function Header() {
     if (!value) return "http://localhost:3005";
     return value.endsWith("/") ? value.slice(0, -1) : value;
   }, []);
+
+  const loadDefaultBoxTypes = async () => {
+    if (defaultBoxTypes.length > 0) return;
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const response = await fetch(`${backendBaseUrl}/api/box-types`);
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+        data?: Array<{ id: number; title: string; isActive: boolean }>;
+      };
+      if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+        throw new Error(payload.message ?? `Failed to load box types (${response.status})`);
+      }
+      const activeTypes = payload.data.filter((type) => type.isActive).slice(0, 8);
+      setDefaultBoxTypes(activeTypes);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Failed to load box types");
+      setDefaultBoxTypes([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -185,17 +210,41 @@ export function Header() {
                 setQuery(e.target.value);
                 setIsDropdownOpen(true);
               }}
-              onFocus={() => setIsDropdownOpen(true)}
+              onFocus={() => {
+                setIsDropdownOpen(true);
+                void loadDefaultBoxTypes();
+              }}
+              onClick={() => {
+                setIsDropdownOpen(true);
+                void loadDefaultBoxTypes();
+              }}
             />
             <span className="absolute right-3 pointer-events-none text-my-red">
               <FaSearch className="h-5 w-5" />
             </span>
-            {isDropdownOpen && query.trim().length >= 2 ? (
+            {isDropdownOpen ? (
               <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 rounded-lg border border-my-light-gray bg-white p-3 shadow-lg">
                 {isLoading ? (
                   <p className="text-sm text-gray-500">Searching...</p>
                 ) : loadError ? (
                   <p className="text-sm text-red-600">{loadError}</p>
+                ) : query.trim().length < 2 ? (
+                  defaultBoxTypes.length === 0 ? (
+                    <p className="text-sm text-gray-500">No box types found.</p>
+                  ) : (
+                    <div>
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        box_types
+                      </p>
+                      <ul className="space-y-1">
+                        {defaultBoxTypes.map((type) => (
+                          <li key={type.id} className="text-sm text-black">
+                            {type.title}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
                 ) : boxTypes.length === 0 && boxTypeProducts.length === 0 ? (
                   <p className="text-sm text-gray-500">No results found.</p>
                 ) : (
