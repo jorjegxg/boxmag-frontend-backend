@@ -1,95 +1,124 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { FaShoppingCart } from "react-icons/fa";
 
 type Shop2Row = {
+  id: number;
   itemNo: string;
   name: string;
-  colour: string;
-  grammage: number;
+  colour?: string;
+  grammage?: number;
   qualityCardboard: string;
-  dinFormat: string;
+  dinFormat?: string;
   l: number;
   w: number;
   h: number;
   bundlePacking: number;
   qty: number;
   palletPcs: number;
+  prices: Array<{
+    id: number;
+    name: string;
+    withoutTax: number;
+    withTax: number;
+  }>;
 };
 
 export function Shop2ProductsTable() {
-  const rows: Shop2Row[] = [
-    {
-      itemNo: "M1-EV",
-      name: "M1-EV CARDBOARD ENVELOPE 255x220",
-      colour: "Brown",
-      grammage: 325,
-      qualityCardboard: "1.20-21 E",
-      dinFormat: "A6",
-      l: 255,
-      w: 220,
-      h: 70,
-      bundlePacking: 25,
-      qty: 25,
-      palletPcs: 5000,
-    },
-    {
-      itemNo: "M2-EV",
-      name: "M2-EV CARDBOARD ENVELOPE 250x165",
-      colour: "Brown",
-      grammage: 325,
-      qualityCardboard: "1.20-21 E",
-      dinFormat: "A5",
-      l: 250,
-      w: 165,
-      h: 70,
-      bundlePacking: 25,
-      qty: 25,
-      palletPcs: 6000,
-    },
-    {
-      itemNo: "M3-EV",
-      name: "M3-EV CARDBOARD ENVELOPE 282x205",
-      colour: "Brown",
-      grammage: 325,
-      qualityCardboard: "1.20-21 E",
-      dinFormat: "A5",
-      l: 282,
-      w: 205,
-      h: 70,
-      bundlePacking: 25,
-      qty: 25,
-      palletPcs: 3000,
-    },
-    {
-      itemNo: "M4-EV",
-      name: "M4-EV CARDBOARD ENVELOPE 312x250",
-      colour: "Brown",
-      grammage: 325,
-      qualityCardboard: "1.20-21 E",
-      dinFormat: "A5",
-      l: 312,
-      w: 250,
-      h: 70,
-      bundlePacking: 25,
-      qty: 25,
-      palletPcs: 3000,
-    },
-    {
-      itemNo: "M5-EV",
-      name: "M4-EV CARDBOARD ENVELOPE 350x250",
-      colour: "Brown",
-      grammage: 325,
-      qualityCardboard: "1.20-21 E",
-      dinFormat: "A5",
-      l: 350,
-      w: 250,
-      h: 70,
-      bundlePacking: 25,
-      qty: 25,
-      palletPcs: 2400,
-    },
-  ];
+  const [rows, setRows] = useState<Shop2Row[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const backendBaseUrl = useMemo(() => {
+    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+    if (!value) return "http://localhost:3005";
+    return value.endsWith("/") ? value.slice(0, -1) : value;
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
+    const loadRows = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const response = await fetch(`${backendBaseUrl}/api/box-types/9/products`, {
+          signal: controller.signal,
+        });
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          message?: string;
+          data?: Array<{
+            id: number;
+            itemNo: string;
+            productName: string;
+            internalDimensionsMM?: { l: number; w: number; h: number };
+            qualityCardboard?: string;
+            amountQtyInPcs?: number;
+            palletPcs?: number;
+            prices?: Array<{ id: number; name: string; withoutTax: number; withTax: number }>;
+          }>;
+        };
+        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+          throw new Error(payload.message ?? "Failed to load products");
+        }
+        if (cancelled) return;
+
+        setRows(
+          payload.data.map((row) => ({
+            id: row.id,
+            itemNo: String(row.itemNo ?? ""),
+            name: String(row.productName ?? ""),
+            colour: "Brown",
+            grammage: 325,
+            qualityCardboard: String(row.qualityCardboard ?? "-"),
+            dinFormat: "-",
+            l: Number(row.internalDimensionsMM?.l ?? 0),
+            w: Number(row.internalDimensionsMM?.w ?? 0),
+            h: Number(row.internalDimensionsMM?.h ?? 0),
+            bundlePacking: Number(row.amountQtyInPcs ?? 0),
+            qty: Number(row.amountQtyInPcs ?? 0),
+            palletPcs: Number(row.palletPcs ?? 0),
+            prices: Array.isArray(row.prices) ? row.prices : [],
+          })),
+        );
+      } catch (error) {
+        if (cancelled || controller.signal.aborted) return;
+        setLoadError(error instanceof Error ? error.message : "Failed to load products");
+        setRows([]);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadRows();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [backendBaseUrl]);
+
+  const getPriceByName = (prices: Shop2Row["prices"], name: string) =>
+    prices.find((price) => String(price.name).toLowerCase() === name.toLowerCase());
+
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border border-[#d6d6d6] bg-[#f2f2f2] px-4 py-6 text-sm text-gray-500">
+        Loading products...
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="rounded-xl border border-[#d6d6d6] bg-[#f2f2f2] px-4 py-6 text-sm text-red-600">
+        {loadError}
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-x-auto rounded-xl border border-[#d6d6d6] bg-[#f2f2f2]">
@@ -158,25 +187,31 @@ export function Shop2ProductsTable() {
         </thead>
         <tbody className="bg-[#f2f2f2]">
           {rows.map((row) => (
-            <tr key={row.itemNo} className="text-black">
+            <tr key={row.id} className="text-black">
               <td className="border border-[#d9d9d9] px-2 py-3">{row.itemNo}</td>
               <td className="border border-[#d9d9d9] px-2 py-3 font-semibold text-[11px] leading-tight">
                 {row.name}
               </td>
-              <td className="border border-[#d9d9d9] px-2 py-3">{row.colour}</td>
-              <td className="border border-[#d9d9d9] px-2 py-3 text-center">{row.grammage}</td>
+              <td className="border border-[#d9d9d9] px-2 py-3">{row.colour ?? "-"}</td>
+              <td className="border border-[#d9d9d9] px-2 py-3 text-center">{row.grammage ?? "-"}</td>
               <td className="border border-[#d9d9d9] px-2 py-3 text-center">{row.qualityCardboard}</td>
-              <td className="border border-[#d9d9d9] px-2 py-3 text-center">{row.dinFormat}</td>
+              <td className="border border-[#d9d9d9] px-2 py-3 text-center">{row.dinFormat ?? "-"}</td>
               <td className="border border-[#d9d9d9] px-2 py-3 text-center">{row.l}</td>
               <td className="border border-[#d9d9d9] px-2 py-3 text-center">{row.w}</td>
               <td className="border border-[#d9d9d9] px-2 py-3 text-center">{row.h}</td>
               <td className="border border-[#d9d9d9] px-2 py-3 text-center">{row.bundlePacking}</td>
-              {[1, 2, 3, 4].map((idx) => (
-                <td key={idx} className="border border-[#d9d9d9] px-2 py-3 text-center whitespace-nowrap">
-                  <div>0.84 €</div>
-                  <div className="font-semibold">1.00 €</div>
-                </td>
-              ))}
+              {["100", "300", "500", "Pallet"].map((priceName) => {
+                const price = getPriceByName(row.prices, priceName);
+                return (
+                  <td
+                    key={priceName}
+                    className="border border-[#d9d9d9] px-2 py-3 text-center whitespace-nowrap"
+                  >
+                    <div>{price ? `${price.withoutTax.toFixed(2)} €` : "-"}</div>
+                    <div className="font-semibold">{price ? `${price.withTax.toFixed(2)} €` : "-"}</div>
+                  </td>
+                );
+              })}
               <td className="border border-[#d9d9d9] px-2 py-2">
                 <div className="flex items-center justify-center gap-2">
                   <div className="flex flex-col text-[11px] text-[#b8b8b8] leading-none">

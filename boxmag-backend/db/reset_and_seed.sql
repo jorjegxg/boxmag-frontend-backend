@@ -260,4 +260,4 @@ JOIN (
   UNION ALL SELECT 'M5-EV','500',0.84
   UNION ALL SELECT 'M5-EV','Pallet',0.84
 ) p ON p.item_no = btp.item_no
-WHERE btp.box_type_id IN (1, 9);
+;
