@@ -489,10 +489,10 @@ boxTypesRouter.put("/:id", async (req, res) => {
     return;
   }
 
-  if (typeof payload.key !== "string" || payload.key.trim().length === 0) {
+  if (payload.key != null && (typeof payload.key !== "string" || payload.key.trim().length === 0)) {
     res.status(400).json({
       ok: false,
-      message: "Key is required",
+      message: "key must be a non-empty string",
     });
     return;
   }
@@ -506,11 +506,22 @@ boxTypesRouter.put("/:id", async (req, res) => {
   }
 
   try {
+    const normalizedKey =
+      typeof payload.key === "string" && payload.key.trim().length > 0
+        ? payload.key.trim()
+        : null;
+
     const [result] = await mysqlPool.execute(
       `UPDATE box_types
-       SET title = ?, \`key\` = ?, image_path = ?, is_active = ?
+       SET title = ?, \`key\` = COALESCE(?, \`key\`), image_path = ?, is_active = ?
        WHERE id = ?`,
-      [payload.title.trim(), payload.key.trim(), payload.imagePath.trim(), payload.isActive ? 1 : 0, boxTypeId]
+      [
+        payload.title.trim(),
+        normalizedKey,
+        payload.imagePath.trim(),
+        payload.isActive ? 1 : 0,
+        boxTypeId,
+      ]
     );
 
     const updateResult = result as { affectedRows?: number };
