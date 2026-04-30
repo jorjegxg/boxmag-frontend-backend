@@ -521,5 +521,17 @@
   "business.errors.transport": "Bitte wählen Sie eine Transportoption aus.",
   "business.errors.quantityRequired": "Menge ist erforderlich.",
   "business.errors.messageRequired": "Nachricht ist erforderlich.",
-  "business.errors.terms": "Sie müssen die Allgemeinen Geschäftsbedingungen akzeptieren."
+  "business.errors.terms": "Sie müssen die Allgemeinen Geschäftsbedingungen akzeptieren.",
+  "productDemo.breadcrumbStore": "Boxmarket Verpackungsgroßhandel",
+  "productDemo.breadcrumbCategory": "Kartonagen und Schachteln",
+  "productDemo.imageAria": "Produktbild",
+  "productDemo.inStore": "Auf Lager",
+  "productDemo.reference": "Referenz",
+  "productDemo.quantity": "Menge",
+  "productDemo.decreaseQuantityAria": "Menge verringern",
+  "productDemo.increaseQuantityAria": "Menge erhöhen",
+  "productDemo.addPallet": "Palette hinzufügen",
+  "productDemo.addToCart": "In den Warenkorb",
+  "productDemo.minOrderQty": "Mindestbestellmenge für dieses Produkt:",
+  "productDemo.priceWithWithoutTax": "Preis mit MwSt./ohne MwSt."
 }

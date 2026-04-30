@@ -521,5 +521,17 @@
   "business.errors.transport": "Te rugăm să selectezi o opțiune de transport.",
   "business.errors.quantityRequired": "Cantitatea este obligatorie.",
   "business.errors.messageRequired": "Mesajul este obligatoriu.",
-  "business.errors.terms": "Trebuie să accepți termenii și condițiile."
+  "business.errors.terms": "Trebuie să accepți termenii și condițiile.",
+  "productDemo.breadcrumbStore": "Boxmarket Angro de Ambalaje",
+  "productDemo.breadcrumbCategory": "Cutii de carton si cutii",
+  "productDemo.imageAria": "Imagine produs",
+  "productDemo.inStore": "În magazin",
+  "productDemo.reference": "Referință",
+  "productDemo.quantity": "Cantitate",
+  "productDemo.decreaseQuantityAria": "Scade cantitatea",
+  "productDemo.increaseQuantityAria": "Crește cantitatea",
+  "productDemo.addPallet": "Adăugați palet",
+  "productDemo.addToCart": "Adaugă în coș",
+  "productDemo.minOrderQty": "Cantitatea minimă de comandă pentru acest produs:",
+  "productDemo.priceWithWithoutTax": "Preț cu TVA/fără TVA"
 }

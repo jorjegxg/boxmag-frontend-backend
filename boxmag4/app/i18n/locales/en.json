@@ -521,5 +521,17 @@
   "business.errors.transport": "Please select a transport option.",
   "business.errors.quantityRequired": "Quantity is required.",
   "business.errors.messageRequired": "Message is required.",
-  "business.errors.terms": "You must accept terms and conditions."
+  "business.errors.terms": "You must accept terms and conditions.",
+  "productDemo.breadcrumbStore": "Boxmarket wholesale packaging",
+  "productDemo.breadcrumbCategory": "Cardboard boxes and cartons",
+  "productDemo.imageAria": "Product image",
+  "productDemo.inStore": "In stock",
+  "productDemo.reference": "Reference",
+  "productDemo.quantity": "Quantity",
+  "productDemo.decreaseQuantityAria": "Decrease quantity",
+  "productDemo.increaseQuantityAria": "Increase quantity",
+  "productDemo.addPallet": "Add pallet",
+  "productDemo.addToCart": "Add to cart",
+  "productDemo.minOrderQty": "Minimum order quantity for this product:",
+  "productDemo.priceWithWithoutTax": "Price with VAT/without VAT"
 }
