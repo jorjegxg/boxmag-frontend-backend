@@ -17,9 +17,22 @@ import { useNotification } from "../global/components/notification-center";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
+const invalidInputClass =
+  "w-full rounded-lg border border-red-500 bg-red-50 px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500";
 const shouldAutofillOrderSummary = ["dev", "development"].includes(
   process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() ?? "",
 );
+type RequiredFieldKey =
+  | "firstName"
+  | "surname"
+  | "companyName"
+  | "vatNumber"
+  | "email"
+  | "phone"
+  | "address"
+  | "postcode"
+  | "city"
+  | "country";
 
 function SummaryRow({
   label,
@@ -65,6 +78,18 @@ export default function OrderSummaryPage() {
   const [consentEmail, setConsentEmail] = useState(true);
   const [consentPhoneError, setConsentPhoneError] = useState("");
   const [consentEmailError, setConsentEmailError] = useState("");
+  const [requiredFieldErrors, setRequiredFieldErrors] = useState<Record<RequiredFieldKey, boolean>>({
+    firstName: false,
+    surname: false,
+    companyName: false,
+    vatNumber: false,
+    email: false,
+    phone: false,
+    address: false,
+    postcode: false,
+    city: false,
+    country: false,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const boxes = useBusinessStore((s) => s.boxes);
@@ -119,22 +144,42 @@ export default function OrderSummaryPage() {
     setConsentPhoneError("");
     setConsentEmailError("");
 
-    const requiredContactFields = [
-      firstName,
-      surname,
-      companyName,
-      email,
-      phone,
-      address,
-      postcode,
-      city,
-      country,
+    const contactFields: Array<{ key: RequiredFieldKey; value: string }> = [
+      { key: "firstName", value: firstName },
+      { key: "surname", value: surname },
+      { key: "companyName", value: companyName },
+      { key: "vatNumber", value: vatNumber },
+      { key: "email", value: email },
+      { key: "phone", value: phone },
+      { key: "address", value: address },
+      { key: "postcode", value: postcode },
+      { key: "city", value: city },
+      { key: "country", value: country },
     ];
+    const nextRequiredFieldErrors = contactFields.reduce<Record<RequiredFieldKey, boolean>>(
+      (acc, field) => {
+        acc[field.key] = field.value.trim().length === 0;
+        return acc;
+      },
+      {
+        firstName: false,
+        surname: false,
+        companyName: false,
+        vatNumber: false,
+        email: false,
+        phone: false,
+        address: false,
+        postcode: false,
+        city: false,
+        country: false,
+      },
+    );
+    setRequiredFieldErrors(nextRequiredFieldErrors);
 
-    if (requiredContactFields.some((value) => value.trim().length === 0)) {
+    if (Object.values(nextRequiredFieldErrors).some(Boolean)) {
       notify({
         type: "error",
-        message: "Please complete all required contact fields before sending the order.",
+        message: t("orderSummary.errors.completeRequiredFields"),
       });
       return;
     }
@@ -142,21 +187,21 @@ export default function OrderSummaryPage() {
     if (!draft.acceptedTerms) {
       notify({
         type: "error",
-        message: "Please accept terms in Step 2 before sending the order.",
+        message: t("orderSummary.errors.acceptTermsStep2"),
       });
       return;
     }
 
     if (!consentPhone || !consentEmail) {
       if (!consentPhone) {
-        setConsentPhoneError("Please accept phone consent before sending.");
+        setConsentPhoneError(t("orderSummary.errors.consentPhoneRequired"));
       }
       if (!consentEmail) {
-        setConsentEmailError("Please accept email consent before sending.");
+        setConsentEmailError(t("orderSummary.errors.consentEmailRequired"));
       }
       notify({
         type: "error",
-        message: "Please accept both consent checkboxes before sending the order.",
+        message: t("orderSummary.errors.bothConsentsRequired"),
       });
       return;
     }
@@ -164,7 +209,7 @@ export default function OrderSummaryPage() {
     if (!selectedBox || !selectedType || !selectedColor || !selectedPrint || !selectedSizeType || !selectedTransport) {
       notify({
         type: "error",
-        message: "Order details are incomplete. Please return to Step 2 and complete all fields.",
+        message: t("orderSummary.errors.orderDetailsIncomplete"),
       });
       return;
     }
@@ -276,51 +321,110 @@ export default function OrderSummaryPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="os-firstName" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.firstName")}</label>
-                <input id="os-firstName" type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={t("orderSummary.firstName")} className={inputClass} />
+                <input id="os-firstName" type="text" value={firstName} onChange={(e) => {
+                  setFirstName(e.target.value);
+                  if (e.target.value.trim().length > 0 && requiredFieldErrors.firstName) {
+                    setRequiredFieldErrors((prev) => ({ ...prev, firstName: false }));
+                  }
+                }} placeholder={t("orderSummary.firstName")} className={requiredFieldErrors.firstName ? invalidInputClass : inputClass} />
+                {requiredFieldErrors.firstName ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.firstNameRequired")}</p> : null}
               </div>
               <div>
                 <label htmlFor="os-surname" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.surname")}</label>
-                <input id="os-surname" type="text" value={surname} onChange={(e) => setSurname(e.target.value)} placeholder={t("orderSummary.surname")} className={inputClass} />
+                <input id="os-surname" type="text" value={surname} onChange={(e) => {
+                  setSurname(e.target.value);
+                  if (e.target.value.trim().length > 0 && requiredFieldErrors.surname) {
+                    setRequiredFieldErrors((prev) => ({ ...prev, surname: false }));
+                  }
+                }} placeholder={t("orderSummary.surname")} className={requiredFieldErrors.surname ? invalidInputClass : inputClass} />
+                {requiredFieldErrors.surname ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.surnameRequired")}</p> : null}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="os-companyName" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.companyName")}</label>
-                <input id="os-companyName" type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder={t("orderSummary.companyName")} className={inputClass} />
+                <input id="os-companyName" type="text" value={companyName} onChange={(e) => {
+                  setCompanyName(e.target.value);
+                  if (e.target.value.trim().length > 0 && requiredFieldErrors.companyName) {
+                    setRequiredFieldErrors((prev) => ({ ...prev, companyName: false }));
+                  }
+                }} placeholder={t("orderSummary.companyName")} className={requiredFieldErrors.companyName ? invalidInputClass : inputClass} />
+                {requiredFieldErrors.companyName ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.companyNameRequired")}</p> : null}
               </div>
               <div>
                 <label htmlFor="os-vatNumber" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.vatNumber")}</label>
-                <input id="os-vatNumber" type="text" value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} placeholder={t("orderSummary.vatNumber")} className={inputClass} />
+                <input id="os-vatNumber" type="text" value={vatNumber} onChange={(e) => {
+                  setVatNumber(e.target.value);
+                  if (e.target.value.trim().length > 0 && requiredFieldErrors.vatNumber) {
+                    setRequiredFieldErrors((prev) => ({ ...prev, vatNumber: false }));
+                  }
+                }} placeholder={t("orderSummary.vatNumber")} className={requiredFieldErrors.vatNumber ? invalidInputClass : inputClass} />
+                {requiredFieldErrors.vatNumber ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.vatNumberRequired")}</p> : null}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="os-email" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.email")}</label>
-                <input id="os-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourwebsite.com" className={inputClass} />
+                <input id="os-email" type="email" value={email} onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (e.target.value.trim().length > 0 && requiredFieldErrors.email) {
+                    setRequiredFieldErrors((prev) => ({ ...prev, email: false }));
+                  }
+                }} placeholder="you@yourwebsite.com" className={requiredFieldErrors.email ? invalidInputClass : inputClass} />
+                {requiredFieldErrors.email ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.emailRequired")}</p> : null}
               </div>
               <div>
                 <label htmlFor="os-phone" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.phone")}</label>
-                <input id="os-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("orderSummary.phone")} className={inputClass} />
+                <input id="os-phone" type="tel" value={phone} onChange={(e) => {
+                  setPhone(e.target.value);
+                  if (e.target.value.trim().length > 0 && requiredFieldErrors.phone) {
+                    setRequiredFieldErrors((prev) => ({ ...prev, phone: false }));
+                  }
+                }} placeholder={t("orderSummary.phone")} className={requiredFieldErrors.phone ? invalidInputClass : inputClass} />
+                {requiredFieldErrors.phone ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.phoneRequired")}</p> : null}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="os-address" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.address")}</label>
-                <input id="os-address" type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t("orderSummary.address")} className={inputClass} />
+                <input id="os-address" type="text" value={address} onChange={(e) => {
+                  setAddress(e.target.value);
+                  if (e.target.value.trim().length > 0 && requiredFieldErrors.address) {
+                    setRequiredFieldErrors((prev) => ({ ...prev, address: false }));
+                  }
+                }} placeholder={t("orderSummary.address")} className={requiredFieldErrors.address ? invalidInputClass : inputClass} />
+                {requiredFieldErrors.address ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.addressRequired")}</p> : null}
               </div>
               <div>
                 <label htmlFor="os-postcode" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.postcode")}</label>
-                <input id="os-postcode" type="text" value={postcode} onChange={(e) => setPostcode(e.target.value)} placeholder={t("orderSummary.postcode")} className={inputClass} />
+                <input id="os-postcode" type="text" value={postcode} onChange={(e) => {
+                  setPostcode(e.target.value);
+                  if (e.target.value.trim().length > 0 && requiredFieldErrors.postcode) {
+                    setRequiredFieldErrors((prev) => ({ ...prev, postcode: false }));
+                  }
+                }} placeholder={t("orderSummary.postcode")} className={requiredFieldErrors.postcode ? invalidInputClass : inputClass} />
+                {requiredFieldErrors.postcode ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.postcodeRequired")}</p> : null}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="os-city" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.city")}</label>
-                <input id="os-city" type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder={t("orderSummary.city")} className={inputClass} />
+                <input id="os-city" type="text" value={city} onChange={(e) => {
+                  setCity(e.target.value);
+                  if (e.target.value.trim().length > 0 && requiredFieldErrors.city) {
+                    setRequiredFieldErrors((prev) => ({ ...prev, city: false }));
+                  }
+                }} placeholder={t("orderSummary.city")} className={requiredFieldErrors.city ? invalidInputClass : inputClass} />
+                {requiredFieldErrors.city ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.cityRequired")}</p> : null}
               </div>
               <div>
                 <label htmlFor="os-country" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.country")}</label>
-                <select id="os-country" value={country} onChange={(e) => setCountry(e.target.value)} className={inputClass}>
+                <select id="os-country" value={country} onChange={(e) => {
+                  setCountry(e.target.value);
+                  if (e.target.value.trim().length > 0 && requiredFieldErrors.country) {
+                    setRequiredFieldErrors((prev) => ({ ...prev, country: false }));
+                  }
+                }} className={requiredFieldErrors.country ? invalidInputClass : inputClass}>
                   <option value="">{t("orderSummary.country")}</option>
                   <option value="RO">Romania</option>
                   <option value="DE">Germany</option>
@@ -330,6 +434,7 @@ export default function OrderSummaryPage() {
                   <option value="NL">Netherlands</option>
                   <option value="OTHER">Other</option>
                 </select>
+                {requiredFieldErrors.country ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.countryRequired")}</p> : null}
               </div>
             </div>
           </form>
