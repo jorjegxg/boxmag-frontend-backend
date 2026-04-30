@@ -19,6 +19,7 @@ const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
 const invalidInputClass =
   "w-full rounded-lg border border-red-500 bg-red-50 px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500";
+const VAT_NUMBER_REGEX = /^([A-Z]{2})?[A-Z0-9]{2,12}$/i;
 const shouldAutofillOrderSummary = ["dev", "development"].includes(
   process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() ?? "",
 );
@@ -78,6 +79,7 @@ export default function OrderSummaryPage() {
   const [consentEmail, setConsentEmail] = useState(true);
   const [consentPhoneError, setConsentPhoneError] = useState("");
   const [consentEmailError, setConsentEmailError] = useState("");
+  const [vatFormatError, setVatFormatError] = useState(false);
   const [requiredFieldErrors, setRequiredFieldErrors] = useState<Record<RequiredFieldKey, boolean>>({
     firstName: false,
     surname: false,
@@ -180,6 +182,15 @@ export default function OrderSummaryPage() {
       notify({
         type: "error",
         message: t("orderSummary.errors.completeRequiredFields"),
+      });
+      return;
+    }
+
+    if (!VAT_NUMBER_REGEX.test(vatNumber.trim())) {
+      setVatFormatError(true);
+      notify({
+        type: "error",
+        message: "Codul TVA trebuie sa fie in format valid (ex: RO12345678, DE123456789).",
       });
       return;
     }
@@ -354,12 +365,17 @@ export default function OrderSummaryPage() {
               <div>
                 <label htmlFor="os-vatNumber" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.vatNumber")}</label>
                 <input id="os-vatNumber" type="text" value={vatNumber} onChange={(e) => {
-                  setVatNumber(e.target.value);
+                  const nextValue = e.target.value.toUpperCase();
+                  setVatNumber(nextValue);
                   if (e.target.value.trim().length > 0 && requiredFieldErrors.vatNumber) {
                     setRequiredFieldErrors((prev) => ({ ...prev, vatNumber: false }));
                   }
-                }} placeholder={t("orderSummary.vatNumber")} className={requiredFieldErrors.vatNumber ? invalidInputClass : inputClass} />
+                  if (VAT_NUMBER_REGEX.test(nextValue.trim()) && vatFormatError) {
+                    setVatFormatError(false);
+                  }
+                }} placeholder={t("orderSummary.vatNumber")} pattern="^([A-Z]{2})?[A-Z0-9]{2,12}$" title="Format valid: RO12345678, DE123456789 sau 12345678" className={requiredFieldErrors.vatNumber || vatFormatError ? invalidInputClass : inputClass} />
                 {requiredFieldErrors.vatNumber ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.vatNumberRequired")}</p> : null}
+                {!requiredFieldErrors.vatNumber && vatFormatError ? <p className="mt-1 text-sm text-red-600">Format invalid. Exemple valide: RO12345678, DE123456789, FRAB12345</p> : null}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
