@@ -248,7 +248,49 @@ export default function ProductByKeyPage() {
       <div>
         <B2b />
         <main className="w-full bg-[#f8f8f8] px-4 py-8 lg:px-12">
-          <p className="mx-auto max-w-7xl text-sm text-gray-600">Loading...</p>
+          <section className="mx-auto max-w-7xl rounded-3xl border border-black/10 bg-white p-4 shadow-sm lg:p-8">
+            <div className="mb-5 h-4 w-2/3 animate-pulse rounded bg-gray-200" />
+            <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr_260px]">
+              <div>
+                <div className="h-[320px] w-[423px] max-w-full animate-pulse rounded-2xl border border-gray-200 bg-gray-200" />
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div
+                      key={`thumb-skeleton-${index}`}
+                      className="h-[68px] w-[82px] animate-pulse rounded-xl border border-gray-200 bg-gray-200"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="h-10 w-4/5 animate-pulse rounded bg-gray-200" />
+                <div className="h-5 w-1/2 animate-pulse rounded bg-gray-200" />
+                <div className="h-10 w-1/3 animate-pulse rounded bg-gray-200" />
+                <div className="h-16 w-2/3 animate-pulse rounded bg-gray-200" />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="h-20 animate-pulse rounded-xl bg-gray-200" />
+                  <div className="h-20 animate-pulse rounded-xl bg-gray-200" />
+                </div>
+                <div className="h-12 w-full animate-pulse rounded-xl bg-gray-200" />
+              </div>
+
+              <aside className="rounded-2xl border border-gray-200 bg-[#f4f4f4] p-3">
+                <div className="mb-2 grid grid-cols-[1fr_1fr] gap-2">
+                  <div className="h-6 animate-pulse rounded bg-gray-200" />
+                  <div className="h-6 animate-pulse rounded bg-gray-200" />
+                </div>
+                <div className="space-y-2">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div
+                      key={`price-skeleton-${index}`}
+                      className="h-12 animate-pulse rounded-md bg-gray-200"
+                    />
+                  ))}
+                </div>
+              </aside>
+            </div>
+          </section>
         </main>
         <NewsletterSubscribe />
       </div>
