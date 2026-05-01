@@ -549,5 +549,8 @@
   "productDemo.addPallet": "Palette hinzufügen",
   "productDemo.addToCart": "In den Warenkorb",
   "productDemo.minOrderQty": "Mindestbestellmenge für dieses Produkt:",
-  "productDemo.priceWithWithoutTax": "Preis mit MwSt./ohne MwSt."
+  "productDemo.priceWithWithoutTax": "Preis mit MwSt./ohne MwSt.",
+  "productDemo.pcsAbbr": "Stk.",
+  "productDemo.pallet": "Palette",
+  "productDemo.withoutVat": "ohne MwSt."
 }

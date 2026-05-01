@@ -5,14 +5,9 @@ import { Minus, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "../i18n/language-context";
+import { B2b } from "../global/components/b2b";
+import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 
-const priceBreaks = [
-  { qty: "> 1 szt.", gross: "1,16 euro", net: "0,96 euro" },
-  { qty: "> 600 szt.", gross: "1,03 euro", net: "0,85 euro" },
-  { qty: "> 1200 szt.", gross: "0,98 euro", net: "0,81 euro" },
-  { qty: "> 1800 szt.", gross: "0,94 euro", net: "0,78 euro" },
-  { qty: "Palet", gross: "0,87 euro", net: "0,72 euro" },
-];
 const BOXES_PER_PALLET = 9000;
 
 export default function ProdusDemoPage() {
@@ -29,16 +24,31 @@ export default function ProdusDemoPage() {
   const netPrice = Number(searchParams.get("priceWithoutTax"));
 
   const displayGrossPrice = Number.isFinite(grossPrice) ? `${grossPrice.toFixed(2)} euro` : "58,00 euro";
-  const displayNetPrice = Number.isFinite(netPrice) ? `${netPrice.toFixed(2)} euro fără TVA` : "48,00 euro fără TVA";
+  const displayNetPrice = Number.isFinite(netPrice)
+    ? `${netPrice.toFixed(2)} euro ${t("productDemo.withoutVat")}`
+    : `48,00 euro ${t("productDemo.withoutVat")}`;
 
   const galleryWithProduct = useMemo(
     () => [imageFromQuery || "/placeholders/box4.png"],
     [imageFromQuery]
   );
+  const qtyUnit = t("productDemo.pcsAbbr");
+  const priceBreaks = useMemo(
+    () => [
+      { qty: `> 1 ${qtyUnit}`, gross: "1,16 euro", net: "0,96 euro" },
+      { qty: `> 600 ${qtyUnit}`, gross: "1,03 euro", net: "0,85 euro" },
+      { qty: `> 1200 ${qtyUnit}`, gross: "0,98 euro", net: "0,81 euro" },
+      { qty: `> 1800 ${qtyUnit}`, gross: "0,94 euro", net: "0,78 euro" },
+      { qty: t("productDemo.pallet"), gross: "0,87 euro", net: "0,72 euro" },
+    ],
+    [qtyUnit, t]
+  );
 
   return (
-    <main className="w-full bg-[#f8f8f8] px-4 py-8 lg:px-12">
-      <section className="mx-auto max-w-7xl rounded-3xl border border-black/10 bg-white p-4 shadow-sm lg:p-8">
+    <div>
+      <B2b />
+      <main className="w-full bg-[#f8f8f8] px-4 py-8 lg:px-12">
+        <section className="mx-auto max-w-7xl rounded-3xl border border-black/10 bg-white p-4 shadow-sm lg:p-8">
         <p className="mb-5 text-xs text-gray-500 lg:text-sm">
           {t("productDemo.breadcrumbStore")} {" > "} {t("productDemo.breadcrumbCategory")} {" > "}{" "}
           {productName} {size}
@@ -169,7 +179,9 @@ export default function ProdusDemoPage() {
             </div>
           </aside>
         </div>
-      </section>
-    </main>
+        </section>
+      </main>
+      <NewsletterSubscribe />
+    </div>
   );
 }

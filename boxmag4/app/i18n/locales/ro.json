@@ -549,5 +549,8 @@
   "productDemo.addPallet": "Adăugați palet",
   "productDemo.addToCart": "Adaugă în coș",
   "productDemo.minOrderQty": "Cantitatea minimă de comandă pentru acest produs:",
-  "productDemo.priceWithWithoutTax": "Preț cu TVA/fără TVA"
+  "productDemo.priceWithWithoutTax": "Preț cu TVA/fără TVA",
+  "productDemo.pcsAbbr": "buc.",
+  "productDemo.pallet": "Palet",
+  "productDemo.withoutVat": "fără TVA"
 }

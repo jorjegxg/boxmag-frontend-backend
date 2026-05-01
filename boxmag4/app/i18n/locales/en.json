@@ -549,5 +549,8 @@
   "productDemo.addPallet": "Add pallet",
   "productDemo.addToCart": "Add to cart",
   "productDemo.minOrderQty": "Minimum order quantity for this product:",
-  "productDemo.priceWithWithoutTax": "Price with VAT/without VAT"
+  "productDemo.priceWithWithoutTax": "Price with VAT/without VAT",
+  "productDemo.pcsAbbr": "pcs",
+  "productDemo.pallet": "Pallet",
+  "productDemo.withoutVat": "without VAT"
 }
