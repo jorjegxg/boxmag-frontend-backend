@@ -19,6 +19,14 @@ type BoxTypeProduct = {
   productName: string;
 };
 
+function buildProductDetailsHref(product: BoxTypeProduct): string {
+  const params = new URLSearchParams({
+    productName: product.productName,
+    itemNo: product.itemNo,
+  });
+  return `/produs-demo?${params.toString()}`;
+}
+
 export function Header() {
   const { t, language } = useLanguage();
   const [query, setQuery] = useState("");
@@ -302,8 +310,14 @@ export function Header() {
                       </p>
                       <ul className="space-y-1">
                         {defaultBoxTypes.map((type) => (
-                          <li key={type.id} className="text-sm text-black">
-                            {type.title}
+                          <li key={type.id}>
+                            <Link
+                              href={`/shop?boxTypeId=${type.id}`}
+                              className="block rounded px-2 py-1.5 text-sm text-black hover:bg-gray-100"
+                              onClick={() => setIsDropdownOpen(false)}
+                            >
+                              {type.title}
+                            </Link>
                           </li>
                         ))}
                       </ul>
@@ -320,8 +334,14 @@ export function Header() {
                         </p>
                         <ul className="space-y-1">
                           {boxTypes.map((type) => (
-                            <li key={type.id} className="text-sm text-black">
-                              {type.title}
+                            <li key={type.id}>
+                              <Link
+                                href={`/shop?boxTypeId=${type.id}`}
+                                className="block rounded px-2 py-1.5 text-sm text-black hover:bg-gray-100"
+                                onClick={() => setIsDropdownOpen(false)}
+                              >
+                                {type.title}
+                              </Link>
                             </li>
                           ))}
                         </ul>
@@ -334,11 +354,17 @@ export function Header() {
                         </p>
                         <ul className="space-y-1">
                           {boxTypeProducts.map((product) => (
-                            <li key={product.id} className="text-sm text-black">
-                              {product.productName}{" "}
-                              <span className="text-gray-500">
-                                ({product.itemNo})
-                              </span>
+                            <li key={product.id}>
+                              <Link
+                                href={buildProductDetailsHref(product)}
+                                className="block rounded px-2 py-1.5 text-sm text-black hover:bg-gray-100"
+                                onClick={() => setIsDropdownOpen(false)}
+                              >
+                                {product.productName}{" "}
+                                <span className="text-gray-500">
+                                  ({product.itemNo})
+                                </span>
+                              </Link>
                             </li>
                           ))}
                         </ul>
