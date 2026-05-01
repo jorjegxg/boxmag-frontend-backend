@@ -9,22 +9,20 @@ import { useLanguage } from "../../i18n/language-context";
 type BoxType = {
   id: number;
   title: string;
+  key: string;
   isActive: boolean;
 };
 
 type BoxTypeProduct = {
   id: number;
   boxTypeId: number;
+  boxTypeKey: string;
   itemNo: string;
   productName: string;
 };
 
 function buildProductDetailsHref(product: BoxTypeProduct): string {
-  const params = new URLSearchParams({
-    productName: product.productName,
-    itemNo: product.itemNo,
-  });
-  return `/produs-demo?${params.toString()}`;
+  return `/products/${encodeURIComponent(product.boxTypeKey)}?itemNo=${encodeURIComponent(product.itemNo)}`;
 }
 
 export function Header() {
@@ -54,7 +52,7 @@ export function Header() {
       const payload = (await response.json()) as {
         ok?: boolean;
         message?: string;
-        data?: Array<{ id: number; title: string; isActive: boolean }>;
+        data?: Array<{ id: number; title: string; key: string; isActive: boolean }>;
       };
       if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
         throw new Error(
@@ -63,7 +61,11 @@ export function Header() {
       }
       const activeTypes = payload.data
         .filter((type) => type.isActive)
-        .slice(0, 8);
+        .slice(0, 8)
+        .map((type) => ({
+          ...type,
+          key: String(type.key ?? ""),
+        }));
       setDefaultBoxTypes(activeTypes);
     } catch (error) {
       setLoadError(
@@ -120,7 +122,7 @@ export function Header() {
         const boxTypesPayload = (await boxTypesResponse.json()) as {
           ok?: boolean;
           message?: string;
-          data?: Array<{ id: number; title: string; isActive: boolean }>;
+          data?: Array<{ id: number; title: string; key: string; isActive: boolean }>;
         };
         if (
           !boxTypesResponse.ok ||
@@ -169,6 +171,7 @@ export function Header() {
             return payload.data.map((product) => ({
               id: product.id,
               boxTypeId: type.id,
+              boxTypeKey: String(type.key ?? ""),
               itemNo: String(product.itemNo ?? ""),
               productName: String(product.productName ?? ""),
             }));

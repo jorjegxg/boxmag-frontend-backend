@@ -8,6 +8,7 @@ import { useLanguage } from "../i18n/language-context";
 type BoxType = {
   id: number;
   title: string;
+  key: string;
   imagePath: string;
   isActive: boolean;
 };
@@ -74,7 +75,13 @@ export default function ShopPage() {
         const boxTypesPayload = (await boxTypesResponse.json()) as {
           ok?: boolean;
           message?: string;
-          data?: Array<{ id: number; title: string; imagePath: string; isActive: boolean }>;
+          data?: Array<{
+            id: number;
+            title: string;
+            key: string;
+            imagePath: string;
+            isActive: boolean;
+          }>;
         };
         if (
           !boxTypesResponse.ok ||
@@ -84,7 +91,12 @@ export default function ShopPage() {
           throw new Error(boxTypesPayload.message ?? "Failed to load box types");
         }
 
-        const activeTypes = boxTypesPayload.data.filter((type) => type.isActive);
+        const activeTypes = boxTypesPayload.data
+          .filter((type) => type.isActive)
+          .map((type) => ({
+            ...type,
+            key: String(type.key ?? ""),
+          }));
         const typeMap = new Map(activeTypes.map((type) => [type.id, type]));
         const targetTypes =
           selectedBoxTypeId && typeMap.has(selectedBoxTypeId)
@@ -227,36 +239,37 @@ export default function ShopPage() {
                     typeof product.internalDimensionsMM?.h === "number"
                       ? `${product.internalDimensionsMM.l} x ${product.internalDimensionsMM.w} x ${product.internalDimensionsMM.h} mm`
                       : null;
-                  const detailsHref = `/produs-demo?productName=${encodeURIComponent(
-                    product.productName
-                  )}&itemNo=${encodeURIComponent(product.itemNo)}&size=${encodeURIComponent(
-                    size ?? ""
-                  )}&image=${encodeURIComponent(imageUrl)}&priceWithTax=${encodeURIComponent(
-                    firstPrice ? String(firstPrice.withTax) : ""
-                  )}&priceWithoutTax=${encodeURIComponent(
-                    firstPrice ? String(firstPrice.withoutTax) : ""
-                  )}`;
-                  return (
+                  const boxTypeKey = boxType?.key?.trim() ?? "";
+                  const detailsHref =
+                    boxTypeKey.length > 0
+                      ? `/products/${encodeURIComponent(boxTypeKey)}?itemNo=${encodeURIComponent(product.itemNo)}`
+                      : null;
+                  const card = (
+                    <article className="rounded-xl border border-my-light-gray bg-white p-4 shadow-sm transition hover:border-my-yellow hover:shadow-md">
+                      <div className="mb-4 h-44 w-full overflow-hidden rounded-lg bg-my-light-gray2">
+                        <img
+                          src={imageUrl}
+                          alt={boxType?.title ?? product.productName}
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">
+                        {boxType?.title ?? "Box Type"}
+                      </p>
+                      <h2 className="mt-1 text-base font-semibold text-black">{product.productName}</h2>
+                      <p className="mt-1 text-sm text-gray-600">Cod: {product.itemNo}</p>
+                      {size ? <p className="mt-1 text-sm text-gray-600">Size: {size}</p> : null}
+                      <p className="mt-3 text-sm font-semibold text-black">
+                        {firstPrice ? `de la € ${firstPrice.withTax.toFixed(2)}` : "Pret la cerere"}
+                      </p>
+                    </article>
+                  );
+                  return detailsHref ? (
                     <Link key={product.id} href={detailsHref} className="block">
-                      <article className="rounded-xl border border-my-light-gray bg-white p-4 shadow-sm transition hover:border-my-yellow hover:shadow-md">
-                        <div className="mb-4 h-44 w-full overflow-hidden rounded-lg bg-my-light-gray2">
-                          <img
-                            src={imageUrl}
-                            alt={boxType?.title ?? product.productName}
-                            className="h-full w-full object-contain"
-                          />
-                        </div>
-                        <p className="text-xs uppercase tracking-wide text-gray-500">
-                          {boxType?.title ?? "Box Type"}
-                        </p>
-                        <h2 className="mt-1 text-base font-semibold text-black">{product.productName}</h2>
-                        <p className="mt-1 text-sm text-gray-600">Cod: {product.itemNo}</p>
-                        {size ? <p className="mt-1 text-sm text-gray-600">Size: {size}</p> : null}
-                        <p className="mt-3 text-sm font-semibold text-black">
-                          {firstPrice ? `de la € ${firstPrice.withTax.toFixed(2)}` : "Pret la cerere"}
-                        </p>
-                      </article>
+                      {card}
                     </Link>
+                  ) : (
+                    <div key={product.id}>{card}</div>
                   );
                 })}
               </div>
