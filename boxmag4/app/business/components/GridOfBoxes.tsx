@@ -44,7 +44,7 @@ export default function GridOfBoxes() {
           key={box.id}
           title={box.name}
           id={box.id}
-          imagePath={box.imagePath}
+          imageUrl={box.imageUrl}
           isSelected={box.isSelected}
           confirmItem={confirmBox}
         />

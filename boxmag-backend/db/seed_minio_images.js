@@ -30,6 +30,7 @@ const config = {
 
 const IMAGE_SEARCH_DIRS = [
   path.join(repoRoot, "boxmag4", "public", "b2b", "boxes"),
+  path.join(repoRoot, "boxmag4", "public", "ecommerce"),
   path.join(repoRoot, "boxmag-backend", "uploads", "boxes"),
 ];
 
@@ -95,7 +96,7 @@ async function main() {
 
   try {
     const [rows] = await connection.query(
-      "SELECT id, image_path FROM box_types ORDER BY id ASC",
+      "SELECT id, url FROM box_type_images ORDER BY box_type_id ASC, sort_order ASC, id ASC",
     );
 
     let uploadedCount = 0;
@@ -103,7 +104,7 @@ async function main() {
     let missingCount = 0;
 
     for (const row of rows) {
-      const currentPath = String(row.image_path || "").trim();
+      const currentPath = String(row.url || "").trim();
       const id = Number(row.id);
       const fileName = currentPath.split("/").pop();
 
@@ -137,7 +138,7 @@ async function main() {
       uploadedCount += 1;
 
       const publicUrl = toPublicUrl(objectName);
-      await connection.execute("UPDATE box_types SET image_path = ? WHERE id = ?", [
+      await connection.execute("UPDATE box_type_images SET url = ? WHERE id = ?", [
         publicUrl,
         id,
       ]);

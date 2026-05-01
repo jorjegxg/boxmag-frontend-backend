@@ -21,7 +21,7 @@ export function CarboardType() {
             title={carboarsType.name}
             id={carboarsType.id}
             key={carboarsType.id}
-            imagePath={carboarsType.imagePath}
+            imageUrl={carboarsType.imageUrl}
             centerItems={false}
             isSelected={carboarsType.isSelected}
             confirmItem={confirmCarboardTypeOption}

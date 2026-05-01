@@ -9,7 +9,13 @@ type BoxType = {
   id: number;
   title: string;
   key: string;
-  imagePath: string;
+  images: Array<{
+    id: number;
+    url: string;
+    sortOrder: number;
+    altText: string | null;
+    isPrimary: boolean;
+  }>;
   isActive: boolean;
 };
 
@@ -39,6 +45,14 @@ function normalizeImageUrl(baseUrl: string, imagePath: string): string {
   }
   const normalizedPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
   return `${baseUrl}${normalizedPath}`;
+}
+
+function resolvePrimaryImageUrl(
+  baseUrl: string,
+  images: Array<{ url: string; isPrimary: boolean }>,
+): string {
+  const primary = images.find((image) => image.isPrimary) ?? images[0];
+  return normalizeImageUrl(baseUrl, primary?.url ?? "");
 }
 
 export default function ShopPage() {
@@ -79,7 +93,13 @@ export default function ShopPage() {
             id: number;
             title: string;
             key: string;
-            imagePath: string;
+            images: Array<{
+              id: number;
+              url: string;
+              sortOrder: number;
+              altText: string | null;
+              isPrimary: boolean;
+            }>;
             isActive: boolean;
           }>;
         };
@@ -230,7 +250,7 @@ export default function ShopPage() {
                 {products.map((product) => {
                   const boxType = activeBoxTypeById.get(product.boxTypeId);
                   const imageUrl = boxType
-                    ? normalizeImageUrl(backendBaseUrl, boxType.imagePath)
+                    ? resolvePrimaryImageUrl(backendBaseUrl, boxType.images)
                     : "/placeholders/box4.png";
                   const firstPrice = product.prices[0];
                   const size =

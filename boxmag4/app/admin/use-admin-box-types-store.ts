@@ -5,14 +5,17 @@ import { create } from "zustand";
 export type AdminBoxType = {
   id: number;
   title: string;
-  imagePath: string;
+  images: Array<{
+    id: number;
+    url: string;
+    sortOrder: number;
+    altText: string | null;
+    isPrimary: boolean;
+  }>;
   isActive: boolean;
 };
 
-type EditableBoxType = Pick<AdminBoxType, "title" | "imagePath" | "isActive"> & {
-  imageFile: File | null;
-  previewImagePath: string;
-};
+type EditableBoxType = Pick<AdminBoxType, "title" | "images" | "isActive">;
 
 type AdminBoxTypesState = {
   backendBaseUrl: string;
@@ -27,22 +30,15 @@ type AdminBoxTypesState = {
   loadBoxTypes: () => Promise<void>;
   createBoxType: (payload: {
     title: string;
-    imagePath: string;
+    images: AdminBoxType["images"];
     isActive?: boolean;
   }) => Promise<void>;
   startEditing: (boxType: AdminBoxType) => void;
   cancelEditing: () => void;
   updateEditingTitle: (value: string) => void;
   updateEditingStatus: (isActive: boolean) => void;
-  updateEditingImageFile: (file: File | null) => void;
   saveEditedBoxType: () => Promise<void>;
 };
-
-function revokePreviewIfNeeded(path?: string) {
-  if (path?.startsWith("blob:")) {
-    URL.revokeObjectURL(path);
-  }
-}
 
 export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
   backendBaseUrl: "http://localhost:3005",
@@ -97,7 +93,7 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
         },
         body: JSON.stringify({
           title: payload.title,
-          imagePath: payload.imagePath,
+          images: payload.images,
           isActive: payload.isActive ?? true,
         }),
       });
@@ -124,68 +120,18 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
   },
 
   startEditing: (boxType) => {
-    const debugStart = performance.now();
-    const currentPreview = get().editingData?.previewImagePath;
-    // #region agent log
-    fetch("http://127.0.0.1:7337/ingest/001632f5-f360-4660-a740-ac305c61ac19", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "52d9a7",
-      },
-      body: JSON.stringify({
-        sessionId: "52d9a7",
-        runId: "pre-fix",
-        hypothesisId: "H3",
-        location: "use-admin-box-types-store.ts:startEditing:entry",
-        message: "startEditing invoked",
-        data: {
-          boxTypeId: boxType.id,
-          boxCount: get().boxTypes.length,
-          hadBlobPreview: Boolean(currentPreview?.startsWith("blob:")),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    revokePreviewIfNeeded(currentPreview);
     set({
       editingBoxId: boxType.id,
       editingData: {
         title: boxType.title,
-        imagePath: boxType.imagePath,
+        images: boxType.images,
         isActive: boxType.isActive,
-        imageFile: null,
-        previewImagePath: boxType.imagePath,
       },
       saveError: null,
     });
-    // #region agent log
-    fetch("http://127.0.0.1:7337/ingest/001632f5-f360-4660-a740-ac305c61ac19", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "52d9a7",
-      },
-      body: JSON.stringify({
-        sessionId: "52d9a7",
-        runId: "pre-fix",
-        hypothesisId: "H3",
-        location: "use-admin-box-types-store.ts:startEditing:exit",
-        message: "startEditing completed",
-        data: {
-          boxTypeId: boxType.id,
-          durationMs: Number((performance.now() - debugStart).toFixed(2)),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
   },
 
   cancelEditing: () => {
-    const currentPreview = get().editingData?.previewImagePath;
-    revokePreviewIfNeeded(currentPreview);
     set({
       editingBoxId: null,
       editingData: null,
@@ -217,32 +163,6 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
     });
   },
 
-  updateEditingImageFile: (file) => {
-    set((state) => {
-      if (!state.editingData) return state;
-
-      revokePreviewIfNeeded(state.editingData.previewImagePath);
-
-      if (!file) {
-        return {
-          editingData: {
-            ...state.editingData,
-            imageFile: null,
-            previewImagePath: state.editingData.imagePath,
-          },
-        };
-      }
-
-      return {
-        editingData: {
-          ...state.editingData,
-          imageFile: file,
-          previewImagePath: URL.createObjectURL(file),
-        },
-      };
-    });
-  },
-
   saveEditedBoxType: async () => {
     const { editingBoxId, editingData, backendBaseUrl } = get();
     if (editingBoxId == null || !editingData) return;
@@ -267,7 +187,7 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
             ? {
                 ...boxType,
                 title: editingData.title,
-                imagePath: editingData.imagePath,
+                images: editingData.images,
                 isActive: editingData.isActive,
               }
             : boxType
@@ -278,7 +198,6 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
         saveError: null,
       }));
 
-      revokePreviewIfNeeded(editingData.previewImagePath);
     } catch (error) {
       set({
         saveError: error instanceof Error ? error.message : "Failed to update box type",

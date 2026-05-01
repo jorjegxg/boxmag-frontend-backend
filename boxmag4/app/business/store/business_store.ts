@@ -48,7 +48,12 @@ const useBusinessStore = create<BusinessState>((set) => ({
             const response = await fetch(`${backendBaseUrl}/api/box-types`);
             const payload = (await response.json()) as {
                 ok?: boolean;
-                data?: Array<{ id: number; title: string; imagePath: string; isActive: boolean }>;
+                data?: Array<{
+                    id: number;
+                    title: string;
+                    isActive: boolean;
+                    images: Array<{ url: string; isPrimary: boolean }>;
+                }>;
                 message?: string;
             };
             if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
@@ -61,7 +66,10 @@ const useBusinessStore = create<BusinessState>((set) => ({
                     id: box.id,
                     key: String(box.id),
                     name: box.title,
-                    imagePath: box.imagePath,
+                    imageUrl:
+                        box.images.find((image) => image.isPrimary)?.url ??
+                        box.images[0]?.url ??
+                        "/placeholders/box4.png",
                     isSelected: isDevelopment ? index === 0 : false,
                 }));
 

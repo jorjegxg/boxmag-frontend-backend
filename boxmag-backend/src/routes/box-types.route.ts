@@ -9,8 +9,26 @@ type BoxTypeRow = RowDataPacket & {
   id: number;
   title: string;
   key: string;
-  image_path: string;
   is_active: number;
+  image_id: number | null;
+  image_url: string | null;
+  image_sort_order: number | null;
+  image_alt_text: string | null;
+  image_is_primary: number | null;
+};
+
+type BoxTypeImageInput = {
+  url: string;
+  sortOrder?: number;
+  altText?: string | null;
+  isPrimary?: boolean;
+};
+
+type NormalizedBoxTypeImage = {
+  url: string;
+  sortOrder: number;
+  altText: string | null;
+  isPrimary: boolean;
 };
 
 type BoxTypeProductRow = RowDataPacket & {
@@ -91,23 +109,131 @@ boxTypesRouter.post("/upload-image", imageUpload.single("image"), async (req, re
   }
 });
 
+boxTypesRouter.post("/upload-images", imageUpload.array("images", 10), async (req, res) => {
+  const files = Array.isArray(req.files) ? req.files : [];
+  if (files.length === 0) {
+    res.status(400).json({
+      ok: false,
+      message: "At least one image file is required",
+    });
+    return;
+  }
+
+  try {
+    const uploadedImages = await Promise.all(
+      files.map(async (file) => {
+        const imagePath = await uploadBoxImageToMinio({
+          fileBuffer: file.buffer,
+          originalFileName: file.originalname,
+          mimeType: file.mimetype,
+        });
+        return {
+          url: imagePath,
+          fileName: file.originalname,
+        };
+      })
+    );
+
+    res.status(201).json({
+      ok: true,
+      data: {
+        images: uploadedImages,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to upload images to MinIO", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to upload images",
+    });
+  }
+});
+
+function normalizeImages(images: unknown): NormalizedBoxTypeImage[] | null {
+  if (!Array.isArray(images) || images.length === 0) {
+    return null;
+  }
+
+  const normalized: NormalizedBoxTypeImage[] = [];
+  for (let index = 0; index < images.length; index += 1) {
+    const candidate = images[index] as BoxTypeImageInput;
+    if (typeof candidate?.url !== "string" || candidate.url.trim().length === 0) {
+      return null;
+    }
+    normalized.push({
+      url: candidate.url.trim(),
+      sortOrder:
+        typeof candidate.sortOrder === "number" && Number.isInteger(candidate.sortOrder)
+          ? candidate.sortOrder
+          : index,
+      altText:
+        typeof candidate.altText === "string" && candidate.altText.trim().length > 0
+          ? candidate.altText.trim()
+          : null,
+      isPrimary: candidate.isPrimary === true,
+    });
+  }
+
+  const primaryCount = normalized.filter((image) => image.isPrimary).length;
+  if (primaryCount !== 1) {
+    return null;
+  }
+
+  return normalized;
+}
+
 boxTypesRouter.get("/", async (_req, res) => {
   try {
     const [rows] = await mysqlPool.query<BoxTypeRow[]>(
-      `SELECT id, title, \`key\`, image_path, is_active
-       FROM box_types
-       ORDER BY id ASC`
+      `SELECT bt.id, bt.title, bt.\`key\`, bt.is_active,
+              bti.id AS image_id, bti.url AS image_url, bti.sort_order AS image_sort_order,
+              bti.alt_text AS image_alt_text, bti.is_primary AS image_is_primary
+       FROM box_types bt
+       LEFT JOIN box_type_images bti ON bti.box_type_id = bt.id
+       ORDER BY bt.id ASC, bti.sort_order ASC, bti.id ASC`
     );
+
+    const grouped = new Map<
+      number,
+      {
+        id: number;
+        title: string;
+        key: string;
+        isActive: boolean;
+        images: Array<{
+          id: number;
+          url: string;
+          sortOrder: number;
+          altText: string | null;
+          isPrimary: boolean;
+        }>;
+      }
+    >();
+
+    for (const row of rows) {
+      if (!grouped.has(row.id)) {
+        grouped.set(row.id, {
+          id: row.id,
+          title: row.title,
+          key: row.key,
+          isActive: row.is_active === 1,
+          images: [],
+        });
+      }
+      if (row.image_id != null && row.image_url != null) {
+        grouped.get(row.id)?.images.push({
+          id: row.image_id,
+          url: row.image_url,
+          sortOrder: row.image_sort_order ?? 0,
+          altText: row.image_alt_text,
+          isPrimary: row.image_is_primary === 1,
+        });
+      }
+    }
 
     res.json({
       ok: true,
-      data: rows.map((row) => ({
-        id: row.id,
-        title: row.title,
-        key: row.key,
-        imagePath: row.image_path,
-        isActive: row.is_active === 1,
-      })),
+      data: Array.from(grouped.values()),
     });
   } catch (error) {
     console.error("Failed to load box types", error);
@@ -122,7 +248,7 @@ boxTypesRouter.post("/", async (req, res) => {
   const payload = req.body as {
     title?: unknown;
     key?: unknown;
-    imagePath?: unknown;
+    images?: unknown;
     isActive?: unknown;
   };
 
@@ -134,10 +260,11 @@ boxTypesRouter.post("/", async (req, res) => {
     return;
   }
 
-  if (typeof payload.imagePath !== "string" || payload.imagePath.trim().length === 0) {
+  const normalizedImages = normalizeImages(payload.images);
+  if (!normalizedImages) {
     res.status(400).json({
       ok: false,
-      message: "Image path is required",
+      message: "images must be a non-empty array with exactly one primary image",
     });
     return;
   }
@@ -164,17 +291,28 @@ boxTypesRouter.post("/", async (req, res) => {
     );
     const nextId = (maxIdRows[0]?.maxId ?? 0) + 1;
 
-    await mysqlPool.execute(
-      `INSERT INTO box_types (id, title, \`key\`, image_path, is_active)
-       VALUES (?, ?, ?, ?, ?)`,
-      [
-        nextId,
-        payload.title.trim(),
-        payload.key.trim(),
-        payload.imagePath.trim(),
-        payload.isActive === false ? 0 : 1,
-      ]
-    );
+    const connection = await mysqlPool.getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.execute(
+        `INSERT INTO box_types (id, title, \`key\`, is_active)
+         VALUES (?, ?, ?, ?)`,
+        [nextId, payload.title.trim(), payload.key.trim(), payload.isActive === false ? 0 : 1]
+      );
+      for (const image of normalizedImages) {
+        await connection.execute(
+          `INSERT INTO box_type_images (box_type_id, url, sort_order, alt_text, is_primary)
+           VALUES (?, ?, ?, ?, ?)`,
+          [nextId, image.url, image.sortOrder, image.altText, image.isPrimary ? 1 : 0]
+        );
+      }
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
 
     res.status(201).json({
       ok: true,
@@ -182,7 +320,13 @@ boxTypesRouter.post("/", async (req, res) => {
         id: nextId,
         title: payload.title.trim(),
         key: payload.key.trim(),
-        imagePath: payload.imagePath.trim(),
+        images: normalizedImages.map((image, index) => ({
+          id: index + 1,
+          url: image.url,
+          sortOrder: image.sortOrder,
+          altText: image.altText,
+          isPrimary: image.isPrimary,
+        })),
         isActive: payload.isActive === false ? false : true,
       },
     });
@@ -461,7 +605,7 @@ boxTypesRouter.put("/:id", async (req, res) => {
   const payload = req.body as {
     title?: unknown;
     key?: unknown;
-    imagePath?: unknown;
+    images?: unknown;
     isActive?: unknown;
   };
 
@@ -481,10 +625,11 @@ boxTypesRouter.put("/:id", async (req, res) => {
     return;
   }
 
-  if (typeof payload.imagePath !== "string" || payload.imagePath.trim().length === 0) {
+  const normalizedImages = normalizeImages(payload.images);
+  if (!normalizedImages) {
     res.status(400).json({
       ok: false,
-      message: "Image path is required",
+      message: "images must be a non-empty array with exactly one primary image",
     });
     return;
   }
@@ -511,18 +656,32 @@ boxTypesRouter.put("/:id", async (req, res) => {
         ? payload.key.trim()
         : null;
 
-    const [result] = await mysqlPool.execute(
-      `UPDATE box_types
-       SET title = ?, \`key\` = COALESCE(?, \`key\`), image_path = ?, is_active = ?
-       WHERE id = ?`,
-      [
-        payload.title.trim(),
-        normalizedKey,
-        payload.imagePath.trim(),
-        payload.isActive ? 1 : 0,
-        boxTypeId,
-      ]
-    );
+    const connection = await mysqlPool.getConnection();
+    let result: unknown;
+    try {
+      await connection.beginTransaction();
+      const [updateResult] = await connection.execute(
+        `UPDATE box_types
+         SET title = ?, \`key\` = COALESCE(?, \`key\`), is_active = ?
+         WHERE id = ?`,
+        [payload.title.trim(), normalizedKey, payload.isActive ? 1 : 0, boxTypeId]
+      );
+      result = updateResult;
+      await connection.execute(`DELETE FROM box_type_images WHERE box_type_id = ?`, [boxTypeId]);
+      for (const image of normalizedImages) {
+        await connection.execute(
+          `INSERT INTO box_type_images (box_type_id, url, sort_order, alt_text, is_primary)
+           VALUES (?, ?, ?, ?, ?)`,
+          [boxTypeId, image.url, image.sortOrder, image.altText, image.isPrimary ? 1 : 0]
+        );
+      }
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
 
     const updateResult = result as { affectedRows?: number };
     if (!updateResult.affectedRows) {

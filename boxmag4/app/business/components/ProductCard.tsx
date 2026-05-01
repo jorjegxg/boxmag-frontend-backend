@@ -9,14 +9,14 @@ import { useLanguage } from "../../i18n/language-context";
 export function PrductCard({
   title,
   id,
-  imagePath,
+  imageUrl,
   centerItems = true,
   isSelected = false,
   confirmItem,
 }: {
   title: string;
   id: number;
-  imagePath?: string;
+  imageUrl?: string;
   centerItems?: boolean;
   isSelected?: boolean;
   confirmItem: (id: number) => void;
@@ -47,7 +47,7 @@ export function PrductCard({
         }`}
       >
         <Image
-          src={imagePath ?? "/placeholders/box2.png"}
+          src={imageUrl ?? "/placeholders/box2.png"}
           alt={title}
           width={centerItems ? 200 : 300}
           height={centerItems ? 200 : 300}

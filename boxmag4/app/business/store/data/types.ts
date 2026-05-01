@@ -2,7 +2,7 @@ export type Box = {
   id: number;
   key: string;
   name: string;
-  imagePath: string;
+  imageUrl: string;
 };
 export type BoxState = {
     isSelected?: boolean;
@@ -12,7 +12,7 @@ export   type BoxColorOption = {
     id: number;
     key: string;
     name: string;
-    imagePath: string;
+    imageUrl: string;
     isSelected?: boolean;
 }
 
@@ -20,7 +20,7 @@ export type CarboardTypeOption = {
     id: number;
     key: string;
     name: string;
-    imagePath: string;
+    imageUrl: string;
 };
 
 export type CarboardTypeState = CarboardTypeOption & {

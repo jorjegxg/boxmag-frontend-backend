@@ -37,6 +37,14 @@ type EditableProduct = {
   prices: EditablePrice[];
 };
 
+type EditableImage = {
+  id?: number;
+  url: string;
+  sortOrder: number;
+  altText: string | null;
+  isPrimary: boolean;
+};
+
 export default function EditBoxTypePage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -71,13 +79,9 @@ export default function EditBoxTypePage() {
   const boxType = boxTypes.find((item) => item.id === boxTypeId);
 
   const [title, setTitle] = useState("");
-  const [imagePath, setImagePath] = useState("");
+  const [images, setImages] = useState<EditableImage[]>([]);
   const [isActive, setIsActive] = useState(true);
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
-  const [selectedImageFileName, setSelectedImageFileName] = useState<
-    string | null
-  >(null);
-  const [previewImagePath, setPreviewImagePath] = useState<string | null>(null);
+  const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -99,11 +103,9 @@ export default function EditBoxTypePage() {
   useEffect(() => {
     if (!boxType) return;
     setTitle(boxType.title);
-    setImagePath(boxType.imagePath);
-    setPreviewImagePath(boxType.imagePath);
+    setImages(boxType.images);
     setIsActive(boxType.isActive);
-    setSelectedImageFile(null);
-    setSelectedImageFileName(null);
+    setSelectedImageFiles([]);
   }, [boxType]);
 
   useEffect(() => {
@@ -157,14 +159,6 @@ export default function EditBoxTypePage() {
   }, [backendBaseUrl, boxTypeId]);
 
   useEffect(() => {
-    return () => {
-      if (previewImagePath?.startsWith("blob:")) {
-        URL.revokeObjectURL(previewImagePath);
-      }
-    };
-  }, [previewImagePath]);
-
-  useEffect(() => {
     const storedPreference = window.localStorage.getItem(
       "boxmag_hide_remove_product_confirm",
     );
@@ -185,22 +179,28 @@ export default function EditBoxTypePage() {
     );
 
     const trimmedTitle = title.trim();
-    let trimmedImagePath = imagePath.trim();
-
-    if (!trimmedTitle || !trimmedImagePath) {
-      setSaveError("Name and photo are required.");
+    if (!trimmedTitle || images.length === 0) {
+      setSaveError("Name and at least one photo are required.");
+      return;
+    }
+    const primaryCount = images.filter((image) => image.isPrimary).length;
+    if (primaryCount !== 1) {
+      setSaveError("Exactly one image must be set as primary.");
       return;
     }
 
     setIsSaving(true);
     setSaveError(null);
     try {
-      if (selectedImageFile) {
+      let nextImages = [...images];
+      if (selectedImageFiles.length > 0) {
         setIsUploadingImage(true);
         const formData = new FormData();
-        formData.append("image", selectedImageFile);
+        for (const file of selectedImageFiles) {
+          formData.append("images", file);
+        }
         const uploadResponse = await fetch(
-          `${backendBaseUrl}/api/box-types/upload-image`,
+          `${backendBaseUrl}/api/box-types/upload-images`,
           {
             method: "POST",
             body: formData,
@@ -208,18 +208,35 @@ export default function EditBoxTypePage() {
         );
         const uploadBody = (await uploadResponse.json()) as {
           ok?: boolean;
-          data?: { imagePath?: string };
+          data?: { images?: Array<{ url?: string }> };
           message?: string;
         };
         if (
           !uploadResponse.ok ||
           uploadBody.ok !== true ||
-          !uploadBody.data?.imagePath
+          !Array.isArray(uploadBody.data?.images) ||
+          uploadBody.data.images.length === 0
         ) {
           throw new Error(uploadBody.message ?? "Failed to upload image");
         }
-        trimmedImagePath = uploadBody.data.imagePath.trim();
-        setImagePath(trimmedImagePath);
+        const startingIndex = nextImages.length;
+        const uploaded = uploadBody.data.images
+          .map((image, index) => {
+            const url = String(image.url ?? "").trim();
+            if (!url) return null;
+            return {
+              url,
+              sortOrder: startingIndex + index,
+              altText: null,
+              isPrimary: nextImages.length === 0 && index === 0,
+            };
+          })
+          .filter((image): image is NonNullable<typeof image> => image != null);
+        nextImages = [...nextImages, ...uploaded];
+      }
+
+      if (nextImages.length === 0 || nextImages.filter((image) => image.isPrimary).length !== 1) {
+        throw new Error("Image gallery must include exactly one primary image");
       }
 
       const response = await fetch(
@@ -231,7 +248,7 @@ export default function EditBoxTypePage() {
           },
           body: JSON.stringify({
             title: trimmedTitle,
-            imagePath: trimmedImagePath,
+            images: nextImages,
             isActive,
           }),
         },
@@ -271,8 +288,8 @@ export default function EditBoxTypePage() {
       }
 
       await loadBoxTypes();
-      setSelectedImageFile(null);
-      setSelectedImageFileName(null);
+      setSelectedImageFiles([]);
+      setImages(nextImages);
       if (redirectToAdmin) {
         router.push("/admin");
       }
@@ -287,20 +304,26 @@ export default function EditBoxTypePage() {
   }
 
   function handleImageFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] ?? null;
-    setSelectedImageFile(file);
-    setSelectedImageFileName(file?.name ?? null);
+    setSelectedImageFiles(Array.from(event.target.files ?? []));
+  }
 
-    if (previewImagePath?.startsWith("blob:")) {
-      URL.revokeObjectURL(previewImagePath);
-    }
+  function setPrimaryImage(index: number) {
+    setImages((current) =>
+      current.map((image, currentIndex) => ({
+        ...image,
+        isPrimary: currentIndex === index,
+      })),
+    );
+  }
 
-    if (!file) {
-      setPreviewImagePath(imagePath);
-      return;
-    }
-
-    setPreviewImagePath(URL.createObjectURL(file));
+  function removeImage(index: number) {
+    setImages((current) => {
+      const next = current.filter((_, currentIndex) => currentIndex !== index);
+      if (next.length > 0 && !next.some((image) => image.isPrimary)) {
+        next[0] = { ...next[0], isPrimary: true };
+      }
+      return next.map((image, currentIndex) => ({ ...image, sortOrder: currentIndex }));
+    });
   }
 
   function updateProduct(
@@ -475,23 +498,48 @@ export default function EditBoxTypePage() {
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleImageFileChange}
                     className="h-11 rounded-lg border border-gray-300 bg-white px-3 py-0 text-sm leading-10 text-gray-900 file:mr-4 file:my-1 file:h-8 file:rounded-md file:border-0 file:bg-my-light-gray2 file:px-3 file:py-0 file:text-sm file:font-medium file:leading-8 file:text-gray-800 hover:file:bg-gray-200"
                   />
                   <span className="text-xs text-gray-500">
-                    {selectedImageFileName
-                      ? `Selected: ${selectedImageFileName}`
-                      : "Choose a file to replace the current image on save."}
+                    {selectedImageFiles.length > 0
+                      ? `Selected ${selectedImageFiles.length} file(s). Save to upload and append to gallery.`
+                      : "Choose one or more files to append to the gallery."}
                   </span>
                 </label>
 
-                {previewImagePath ? (
-                  <img
-                    src={previewImagePath}
-                    alt={title || "Box type preview"}
-                    className="h-28 w-28 rounded-md border border-gray-200 object-cover"
-                  />
-                ) : null}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {images.map((image, index) => (
+                    <div key={`${image.id ?? "new"}-${index}`} className="space-y-2">
+                      <img
+                        src={image.url}
+                        alt={title || "Box type preview"}
+                        className="h-24 w-full rounded-md border border-gray-200 object-cover"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPrimaryImage(index)}
+                          className={`rounded border px-2 py-1 text-xs ${
+                            image.isPrimary
+                              ? "border-green-300 bg-green-50 text-green-700"
+                              : "border-gray-300 text-gray-700"
+                          }`}
+                        >
+                          {image.isPrimary ? "Primary" : "Set primary"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="rounded border border-red-300 px-2 py-1 text-xs text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
                 <div className="rounded-xl border border-gray-200 p-4 space-y-3">
                   <h2 className="text-sm font-semibold text-gray-900">

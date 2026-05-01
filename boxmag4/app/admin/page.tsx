@@ -85,10 +85,7 @@ export default function AdminPage() {
   const loadBoxTypes = useAdminBoxTypesStore((state) => state.loadBoxTypes);
   const createBoxType = useAdminBoxTypesStore((state) => state.createBoxType);
   const [boxTypeTitle, setBoxTypeTitle] = useState("");
-  const [boxImagePath, setBoxImagePath] = useState("");
-  const [selectedBoxImageFile, setSelectedBoxImageFile] = useState<File | null>(
-    null,
-  );
+  const [selectedBoxImageFiles, setSelectedBoxImageFiles] = useState<File[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
@@ -104,7 +101,13 @@ export default function AdminPage() {
 
   const handleAddBoxType = async () => {
     const trimmedTitle = boxTypeTitle.trim();
-    let trimmedImagePath = boxImagePath.trim();
+    let uploadedImages: Array<{
+      id: number;
+      url: string;
+      sortOrder: number;
+      altText: string | null;
+      isPrimary: boolean;
+    }> = [];
 
     if (!trimmedTitle) {
       setFormError("Please fill in Title.");
@@ -113,13 +116,15 @@ export default function AdminPage() {
 
     setFormError(null);
 
-    if (selectedBoxImageFile) {
+    if (selectedBoxImageFiles.length > 0) {
       setIsUploadingImage(true);
       try {
         const formData = new FormData();
-        formData.append("image", selectedBoxImageFile);
+        for (const file of selectedBoxImageFiles) {
+          formData.append("images", file);
+        }
         const uploadResponse = await fetch(
-          `${backendBaseUrl}/api/box-types/upload-image`,
+          `${backendBaseUrl}/api/box-types/upload-images`,
           {
             method: "POST",
             body: formData,
@@ -127,20 +132,32 @@ export default function AdminPage() {
         );
         const uploadBody = (await uploadResponse.json()) as {
           ok?: boolean;
-          data?: { imagePath?: string };
+          data?: { images?: Array<{ url?: string }> };
           message?: string;
         };
 
         if (
           !uploadResponse.ok ||
           uploadBody.ok !== true ||
-          !uploadBody.data?.imagePath
+          !Array.isArray(uploadBody.data?.images) ||
+          uploadBody.data.images.length === 0
         ) {
           throw new Error(uploadBody.message ?? "Failed to upload image");
         }
 
-        trimmedImagePath = uploadBody.data.imagePath.trim();
-        setBoxImagePath(trimmedImagePath);
+        uploadedImages = uploadBody.data.images
+          .map((image, index) => {
+            const url = String(image.url ?? "").trim();
+            if (!url) return null;
+            return {
+              id: index + 1,
+              url,
+              sortOrder: index,
+              altText: null,
+              isPrimary: index === 0,
+            };
+          })
+          .filter((image): image is NonNullable<typeof image> => image != null);
       } catch (error) {
         setFormError(
           error instanceof Error
@@ -153,22 +170,21 @@ export default function AdminPage() {
       setIsUploadingImage(false);
     }
 
-    if (!trimmedImagePath) {
+    if (uploadedImages.length === 0) {
       setFormError("Please choose a Box Image before adding.");
       return;
     }
 
     await createBoxType({
       title: trimmedTitle,
-      imagePath: trimmedImagePath,
+      images: uploadedImages,
       isActive: true,
     });
 
     const latestSaveError = useAdminBoxTypesStore.getState().saveError;
     if (!latestSaveError) {
       setBoxTypeTitle("");
-      setBoxImagePath("");
-      setSelectedBoxImageFile(null);
+      setSelectedBoxImageFiles([]);
     }
   };
 
@@ -414,10 +430,9 @@ export default function AdminPage() {
                 onChange={setBoxTypeTitle}
               />
               <ImagePickerField
-                label="Box Image"
-                selectedFile={selectedBoxImageFile}
-                imagePath={boxImagePath}
-                onFileChange={setSelectedBoxImageFile}
+                label="Box Images"
+                selectedFiles={selectedBoxImageFiles}
+                onFileChange={setSelectedBoxImageFiles}
               />
             </div>
 
@@ -425,7 +440,11 @@ export default function AdminPage() {
               <button
                 type="button"
                 onClick={() => void handleAddBoxType()}
-                disabled={isSavingBoxType || isUploadingImage}
+                disabled={
+                  isSavingBoxType ||
+                  isUploadingImage ||
+                  selectedBoxImageFiles.length === 0
+                }
                 className="bg-my-yellow hover:bg-my-yellow-bright text-black font-semibold px-5 py-2.5 rounded-lg transition-colors"
               >
                 {isUploadingImage
@@ -511,13 +530,16 @@ const BoxTypeRow = memo(function BoxTypeRow({
 }: {
   boxType: AdminBoxType;
 }) {
+  const primaryImage =
+    boxType.images.find((image) => image.isPrimary) ?? boxType.images[0] ?? null;
+
   return (
     <tr className="border-t border-gray-200">
       <td className="px-4 py-3">{boxType.id}</td>
       <td className="px-4 py-3">{boxType.title}</td>
       <td className="px-4 py-3">
         <img
-          src={boxType.imagePath}
+          src={primaryImage?.url ?? "/placeholders/box4.png"}
           alt={boxType.title}
           className="h-12 w-12 rounded-md border border-gray-200 object-cover"
         />
@@ -592,20 +614,18 @@ function Field({
 
 function ImagePickerField({
   label,
-  selectedFile,
-  imagePath,
+  selectedFiles,
   onFileChange,
 }: {
   label: string;
-  selectedFile: File | null;
-  imagePath: string;
-  onFileChange: (file: File | null) => void;
+  selectedFiles: File[];
+  onFileChange: (files: File[]) => void;
 }) {
   const inputId = "box-image-upload";
-  const previewUrl = useMemo(
-    () => (selectedFile ? URL.createObjectURL(selectedFile) : imagePath),
-    [imagePath, selectedFile],
-  );
+  const previewUrl = useMemo(() => {
+    if (selectedFiles.length === 0) return "";
+    return URL.createObjectURL(selectedFiles[0]);
+  }, [selectedFiles]);
 
   useEffect(() => {
     return () => {
@@ -620,12 +640,12 @@ function ImagePickerField({
       <span className="text-sm font-semibold text-gray-800">{label}</span>
       <FilePickerInput
         inputId={inputId}
-        selectedFileName={selectedFile?.name ?? null}
-        onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
+        selectedFileName={selectedFiles.map((file) => file.name).join(", ")}
+        onChange={(event) => onFileChange(Array.from(event.target.files ?? []))}
       />
-      {selectedFile ? (
+      {selectedFiles.length > 0 ? (
         <span className="text-xs text-gray-600 truncate">
-          {selectedFile.name}
+          {selectedFiles.length} file(s) selected
         </span>
       ) : (
         <span className="text-xs text-gray-400">No image selected</span>
@@ -660,6 +680,7 @@ function FilePickerInput({
         id={inputId}
         type="file"
         accept="image/*"
+        multiple
         onChange={onChange}
         className="hidden"
       />

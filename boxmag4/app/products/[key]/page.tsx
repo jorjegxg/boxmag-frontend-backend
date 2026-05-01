@@ -24,7 +24,13 @@ type BoxTypeApi = {
   id: number;
   title: string;
   key: string;
-  imagePath: string;
+  images: Array<{
+    id: number;
+    url: string;
+    sortOrder: number;
+    altText: string | null;
+    isPrimary: boolean;
+  }>;
   isActive: boolean;
 };
 
@@ -64,7 +70,10 @@ export default function ProductByKeyPage() {
   const [productName, setProductName] = useState("");
   const [itemNo, setItemNo] = useState("");
   const [sizeLabel, setSizeLabel] = useState("");
-  const [imageUrl, setImageUrl] = useState("/placeholders/box4.png");
+  const [imageUrls, setImageUrls] = useState<string[]>(["/placeholders/box4.png"]);
+  const [selectedProductPrices, setSelectedProductPrices] = useState<
+    Array<{ id: number; name: string; withoutTax: number; withTax: number }>
+  >([]);
   const [firstWithTax, setFirstWithTax] = useState<number | null>(null);
   const [firstWithoutTax, setFirstWithoutTax] = useState<number | null>(null);
 
@@ -83,13 +92,14 @@ export default function ProductByKeyPage() {
       : "";
   };
 
-  const applyProductSelection = (product: BoxTypeProductApi, normalizedImageUrl: string) => {
+  const applyProductSelection = (product: BoxTypeProductApi, normalizedImageUrls: string[]) => {
     const firstPrice = Array.isArray(product.prices) ? product.prices[0] : undefined;
 
     setProductName(String(product.productName ?? ""));
     setItemNo(String(product.itemNo ?? ""));
     setSizeLabel(formatSizeLabel(product));
-    setImageUrl(normalizedImageUrl);
+    setImageUrls(normalizedImageUrls.length > 0 ? normalizedImageUrls : ["/placeholders/box4.png"]);
+    setSelectedProductPrices(Array.isArray(product.prices) ? product.prices : []);
     setFirstWithTax(
       firstPrice && typeof firstPrice.withTax === "number" ? firstPrice.withTax : null,
     );
@@ -170,12 +180,20 @@ export default function ProductByKeyPage() {
             : undefined;
         const product = matched ?? products[0];
 
-        const img = normalizeImageUrl(backendBaseUrl, boxType.imagePath);
+        let gallery = boxType.images
+          .slice()
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((image) => normalizeImageUrl(backendBaseUrl, image.url));
+        const primary = boxType.images.find((image) => image.isPrimary);
+        if (primary) {
+          const primaryUrl = normalizeImageUrl(backendBaseUrl, primary.url);
+          gallery = [primaryUrl, ...gallery.filter((url) => url !== primaryUrl)];
+        }
 
         if (cancelled) return;
 
         setAllProducts(products);
-        applyProductSelection(product, img);
+        applyProductSelection(product, gallery);
         setLoadState("ready");
       } catch (error) {
         if (cancelled || controller.signal.aborted) return;
@@ -201,20 +219,18 @@ export default function ProductByKeyPage() {
       ? `${(firstWithoutTax * quantity).toFixed(2)} euro ${t("productDemo.withoutVat")}`
       : `— ${t("productDemo.withoutVat")}`;
 
-  const galleryWithProduct = useMemo(() => [imageUrl], [imageUrl]);
+  const galleryWithProduct = useMemo(() => imageUrls, [imageUrls]);
 
-  const qtyUnit = t("productDemo.pcsAbbr");
   const priceBreaks = useMemo(
-    () => [
-      { qty: `> 1 ${qtyUnit}`, gross: "1,16 euro", net: "0,96 euro" },
-      { qty: `> 600 ${qtyUnit}`, gross: "1,03 euro", net: "0,85 euro" },
-      { qty: `> 1200 ${qtyUnit}`, gross: "0,98 euro", net: "0,81 euro" },
-      { qty: `> 1800 ${qtyUnit}`, gross: "0,94 euro", net: "0,78 euro" },
-      { qty: t("productDemo.pallet"), gross: "0,87 euro", net: "0,72 euro" },
-    ],
-    [qtyUnit, t],
+    () =>
+      selectedProductPrices.map((price) => ({
+        qty: price.name,
+        gross: `${price.withTax.toFixed(2)} euro`,
+        net: `${price.withoutTax.toFixed(2)} euro`,
+      })),
+    [selectedProductPrices],
   );
-  const imageUrlForCurrentBoxType = imageUrl;
+  const imageUrlForCurrentBoxType = imageUrls;
 
   if (loadState === "loading" || loadState === "idle") {
     return (

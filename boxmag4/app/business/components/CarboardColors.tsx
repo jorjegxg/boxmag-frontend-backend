@@ -19,7 +19,7 @@ export function CarboardColors() {
           key={carboardColor.id}
           title={t(`business.options.boxColor.${carboardColor.key}`)}
           id={carboardColor.id}
-          imagePath={carboardColor.imagePath}
+          imageUrl={carboardColor.imageUrl}
           isSelected={carboardColor.isSelected}
           confirmItem={confirmBoxColorOption}
         />

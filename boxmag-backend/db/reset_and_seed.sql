@@ -1,6 +1,7 @@
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS box_type_product_prices;
+DROP TABLE IF EXISTS box_type_images;
 DROP TABLE IF EXISTS box_type_products;
 DROP TABLE IF EXISTS newsletter_subscribers;
 DROP TABLE IF EXISTS contacts;
@@ -13,10 +14,24 @@ CREATE TABLE IF NOT EXISTS box_types (
   id INT UNSIGNED NOT NULL PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
   `key` VARCHAR(100) NOT NULL,
-  image_path VARCHAR(500) NOT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS box_type_images (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  box_type_id INT UNSIGNED NOT NULL,
+  url VARCHAR(500) NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  alt_text VARCHAR(255) NULL,
+  is_primary TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_box_type_images_box_type
+    FOREIGN KEY (box_type_id) REFERENCES box_types(id)
+    ON DELETE CASCADE,
+  INDEX idx_box_type_images_box_type_sort (box_type_id, sort_order)
 );
 
 CREATE TABLE IF NOT EXISTS box_type_products (
@@ -110,17 +125,44 @@ CREATE TABLE IF NOT EXISTS newsletter_subscribers (
   UNIQUE KEY uq_newsletter_subscribers_email (email)
 );
 
-INSERT INTO box_types (id, title, `key`, image_path, is_active)
+INSERT INTO box_types (id, title, `key`, is_active)
 VALUES
-  (1, 'Boxfix, E-commerce Boxes Fefco 703 - B Wave', 'boxfix-fefco-703-b-wave', '/b2b/boxes/ecommerce.png', 1),
-  (2, 'Flaps Box - Fefco 201', 'flaps-box-fefco-201', '/b2b/boxes/flaps_box.png', 1),
-  (3, 'Shipping Box With Tape And Tear Strip - Fefco 427 (Size: 343X245X47 mm) - B Wave', 'shipping-box-tape-tear-strip-fefco-427', '/b2b/boxes/tear_strip.png', 1),
-  (4, 'Shipping Box - Fefco 427 (Size: 343X245X47 mm) - B Wave', 'shipping-box-fefco-427', '/b2b/boxes/felco.png', 1),
-  (5, 'Footwear shipping box - Boxfix (Size: 350x255x135 mm) - B Wave', 'footwear-shipping-box-boxfix', '/b2b/boxes/footwear.png', 1),
-  (6, 'Flat Box (Size: 220x155x39 mm, A5 - DIN)', 'flat-box-a5-din', '/b2b/boxes/flat_box.png', 1),
-  (7, 'Pizza Box (Size: 325x325x39mm) - E Wave', 'pizza-box-325x325x39-e-wave', '/b2b/boxes/pizza.png', 1),
-  (8, 'Height Adjustable Shipping Box - Fefco 710, B Wave', 'height-adjustable-shipping-box-fefco-710', '/b2b/boxes/adjustable.png', 1),
-  (9, 'Corrugated cardboard envelope', 'corrugated-cardboard-envelope', '/b2b/boxes/envelope.png', 1);
+  (1, 'Boxfix, E-commerce Boxes Fefco 703 - B Wave', 'boxfix-fefco-703-b-wave', 1),
+  (2, 'Flaps Box - Fefco 201', 'flaps-box-fefco-201', 1),
+  (3, 'Shipping Box With Tape And Tear Strip - Fefco 427 (Size: 343X245X47 mm) - B Wave', 'shipping-box-tape-tear-strip-fefco-427', 1),
+  (4, 'Shipping Box - Fefco 427 (Size: 343X245X47 mm) - B Wave', 'shipping-box-fefco-427', 1),
+  (5, 'Footwear shipping box - Boxfix (Size: 350x255x135 mm) - B Wave', 'footwear-shipping-box-boxfix', 1),
+  (6, 'Flat Box (Size: 220x155x39 mm, A5 - DIN)', 'flat-box-a5-din', 1),
+  (7, 'Pizza Box (Size: 325x325x39mm) - E Wave', 'pizza-box-325x325x39-e-wave', 1),
+  (8, 'Height Adjustable Shipping Box - Fefco 710, B Wave', 'height-adjustable-shipping-box-fefco-710', 1),
+  (9, 'Corrugated cardboard envelope', 'corrugated-cardboard-envelope', 1);
+
+INSERT INTO box_type_images
+  (box_type_id, url, sort_order, alt_text, is_primary)
+VALUES
+  (1, '/ecommerce/2.png', 0, 'FEFCO box preview 1', 0),
+  (1, '/ecommerce/3.png', 1, 'FEFCO box preview 2', 1),
+  (1, '/ecommerce/4.png', 2, 'FEFCO box preview 3', 0),
+  (1, '/ecommerce/5.png', 3, 'FEFCO box preview 4', 0),
+  (1, '/ecommerce/8.png', 4, 'FEFCO box preview 5', 0),
+  (1, '/ecommerce/open-box.png', 5, 'FEFCO box open preview', 0),
+  (1, '/ecommerce/sqashed.png', 6, 'FEFCO box squashed preview', 0),
+  (2, '/b2b/boxes/flaps_box.png', 0, 'Flaps box preview', 1),
+  (2, '/b2b/boxes/flaps_box.png', 1, 'Flaps box detail', 0),
+  (3, '/b2b/boxes/tear_strip.png', 0, 'Shipping box with tear strip preview', 1),
+  (3, '/b2b/boxes/tear_strip.png', 1, 'Shipping box with tear strip detail', 0),
+  (4, '/b2b/boxes/felco.png', 0, 'Shipping box preview', 1),
+  (4, '/b2b/boxes/felco.png', 1, 'Shipping box detail', 0),
+  (5, '/b2b/boxes/footwear.png', 0, 'Footwear box preview', 1),
+  (5, '/b2b/boxes/footwear.png', 1, 'Footwear box detail', 0),
+  (6, '/b2b/boxes/flat_box.png', 0, 'Flat box preview', 1),
+  (6, '/b2b/boxes/flat_box.png', 1, 'Flat box detail', 0),
+  (7, '/b2b/boxes/pizza.png', 0, 'Pizza box preview', 1),
+  (7, '/b2b/boxes/pizza.png', 1, 'Pizza box detail', 0),
+  (8, '/b2b/boxes/adjustable.png', 0, 'Adjustable shipping box preview', 1),
+  (8, '/b2b/boxes/adjustable.png', 1, 'Adjustable shipping box detail', 0),
+  (9, '/b2b/boxes/envelope.png', 0, 'Cardboard envelope preview', 1),
+  (9, '/b2b/boxes/envelope.png', 1, 'Cardboard envelope detail', 0);
 
 INSERT INTO box_type_products
   (box_type_id, item_no, product_name, internal_l_mm, internal_w_mm, internal_h_mm, quality_cardboard, pallet_l_cm, pallet_w_cm, pallet_h_cm, weight_piece_gr, weight_pallet_kg, amount_qty_in_pcs, pallet_pcs)
@@ -156,120 +198,36 @@ VALUES
 
 INSERT INTO box_type_product_prices
   (box_type_product_id, price_name, price_without_tax)
-SELECT btp.id, p.price_name, p.price_without_tax
+SELECT
+  btp.id,
+  tiers.price_name,
+  ROUND(bp.base_price * tiers.discount_factor, 2) AS price_without_tax
 FROM box_type_products btp
 JOIN (
-  SELECT 'BF10' AS item_no, '100' AS price_name, 0.84 AS price_without_tax
-  UNION ALL SELECT 'BF10','300',0.84
-  UNION ALL SELECT 'BF10','500',0.84
-  UNION ALL SELECT 'BF10','Pallet',0.84
-  UNION ALL SELECT 'BF11','100',0.84
-  UNION ALL SELECT 'BF11','300',0.84
-  UNION ALL SELECT 'BF11','500',0.84
-  UNION ALL SELECT 'BF11','Pallet',0.84
-  UNION ALL SELECT 'BF15','100',0.84
-  UNION ALL SELECT 'BF15','300',0.84
-  UNION ALL SELECT 'BF15','500',0.84
-  UNION ALL SELECT 'BF15','Pallet',0.84
-  UNION ALL SELECT 'BF20','100',0.84
-  UNION ALL SELECT 'BF20','300',0.84
-  UNION ALL SELECT 'BF20','500',0.84
-  UNION ALL SELECT 'BF20','Pallet',0.84
-  UNION ALL SELECT 'BF20E','100',0.84
-  UNION ALL SELECT 'BF20E','300',0.84
-  UNION ALL SELECT 'BF20E','500',0.84
-  UNION ALL SELECT 'BF20E','Pallet',0.84
-  UNION ALL SELECT 'BF22','100',0.84
-  UNION ALL SELECT 'BF22','300',0.84
-  UNION ALL SELECT 'BF22','500',0.84
-  UNION ALL SELECT 'BF22','Pallet',0.84
-  UNION ALL SELECT 'BF30','100',0.84
-  UNION ALL SELECT 'BF30','300',0.84
-  UNION ALL SELECT 'BF30','500',0.84
-  UNION ALL SELECT 'BF30','Pallet',0.84
-  UNION ALL SELECT 'BF30E','100',0.84
-  UNION ALL SELECT 'BF30E','300',0.84
-  UNION ALL SELECT 'BF30E','500',0.84
-  UNION ALL SELECT 'BF30E','Pallet',0.84
-  UNION ALL SELECT 'BF33','100',0.84
-  UNION ALL SELECT 'BF33','300',0.84
-  UNION ALL SELECT 'BF33','500',0.84
-  UNION ALL SELECT 'BF33','Pallet',0.84
-  UNION ALL SELECT 'BF35','100',0.84
-  UNION ALL SELECT 'BF35','300',0.84
-  UNION ALL SELECT 'BF35','500',0.84
-  UNION ALL SELECT 'BF35','Pallet',0.84
-  UNION ALL SELECT 'BF37','100',0.84
-  UNION ALL SELECT 'BF37','300',0.84
-  UNION ALL SELECT 'BF37','500',0.84
-  UNION ALL SELECT 'BF37','Pallet',0.84
-  UNION ALL SELECT 'BF40','100',0.84
-  UNION ALL SELECT 'BF40','300',0.84
-  UNION ALL SELECT 'BF40','500',0.84
-  UNION ALL SELECT 'BF40','Pallet',0.84
-  UNION ALL SELECT 'BF41','100',0.84
-  UNION ALL SELECT 'BF41','300',0.84
-  UNION ALL SELECT 'BF41','500',0.84
-  UNION ALL SELECT 'BF41','Pallet',0.84
-  UNION ALL SELECT 'BF42','100',0.84
-  UNION ALL SELECT 'BF42','300',0.84
-  UNION ALL SELECT 'BF42','500',0.84
-  UNION ALL SELECT 'BF42','Pallet',0.84
-  UNION ALL SELECT 'BF50','100',0.84
-  UNION ALL SELECT 'BF50','300',0.84
-  UNION ALL SELECT 'BF50','500',0.84
-  UNION ALL SELECT 'BF50','Pallet',0.84
-  UNION ALL SELECT 'BF55','100',0.84
-  UNION ALL SELECT 'BF55','300',0.84
-  UNION ALL SELECT 'BF55','500',0.84
-  UNION ALL SELECT 'BF55','Pallet',0.84
-  UNION ALL SELECT 'F201-D1','100',0.84
-  UNION ALL SELECT 'F201-D1','300',0.84
-  UNION ALL SELECT 'F201-D1','500',0.84
-  UNION ALL SELECT 'F201-D1','Pallet',0.84
-  UNION ALL SELECT 'TS427-D1','100',0.84
-  UNION ALL SELECT 'TS427-D1','300',0.84
-  UNION ALL SELECT 'TS427-D1','500',0.84
-  UNION ALL SELECT 'TS427-D1','Pallet',0.84
-  UNION ALL SELECT 'F427-D1','100',0.84
-  UNION ALL SELECT 'F427-D1','300',0.84
-  UNION ALL SELECT 'F427-D1','500',0.84
-  UNION ALL SELECT 'F427-D1','Pallet',0.84
-  UNION ALL SELECT 'FW-D1','100',0.84
-  UNION ALL SELECT 'FW-D1','300',0.84
-  UNION ALL SELECT 'FW-D1','500',0.84
-  UNION ALL SELECT 'FW-D1','Pallet',0.84
-  UNION ALL SELECT 'FLAT-D1','100',0.84
-  UNION ALL SELECT 'FLAT-D1','300',0.84
-  UNION ALL SELECT 'FLAT-D1','500',0.84
-  UNION ALL SELECT 'FLAT-D1','Pallet',0.84
-  UNION ALL SELECT 'PIZZA-D1','100',0.84
-  UNION ALL SELECT 'PIZZA-D1','300',0.84
-  UNION ALL SELECT 'PIZZA-D1','500',0.84
-  UNION ALL SELECT 'PIZZA-D1','Pallet',0.84
-  UNION ALL SELECT 'ADJ710-D1','100',0.84
-  UNION ALL SELECT 'ADJ710-D1','300',0.84
-  UNION ALL SELECT 'ADJ710-D1','500',0.84
-  UNION ALL SELECT 'ADJ710-D1','Pallet',0.84
-  UNION ALL SELECT 'M1-EV','100',0.84
-  UNION ALL SELECT 'M1-EV','300',0.84
-  UNION ALL SELECT 'M1-EV','500',0.84
-  UNION ALL SELECT 'M1-EV','Pallet',0.84
-  UNION ALL SELECT 'M2-EV','100',0.84
-  UNION ALL SELECT 'M2-EV','300',0.84
-  UNION ALL SELECT 'M2-EV','500',0.84
-  UNION ALL SELECT 'M2-EV','Pallet',0.84
-  UNION ALL SELECT 'M3-EV','100',0.84
-  UNION ALL SELECT 'M3-EV','300',0.84
-  UNION ALL SELECT 'M3-EV','500',0.84
-  UNION ALL SELECT 'M3-EV','Pallet',0.84
-  UNION ALL SELECT 'M4-EV','100',0.84
-  UNION ALL SELECT 'M4-EV','300',0.84
-  UNION ALL SELECT 'M4-EV','500',0.84
-  UNION ALL SELECT 'M4-EV','Pallet',0.84
-  UNION ALL SELECT 'M5-EV','100',0.84
-  UNION ALL SELECT 'M5-EV','300',0.84
-  UNION ALL SELECT 'M5-EV','500',0.84
-  UNION ALL SELECT 'M5-EV','Pallet',0.84
-) p ON p.item_no = btp.item_no
+  SELECT
+    id,
+    GREATEST(
+      0.18,
+      (
+        (
+          0.14
+          + ((internal_l_mm * internal_w_mm) / 110000.0)
+          + (internal_h_mm / 950.0)
+        )
+        * CASE
+            WHEN quality_cardboard LIKE '%B%' THEN 1.16
+            WHEN quality_cardboard LIKE '%E%' THEN 1.03
+            ELSE 1.09
+          END
+        * (0.92 + (RAND() * 0.34))
+      )
+    ) AS base_price
+  FROM box_type_products
+) bp ON bp.id = btp.id
+JOIN (
+  SELECT '100' AS price_name, 1.00 AS discount_factor
+  UNION ALL SELECT '300', 0.93
+  UNION ALL SELECT '500', 0.87
+  UNION ALL SELECT 'Pallet', 0.80
+) tiers
 ;
