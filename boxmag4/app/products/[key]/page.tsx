@@ -9,6 +9,7 @@ import { NewsletterSubscribe } from "../../global/components/newsletter-subscrib
 
 const MIN_ORDER_QTY = 100;
 const BOXES_PER_PALLET = 9000;
+const imageRequestCache = new Set<string>();
 
 function normalizeImageUrl(baseUrl: string, imagePath: string): string {
   const trimmed = imagePath.trim();
@@ -221,6 +222,16 @@ export default function ProductByKeyPage() {
 
   const galleryWithProduct = useMemo(() => imageUrls, [imageUrls]);
 
+  useEffect(() => {
+    for (const imageUrl of galleryWithProduct) {
+      if (!imageUrl || imageRequestCache.has(imageUrl)) continue;
+      const preloadedImage = new Image();
+      preloadedImage.decoding = "async";
+      preloadedImage.src = imageUrl;
+      imageRequestCache.add(imageUrl);
+    }
+  }, [galleryWithProduct]);
+
   const priceBreaks = useMemo(
     () =>
       selectedProductPrices.map((price) => ({
@@ -286,6 +297,9 @@ export default function ProductByKeyPage() {
                   alt={productName}
                   width={430}
                   height={320}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
                   className="h-full w-full max-h-full max-w-full object-contain"
                 />
               </div>
@@ -308,6 +322,8 @@ export default function ProductByKeyPage() {
                       alt={`Thumbnail ${index + 1}`}
                       width={72}
                       height={72}
+                      loading="lazy"
+                      decoding="async"
                       className="h-[58px] w-[72px] rounded-lg object-cover"
                     />
                   </button>
