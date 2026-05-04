@@ -27,10 +27,6 @@ export default function CheckoutPage() {
             {t("common.home")}
           </Link>{" "}
           <span className="mx-2">→</span>
-          <Link href="/business" className="hover:underline">
-            {t("common.b2b")}
-          </Link>{" "}
-          <span className="mx-2">→</span>
           <span className="text-gray-700 font-semibold">{t("checkout.breadcrumb.checkout")}</span>
         </div>
       </section>
