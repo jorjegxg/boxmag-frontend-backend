@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { B2b } from "../global/components/b2b";
@@ -108,11 +108,29 @@ export default function OrderSummaryPage() {
   const selectedPrint = boxPrints.find((p) => p.isSelected);
   const selectedSizeType = typeOfSizes.find((t) => t.isSelected);
   const selectedTransport = transportOptions.find((t) => t.isSelected);
+  const hasRequiredOrderData =
+    Boolean(selectedBox) &&
+    Boolean(selectedType) &&
+    Boolean(selectedColor) &&
+    Boolean(selectedPrint) &&
+    Boolean(selectedSizeType) &&
+    Boolean(selectedTransport) &&
+    Boolean(draft.length) &&
+    Boolean(draft.width) &&
+    Boolean(draft.height) &&
+    Boolean(draft.quantity) &&
+    draft.acceptedTerms;
   const backendBaseUrl = (() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
     if (!value) return "http://localhost:3005";
     return value.endsWith("/") ? value.slice(0, -1) : value;
   })();
+
+  useEffect(() => {
+    if (!hasRequiredOrderData) {
+      router.replace("/business");
+    }
+  }, [hasRequiredOrderData, router]);
 
   const orderRows = [
     { label: t("orderSummary.boxType"), value: selectedBox?.name ?? "—" },
@@ -283,6 +301,10 @@ export default function OrderSummaryPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (!hasRequiredOrderData) {
+    return null;
+  }
 
   return (
     <div>
