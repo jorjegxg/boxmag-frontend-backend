@@ -57,7 +57,7 @@ export default function CheckoutPage() {
           vatPercent={19}
           shipping={15.0}
           currency="€"
-          onContinueHref="/boxesfetxo"
+          onContinueHref="/boxesfetco"
         />
         <BottomPadding />
       </ResponsiveLayoutWithPadding>
@@ -77,7 +77,7 @@ export default function CheckoutPage() {
     vatPercent,
     shipping,
     currency = "€",
-    onContinueHref = "/boxesfetxo",
+    onContinueHref = "/boxesfetco",
   }: {
     subtotal: number;
     vatPercent: number;

@@ -70,7 +70,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/boxesfetxo" className="hover:underline">
+                <Link href="/boxesfetco" className="hover:underline">
                   {t("footer.shop")}
                 </Link>
               </li>

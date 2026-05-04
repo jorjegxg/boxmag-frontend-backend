@@ -198,11 +198,7 @@ const BussinessPage = () => {
         <Pt16 />
 
         <div id="section-box-type">
-          <RedTitle
-            title={t("business.selectBoxType")}
-            secondTitle={t("business.moreDetails")}
-            link="/boxesfetxo"
-          />
+          <RedTitle title={t("business.selectBoxType")} />
         </div>
         {errors.boxType ? (
           <p className="mt-3 text-sm text-red-600">{errors.boxType}</p>
