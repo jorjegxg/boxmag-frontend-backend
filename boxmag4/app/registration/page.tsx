@@ -20,6 +20,7 @@ export default function RegistrationPage() {
   const [firstName, setFirstName] = useState("");
   const [surname, setSurname] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [phone, setPhone] = useState("");
   const [vatNumber, setVatNumber] = useState("");
   const [acceptRegulations, setAcceptRegulations] = useState(false);
 
@@ -92,9 +93,15 @@ export default function RegistrationPage() {
                 <input id="reg-surname" type="text" value={surname} onChange={(e) => setSurname(e.target.value)} placeholder="Surname" className={inputClass} required />
               </div>
             </div>
-            <div className="max-w-md">
-              <label htmlFor="reg-vat" className="block text-sm font-semibold text-gray-800 mb-1">VAT Number</label>
-              <input id="reg-vat" type="text" value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} placeholder="VAT Number" className={inputClass} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="reg-phone" className="block text-sm font-semibold text-gray-800 mb-1">Phone Number</label>
+                <input id="reg-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+40 700 000 000" className={inputClass} />
+              </div>
+              <div>
+                <label htmlFor="reg-vat" className="block text-sm font-semibold text-gray-800 mb-1">VAT Number</label>
+                <input id="reg-vat" type="text" value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} placeholder="VAT Number" className={inputClass} />
+              </div>
             </div>
             <div className="flex items-start gap-3">
               <input id="reg-accept" type="checkbox" checked={acceptRegulations} onChange={(e) => setAcceptRegulations(e.target.checked)} className="mt-1 rounded border-gray-300 text-my-red focus:ring-my-red" />

@@ -5,8 +5,10 @@ DROP TABLE IF EXISTS box_type_images;
 DROP TABLE IF EXISTS box_type_products;
 DROP TABLE IF EXISTS newsletter_subscribers;
 DROP TABLE IF EXISTS contacts;
+DROP TABLE IF EXISTS addresses;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS box_types;
+DROP TABLE IF EXISTS users;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -69,8 +71,24 @@ CREATE TABLE IF NOT EXISTS box_type_product_prices (
     ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS users (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  first_name VARCHAR(120) NULL,
+  last_name VARCHAR(120) NULL,
+  phone VARCHAR(80) NULL,
+  role VARCHAR(40) NOT NULL DEFAULT 'customer',
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  last_login_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_users_email (email)
+);
+
 CREATE TABLE IF NOT EXISTS orders (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL,
   box_type_id INT UNSIGNED NULL,
   box_type_name VARCHAR(255) NOT NULL,
   cardboard_type VARCHAR(120) NOT NULL,
@@ -88,7 +106,33 @@ CREATE TABLE IF NOT EXISTS orders (
   accepted_terms TINYINT(1) NOT NULL DEFAULT 1,
   status VARCHAR(40) NOT NULL DEFAULT 'new',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_orders_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS addresses (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  label VARCHAR(80) NULL,
+  company_name VARCHAR(255) NULL,
+  first_name VARCHAR(120) NOT NULL,
+  last_name VARCHAR(120) NOT NULL,
+  phone VARCHAR(80) NULL,
+  address_line_1 VARCHAR(255) NOT NULL,
+  address_line_2 VARCHAR(255) NULL,
+  postcode VARCHAR(40) NOT NULL,
+  city VARCHAR(120) NOT NULL,
+  country VARCHAR(120) NOT NULL,
+  is_default_billing TINYINT(1) NOT NULL DEFAULT 0,
+  is_default_shipping TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_addresses_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+  INDEX idx_addresses_user (user_id)
 );
 
 CREATE TABLE IF NOT EXISTS contacts (
@@ -136,6 +180,16 @@ VALUES
   (7, 'Pizza Box (Size: 325x325x39mm) - E Wave', 'pizza-box-325x325x39-e-wave', 1),
   (8, 'Height Adjustable Shipping Box - Fefco 710, B Wave', 'height-adjustable-shipping-box-fefco-710', 1),
   (9, 'Corrugated cardboard envelope', 'corrugated-cardboard-envelope', 1);
+
+INSERT INTO users
+  (email, password_hash, first_name, last_name, phone, role, is_active)
+VALUES
+  ('customer.demo@boxmag.com', '$2b$10$CwTycUXWue0Thq9StjUM0uJ8Pj0xK4Hknc0NrF4Pjk6HoydxHDB6.', 'Demo', 'Customer', '+40 700 000 000', 'customer', 1);
+
+INSERT INTO addresses
+  (user_id, label, company_name, first_name, last_name, phone, address_line_1, postcode, city, country, is_default_billing, is_default_shipping)
+VALUES
+  (1, 'Primary', 'Boxmag Demo SRL', 'Demo', 'Customer', '+40 700 000 000', 'Str. Exemplu 10', '010101', 'Bucuresti', 'Romania', 1, 1);
 
 INSERT INTO box_type_images
   (box_type_id, url, sort_order, alt_text, is_primary)
