@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { B2b } from "../global/components/b2b";
 import { ServicesSection } from "../global/components/services-section";
 import { HaveAQuestion } from "../global/components/have-a-question";
@@ -12,22 +11,109 @@ import { FaUserPlus } from "react-icons/fa";
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
 
-export default function RegistrationPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [surname, setSurname] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [vatNumber, setVatNumber] = useState("");
-  const [acceptRegulations, setAcceptRegulations] = useState(false);
+const isDevelopment = process.env.NODE_ENV === "development";
 
-  const handleSubmit = (e: React.FormEvent) => {
+export default function RegistrationPage() {
+  const [email, setEmail] = useState(
+    isDevelopment ? "yotrevorgxg@gmail.com" : "",
+  );
+  const [password, setPassword] = useState(isDevelopment ? "dummy123" : "");
+  const [confirmPassword, setConfirmPassword] = useState(
+    isDevelopment ? "dummy123" : "",
+  );
+  const [firstName, setFirstName] = useState(isDevelopment ? "Ion" : "");
+  const [surname, setSurname] = useState(isDevelopment ? "Popescu" : "");
+  const [companyName, setCompanyName] = useState(
+    isDevelopment ? "Boxmag Test SRL" : "",
+  );
+  const [phone, setPhone] = useState(isDevelopment ? "+40 700 000 000" : "");
+  const [vatNumber, setVatNumber] = useState(isDevelopment ? "RO12345678" : "");
+  const [acceptRegulations, setAcceptRegulations] = useState(isDevelopment);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+
+  const backendBaseUrl = React.useMemo(() => {
+    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+    if (!value) return "http://localhost:3005";
+    return value.endsWith("/") ? value.slice(0, -1) : value;
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Placeholder: in a real app you would call an API to register
-    router.push("/account");
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setFeedback({ kind: "error", message: "Email is required." });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setFeedback({ kind: "error", message: "Passwords do not match." });
+      return;
+    }
+
+    if (!acceptRegulations) {
+      setFeedback({
+        kind: "error",
+        message: "You must accept the Regulations and Privacy Policy.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFeedback(null);
+    try {
+      const response = await fetch(`${backendBaseUrl}/api/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password,
+          firstName,
+          surname,
+          companyName,
+          vatNumber,
+          phone,
+          acceptRegulations: true,
+        }),
+      });
+
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+      };
+
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.message ?? "Registration failed");
+      }
+
+      setFeedback({
+        kind: "success",
+        message:
+          "Account created. Check your email and click the verification link before signing in.",
+      });
+      setRegisteredEmail(normalizedEmail);
+      setIsRegistered(true);
+    } catch (error) {
+      setIsRegistered(false);
+      setRegisteredEmail("");
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error && error.message.trim().length > 0
+            ? error.message
+            : "Failed to register account",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -109,9 +195,16 @@ export default function RegistrationPage() {
                 I have read and accept the <Link href="/regulations" className="text-my-red font-semibold hover:underline">Regulations</Link> and the <Link href="/privacy-policy" className="text-my-red font-semibold hover:underline">Privacy Policy</Link> of the Online Store.
               </label>
             </div>
+            {feedback?.kind === "error" ? (
+              <p
+                className="text-sm text-red-700 font-medium"
+              >
+                {feedback.message}
+              </p>
+            ) : null}
             <div className="flex flex-col sm:flex-row gap-4 pt-2">
-              <button type="submit" className="px-6 py-3 rounded-lg bg-my-red text-white font-semibold hover:bg-my-red/90 transition-colors">
-                Register
+              <button type="submit" disabled={isSubmitting || isRegistered} className="px-6 py-3 rounded-lg bg-my-red text-white font-semibold hover:bg-my-red/90 transition-colors disabled:opacity-70 disabled:cursor-not-allowed">
+                {isSubmitting ? "Registering..." : "Register"}
               </button>
               <p className="flex items-center text-sm text-gray-600">
                 Already have an account?{" "}
@@ -127,6 +220,32 @@ export default function RegistrationPage() {
       <ServicesSection />
       <HaveAQuestion />
       <NewsletterSubscribe />
+      {isRegistered ? (
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-2xl rounded-xl bg-white p-6 sm:p-8 shadow-2xl text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-green-700">
+              Confirm your email
+            </h2>
+            <p className="mt-4 text-base sm:text-lg text-gray-800">
+              Verification link was sent to:
+            </p>
+            <p className="mt-2 break-all text-lg sm:text-2xl font-semibold text-my-red">
+              {registeredEmail}
+            </p>
+            <p className="mt-4 text-sm sm:text-base text-gray-600">
+              Open your inbox and click the link to activate your account.
+            </p>
+            <div className="mt-6 flex justify-center">
+              <Link
+                href="/account"
+                className="inline-flex items-center justify-center rounded-lg bg-my-red px-6 py-3 text-white font-semibold hover:bg-my-red/90 transition-colors"
+              >
+                Go to sign in
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

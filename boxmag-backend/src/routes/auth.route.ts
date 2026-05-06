@@ -1,0 +1,262 @@
+import crypto from "crypto";
+import { Router } from "express";
+import { ResultSetHeader, RowDataPacket } from "mysql2";
+import { env } from "../config/env";
+import { mysqlPool } from "../db/mysql";
+import {
+  isEmailTransportConfigured,
+  sendVerificationEmail,
+} from "../services/email";
+
+type RegisterPayload = {
+  email?: unknown;
+  password?: unknown;
+  firstName?: unknown;
+  surname?: unknown;
+  companyName?: unknown;
+  vatNumber?: unknown;
+  phone?: unknown;
+  acceptRegulations?: unknown;
+};
+
+type ExistingUserRow = RowDataPacket & {
+  id: number;
+};
+
+type PendingRegistrationRow = RowDataPacket & {
+  id: number;
+  email: string;
+  password_hash: string;
+  first_name: string | null;
+  last_name: string | null;
+  company_name: string | null;
+  vat_number: string | null;
+  phone: string | null;
+  verification_expires_at: Date | string | null;
+};
+
+function toOptionalString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${hash}`;
+}
+
+function sha256Hex(value: string): string {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export const authRouter = Router();
+
+authRouter.post("/register", async (req, res) => {
+  const payload = (req.body ?? {}) as RegisterPayload;
+
+  const emailRaw = toOptionalString(payload.email);
+  const passwordRaw = toOptionalString(payload.password);
+  const firstName = toOptionalString(payload.firstName);
+  const surname = toOptionalString(payload.surname);
+  const companyName = toOptionalString(payload.companyName);
+  const vatNumber = toOptionalString(payload.vatNumber);
+  const phone = toOptionalString(payload.phone);
+  const acceptedTerms = payload.acceptRegulations === true;
+
+  if (
+    !emailRaw ||
+    !passwordRaw ||
+    passwordRaw.length < 6 ||
+    !firstName ||
+    !surname ||
+    !acceptedTerms
+  ) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid registration payload",
+    });
+    return;
+  }
+
+  const normalizedEmail = emailRaw.toLowerCase();
+  if (!isValidEmail(normalizedEmail)) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid email address",
+    });
+    return;
+  }
+
+  if (!isEmailTransportConfigured()) {
+    res.status(500).json({
+      ok: false,
+      message:
+        "Email service is not configured. Set SMTP_USER, SMTP_PASS and EMAIL_FROM.",
+    });
+    return;
+  }
+
+  try {
+    const [existingRows] = await mysqlPool.execute<ExistingUserRow[]>(
+      `SELECT id FROM users WHERE email = ? LIMIT 1`,
+      [normalizedEmail]
+    );
+
+    if (existingRows.length > 0) {
+      res.status(409).json({
+        ok: false,
+        message: "An account with this email already exists",
+      });
+      return;
+    }
+
+    const passwordHash = hashPassword(passwordRaw);
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationTokenHash = sha256Hex(verificationToken);
+    const expiresMinutes = env.verificationExpiresMinutes;
+    const verificationExpiresAt = new Date(
+      Date.now() + expiresMinutes * 60 * 1000
+    );
+
+    await mysqlPool.execute<ResultSetHeader>(
+      `INSERT INTO pending_user_registrations
+        (email, password_hash, first_name, last_name, company_name, vat_number, phone,
+         verification_token_hash, verification_expires_at, accepted_terms)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+       ON DUPLICATE KEY UPDATE
+         password_hash = VALUES(password_hash),
+         first_name = VALUES(first_name),
+         last_name = VALUES(last_name),
+         company_name = VALUES(company_name),
+         vat_number = VALUES(vat_number),
+         phone = VALUES(phone),
+         verification_token_hash = VALUES(verification_token_hash),
+         verification_expires_at = VALUES(verification_expires_at),
+         accepted_terms = VALUES(accepted_terms)`,
+      [
+        normalizedEmail,
+        passwordHash,
+        firstName,
+        surname,
+        companyName,
+        vatNumber,
+        phone,
+        verificationTokenHash,
+        verificationExpiresAt,
+      ]
+    );
+
+    const verifyUrl =
+      `${env.backendPublicUrl.replace(/\/$/, "")}/api/auth/verify-email` +
+      `?token=${encodeURIComponent(verificationToken)}`;
+
+    await sendVerificationEmail({
+      to: normalizedEmail,
+      verifyUrl,
+      expiresMinutes,
+    });
+
+    res.status(201).json({
+      ok: true,
+      data: {
+        email: normalizedEmail,
+        requiresEmailVerification: true,
+      },
+      message: "Registration successful. Check your email for the verification link.",
+    });
+  } catch (error) {
+    console.error("Failed to register user", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to register user",
+    });
+  }
+});
+
+authRouter.get("/verify-email", async (req, res) => {
+  const token =
+    typeof req.query.token === "string" ? req.query.token.trim() : "";
+
+  if (!token) {
+    res.status(400).send("<h1>Invalid verification link.</h1>");
+    return;
+  }
+
+  const tokenHash = sha256Hex(token);
+  try {
+    const [rows] = await mysqlPool.execute<PendingRegistrationRow[]>(
+      `SELECT id, email, password_hash, first_name, last_name, company_name, vat_number, phone, verification_expires_at
+       FROM pending_user_registrations
+       WHERE verification_token_hash = ?
+       LIMIT 1`,
+      [tokenHash]
+    );
+
+    if (rows.length === 0) {
+      res.status(400).send("<h1>Verification link is invalid or already used.</h1>");
+      return;
+    }
+
+    const user = rows[0]!;
+    const expiresAtRaw = user.verification_expires_at;
+    const expiresAt = expiresAtRaw ? new Date(expiresAtRaw) : null;
+    if (!expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
+      res.status(400).send(
+        "<h1>Verification link expired.</h1><p>Please register again and use the newest link.</p>"
+      );
+      return;
+    }
+
+    const [existingRows] = await mysqlPool.execute<ExistingUserRow[]>(
+      `SELECT id FROM users WHERE email = ? LIMIT 1`,
+      [user.email]
+    );
+    if (existingRows.length === 0) {
+      await mysqlPool.execute(
+        `INSERT INTO users
+          (email, password_hash, first_name, last_name, company_name, vat_number, phone,
+           email_verification_token_hash, email_verification_expires_at, email_verified_at, role, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, CURRENT_TIMESTAMP, 'customer', 1)`,
+        [
+          user.email,
+          user.password_hash,
+          user.first_name,
+          user.last_name,
+          user.company_name,
+          user.vat_number,
+          user.phone,
+        ]
+      );
+    }
+
+    await mysqlPool.execute(
+      `DELETE FROM pending_user_registrations WHERE id = ?`,
+      [user.id]
+    );
+
+    const accountUrl = `${env.frontendBaseUrl.replace(/\/$/, "")}/account`;
+    res
+      .status(200)
+      .send(
+        `<h1>Email confirmed successfully.</h1><p>You can now sign in.</p><p><a href="${escapeHtml(accountUrl)}">Go to account</a></p>`
+      );
+  } catch (error) {
+    console.error("Failed to verify email", error);
+    res.status(500).send("<h1>Failed to verify email.</h1>");
+  }
+});

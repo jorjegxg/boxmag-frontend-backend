@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS box_type_product_prices;
 DROP TABLE IF EXISTS box_type_images;
 DROP TABLE IF EXISTS box_type_products;
 DROP TABLE IF EXISTS newsletter_subscribers;
+DROP TABLE IF EXISTS pending_user_registrations;
 DROP TABLE IF EXISTS contacts;
 DROP TABLE IF EXISTS addresses;
 DROP TABLE IF EXISTS orders;
@@ -77,13 +78,36 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) NOT NULL,
   first_name VARCHAR(120) NULL,
   last_name VARCHAR(120) NULL,
+  company_name VARCHAR(255) NULL,
+  vat_number VARCHAR(120) NULL,
   phone VARCHAR(80) NULL,
+  email_verification_token_hash VARCHAR(255) NULL,
+  email_verification_expires_at DATETIME NULL,
+  email_verified_at TIMESTAMP NULL,
   role VARCHAR(40) NOT NULL DEFAULT 'customer',
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   last_login_at TIMESTAMP NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_users_email (email)
+);
+
+CREATE TABLE IF NOT EXISTS pending_user_registrations (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  first_name VARCHAR(120) NULL,
+  last_name VARCHAR(120) NULL,
+  company_name VARCHAR(255) NULL,
+  vat_number VARCHAR(120) NULL,
+  phone VARCHAR(80) NULL,
+  verification_token_hash VARCHAR(255) NOT NULL,
+  verification_expires_at DATETIME NOT NULL,
+  accepted_terms TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_pending_user_registrations_email (email),
+  UNIQUE KEY uq_pending_user_registrations_token (verification_token_hash)
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -182,9 +206,9 @@ VALUES
   (9, 'Corrugated cardboard envelope', 'corrugated-cardboard-envelope', 1);
 
 INSERT INTO users
-  (email, password_hash, first_name, last_name, phone, role, is_active)
+  (email, password_hash, first_name, last_name, company_name, vat_number, phone, role, is_active)
 VALUES
-  ('customer.demo@boxmag.com', '$2b$10$CwTycUXWue0Thq9StjUM0uJ8Pj0xK4Hknc0NrF4Pjk6HoydxHDB6.', 'Demo', 'Customer', '+40 700 000 000', 'customer', 1);
+  ('customer.demo@boxmag.com', '$2b$10$CwTycUXWue0Thq9StjUM0uJ8Pj0xK4Hknc0NrF4Pjk6HoydxHDB6.', 'Demo', 'Customer', 'Boxmag Demo SRL', 'RO12345678', '+40 700 000 000', 'customer', 1);
 
 INSERT INTO addresses
   (user_id, label, company_name, first_name, last_name, phone, address_line_1, postcode, city, country, is_default_billing, is_default_shipping)
