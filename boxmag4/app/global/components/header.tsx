@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaBars, FaSearch, FaTimes } from "react-icons/fa";
 import { useLanguage } from "../../i18n/language-context";
+import { useCartStore } from "../../stores/cart_store";
 
 type BoxType = {
   id: number;
@@ -27,6 +28,8 @@ function buildProductDetailsHref(product: BoxTypeProduct): string {
 
 export function Header() {
   const { t, language } = useLanguage();
+  const totalItems = useCartStore((s) => s.totalItems);
+  const subtotal = useCartStore((s) => s.subtotal);
   const [query, setQuery] = useState("");
   const [defaultBoxTypes, setDefaultBoxTypes] = useState<BoxType[]>([]);
   const [boxTypes, setBoxTypes] = useState<BoxType[]>([]);
@@ -396,13 +399,13 @@ export function Header() {
                 className="h-6 w-6"
               />
               <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-my-red text-[10px] font-bold text-white">
-                1
+                {totalItems}
               </span>
             </span>
             <span className="text-xs font-medium text-black">
               {t("header.cart")}
             </span>
-            <span className="text-xs font-bold text-black">€ 300.00</span>
+            <span className="text-xs font-bold text-black">€ {subtotal.toFixed(2)}</span>
           </Link>
 
           {/* User */}

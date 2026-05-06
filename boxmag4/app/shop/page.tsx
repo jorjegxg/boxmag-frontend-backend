@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "../i18n/language-context";
+import { FaShoppingCart } from "react-icons/fa";
+import { useCartStore } from "../stores/cart_store";
 
 type BoxType = {
   id: number;
@@ -57,6 +59,7 @@ function resolvePrimaryImageUrl(
 
 export default function ShopPage() {
   const { t } = useLanguage();
+  const addCartItem = useCartStore((s) => s.addItem);
   const searchParams = useSearchParams();
   const [boxTypes, setBoxTypes] = useState<BoxType[]>([]);
   const [products, setProducts] = useState<BoxTypeProduct[]>([]);
@@ -282,6 +285,24 @@ export default function ShopPage() {
                       <p className="mt-3 text-sm font-semibold text-black">
                         {firstPrice ? `de la € ${firstPrice.withTax.toFixed(2)}` : "Pret la cerere"}
                       </p>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          addCartItem({
+                            itemNo: product.itemNo,
+                            name: product.productName,
+                            unitPrice: firstPrice?.withoutTax ?? 0,
+                            quantity: 1,
+                            imageUrl,
+                          });
+                        }}
+                        className="mt-3 inline-flex items-center gap-2 rounded-lg border border-my-red px-3 py-2 text-xs font-semibold text-my-red hover:bg-my-red hover:text-white transition-colors"
+                      >
+                        <FaShoppingCart className="h-3.5 w-3.5" />
+                        Add to cart
+                      </button>
                     </article>
                   );
                   return detailsHref ? (

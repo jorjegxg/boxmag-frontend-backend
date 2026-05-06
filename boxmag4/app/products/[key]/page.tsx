@@ -6,6 +6,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useLanguage } from "../../i18n/language-context";
 import { B2b } from "../../global/components/b2b";
 import { NewsletterSubscribe } from "../../global/components/newsletter-subscribe";
+import { useCartStore } from "../../stores/cart_store";
 
 const MIN_ORDER_QTY = 100;
 const BOXES_PER_PALLET = 9000;
@@ -77,6 +78,7 @@ export default function ProductByKeyPage() {
   >([]);
   const [firstWithTax, setFirstWithTax] = useState<number | null>(null);
   const [firstWithoutTax, setFirstWithoutTax] = useState<number | null>(null);
+  const addCartItem = useCartStore((s) => s.addItem);
 
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -463,6 +465,15 @@ export default function ProductByKeyPage() {
 
               <button
                 type="button"
+                onClick={() => {
+                  addCartItem({
+                    itemNo,
+                    name: productName,
+                    unitPrice: firstWithoutTax ?? 0,
+                    quantity,
+                    imageUrl: galleryWithProduct[selectedImage],
+                  });
+                }}
                 className="mt-4 w-full rounded-xl bg-my-yellow px-5 py-4 text-lg font-bold text-black hover:brightness-95"
               >
                 {t("productDemo.addToCart")}
