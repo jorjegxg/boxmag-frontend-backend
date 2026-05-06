@@ -23,6 +23,13 @@ type ExistingUserRow = RowDataPacket & {
   id: number;
 };
 
+type UserProfileRow = RowDataPacket & {
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+};
+
 type PendingRegistrationRow = RowDataPacket & {
   id: number;
   email: string;
@@ -65,6 +72,53 @@ function escapeHtml(value: string): string {
 }
 
 export const authRouter = Router();
+
+authRouter.get("/profile", async (req, res) => {
+  const emailRaw =
+    typeof req.query.email === "string" ? req.query.email.trim().toLowerCase() : "";
+  if (!emailRaw) {
+    res.status(400).json({
+      ok: false,
+      message: "Email query param is required",
+    });
+    return;
+  }
+
+  try {
+    const [rows] = await mysqlPool.execute<UserProfileRow[]>(
+      `SELECT email, first_name, last_name, phone
+       FROM users
+       WHERE email = ?
+       LIMIT 1`,
+      [emailRaw]
+    );
+
+    if (rows.length === 0) {
+      res.status(404).json({
+        ok: false,
+        message: "User not found",
+      });
+      return;
+    }
+
+    const user = rows[0]!;
+    res.status(200).json({
+      ok: true,
+      data: {
+        email: user.email,
+        firstName: user.first_name ?? "",
+        lastName: user.last_name ?? "",
+        phone: user.phone ?? "",
+      },
+    });
+  } catch (error) {
+    console.error("Failed to load user profile", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to load user profile",
+    });
+  }
+});
 
 authRouter.post("/register", async (req, res) => {
   const payload = (req.body ?? {}) as RegisterPayload;

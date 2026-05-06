@@ -14,7 +14,6 @@ import {
   FaCreditCard,
   FaBoxOpen,
   FaSignOutAlt,
-  FaTrashAlt,
 } from "react-icons/fa";
 
 type Tab = "account" | "address" | "billing" | "orders";
@@ -32,14 +31,22 @@ const saveBtnClass =
   "px-6 py-2.5 rounded-lg bg-my-red text-white font-semibold text-sm hover:bg-my-red/90 transition-colors";
 
 const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
+const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const isDevelopment = process.env.NODE_ENV === "development";
+
+type UserProfile = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+};
 
 function LoginRequiredView({
   t,
   onLoginSuccess,
 }: {
   t: (key: string) => string;
-  onLoginSuccess: () => void;
+  onLoginSuccess: (email: string) => void;
 }) {
   const [email, setEmail] = useState(
     isDevelopment ? "yotrevorgxg@gmail.com" : "",
@@ -56,8 +63,9 @@ function LoginRequiredView({
     }
 
     localStorage.setItem(AUTH_STORAGE_KEY, "true");
+    localStorage.setItem(AUTH_EMAIL_STORAGE_KEY, normalizedEmail);
     setError(null);
-    onLoginSuccess();
+    onLoginSuccess(normalizedEmail);
   };
 
   return (
@@ -110,12 +118,24 @@ function LoginRequiredView({
 }
 
 /* ─── Tab content: MY ACCOUNT ─────────────────────────────── */
-function MyAccountTab({ t }: { t: (key: string) => string }) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [emailAddress, setEmailAddress] = useState("");
-  const [password, setPassword] = useState("**************");
+function MyAccountTab({
+  t,
+  profile,
+}: {
+  t: (key: string) => string;
+  profile: UserProfile;
+}) {
+  const [firstName, setFirstName] = useState(profile.firstName);
+  const [lastName, setLastName] = useState(profile.lastName);
+  const [phone, setPhone] = useState(profile.phone);
+  const [emailAddress, setEmailAddress] = useState(profile.email);
+
+  useEffect(() => {
+    setFirstName(profile.firstName);
+    setLastName(profile.lastName);
+    setPhone(profile.phone);
+    setEmailAddress(profile.email);
+  }, [profile]);
 
   return (
     <div className="space-y-8">
@@ -157,15 +177,9 @@ function MyAccountTab({ t }: { t: (key: string) => string }) {
       {/* Email */}
       <div className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-4">
         <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{t("account.emailSection")}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="acc-email" className="block text-xs font-semibold text-gray-500 mb-1 uppercase">{t("account.emailAddress")}</label>
-            <input id="acc-email" type="email" value={emailAddress} onChange={(e) => setEmailAddress(e.target.value)} placeholder="You@yourwebsite.com" className={inputClass} />
-          </div>
-          <div>
-            <label htmlFor="acc-pass" className="block text-xs font-semibold text-gray-500 mb-1 uppercase">{t("account.password")}</label>
-            <input id="acc-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
-          </div>
+        <div>
+          <label htmlFor="acc-email" className="block text-xs font-semibold text-gray-500 mb-1 uppercase">{t("account.emailAddress")}</label>
+          <input id="acc-email" type="email" value={emailAddress} onChange={(e) => setEmailAddress(e.target.value)} placeholder="You@yourwebsite.com" className={inputClass} />
         </div>
         <button type="button" className={saveBtnClass}>{t("account.save")}</button>
       </div>
@@ -377,11 +391,80 @@ export default function AccountPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("account");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loggedInEmail, setLoggedInEmail] = useState(
+    isDevelopment ? "yotrevorgxg@gmail.com" : "",
+  );
+  const [accountProfile, setAccountProfile] = useState<UserProfile>({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+  });
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
 
   useEffect(() => {
     const storedStatus = localStorage.getItem(AUTH_STORAGE_KEY);
+    const storedEmail = localStorage.getItem(AUTH_EMAIL_STORAGE_KEY);
     setIsLoggedIn(storedStatus === "true");
+    if (storedEmail) {
+      setLoggedInEmail(storedEmail);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !loggedInEmail) {
+      return;
+    }
+
+    const backendBaseUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
+      "http://localhost:3005";
+    const controller = new AbortController();
+
+    const loadProfile = async () => {
+      setIsProfileLoading(true);
+      try {
+        const response = await fetch(
+          `${backendBaseUrl}/api/auth/profile?email=${encodeURIComponent(loggedInEmail)}`,
+          { signal: controller.signal },
+        );
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          data?: {
+            firstName?: string;
+            lastName?: string;
+            phone?: string;
+            email?: string;
+          };
+        };
+        if (!response.ok || payload.ok !== true || !payload.data) {
+          throw new Error("Failed to load profile");
+        }
+
+        setAccountProfile({
+          firstName: payload.data.firstName ?? "",
+          lastName: payload.data.lastName ?? "",
+          phone: payload.data.phone ?? "",
+          email: payload.data.email ?? loggedInEmail,
+        });
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setAccountProfile({
+          firstName: "",
+          lastName: "",
+          phone: "",
+          email: loggedInEmail,
+        });
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsProfileLoading(false);
+        }
+      }
+    };
+
+    void loadProfile();
+    return () => controller.abort();
+  }, [isLoggedIn, loggedInEmail]);
 
   const navItems: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "account", label: t("account.nav.account"), icon: <FaUser className="w-4 h-4" /> },
@@ -428,7 +511,13 @@ export default function AccountPage() {
       {/* Sidebar + Content */}
       <section className="w-full px-4 sm:px-6 lg:px-20 pb-12">
         {!isLoggedIn ? (
-          <LoginRequiredView t={t} onLoginSuccess={() => setIsLoggedIn(true)} />
+          <LoginRequiredView
+            t={t}
+            onLoginSuccess={(email) => {
+              setLoggedInEmail(email);
+              setIsLoggedIn(true);
+            }}
+          />
         ) : (
           <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-6">
 
@@ -459,7 +548,15 @@ export default function AccountPage() {
                   type="button"
                   onClick={() => {
                     localStorage.removeItem(AUTH_STORAGE_KEY);
+                    localStorage.removeItem(AUTH_EMAIL_STORAGE_KEY);
                     setIsLoggedIn(false);
+                    setLoggedInEmail("");
+                    setAccountProfile({
+                      firstName: "",
+                      lastName: "",
+                      phone: "",
+                      email: "",
+                    });
                     setActiveTab("account");
                     router.push("/account");
                   }}
@@ -469,20 +566,19 @@ export default function AccountPage() {
                   {t("account.signOut")}
                 </button>
 
-                {/* Delete Account */}
-                <button
-                  type="button"
-                  className="w-full flex items-center gap-3 px-5 py-3.5 text-sm font-bold uppercase tracking-wide text-red-500 hover:bg-red-50 transition-colors"
-                >
-                  <FaTrashAlt className="w-4 h-4" />
-                  {t("account.deleteAccount")}
-                </button>
               </nav>
             </aside>
 
             {/* ── Content ── */}
             <main className="flex-1 min-w-0">
-              {activeTab === "account" && <MyAccountTab t={t} />}
+              {activeTab === "account" && isProfileLoading ? (
+                <div className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-600">
+                  Loading account details...
+                </div>
+              ) : null}
+              {activeTab === "account" && !isProfileLoading ? (
+                <MyAccountTab t={t} profile={accountProfile} />
+              ) : null}
               {activeTab === "address" && <AddressTab t={t} />}
               {activeTab === "billing" && <BillingTab t={t} />}
               {activeTab === "orders" && <OrdersTab t={t} />}
