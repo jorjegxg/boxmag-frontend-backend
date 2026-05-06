@@ -4,6 +4,7 @@ import useTableEComStore from "../stores/table_e_commerce_store";
 import { Product } from "../types/product";
 import { useLanguage } from "../i18n/language-context";
 import { useEffect, useMemo } from "react";
+import { useCartStore } from "../stores/cart_store";
 
 export function ProductsTable() {
   const { t } = useLanguage();
@@ -13,6 +14,7 @@ export function ProductsTable() {
   const loadProducts = useTableEComStore((s) => s.loadProducts);
   const incrementProducts = useTableEComStore((s) => s.increment);
   const decrementProducts = useTableEComStore((s) => s.decrement);
+  const addCartItem = useCartStore((s) => s.addItem);
 
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -111,7 +113,17 @@ export function ProductsTable() {
 
                 <span>{product.amountQtyInPcs}</span>
                 <span>
-                  <button>
+                  <button
+                    onClick={() => {
+                      const basePrice = product.prices[0]?.withoutTax ?? 0;
+                      addCartItem({
+                        itemNo: product.itemNo,
+                        name: product.name,
+                        unitPrice: basePrice,
+                        quantity: product.amountQtyInPcs > 0 ? product.amountQtyInPcs : 1,
+                      });
+                    }}
+                  >
                     <FaShoppingCart />
                   </button>
                 </span>

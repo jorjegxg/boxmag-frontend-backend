@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FaArrowLeft } from "react-icons/fa";
@@ -10,11 +10,89 @@ import { ServicesSection } from "../global/components/services-section";
 import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { useLanguage } from "../i18n/language-context";
+import { useCartStore } from "../stores/cart_store";
+
+type UserAddress = {
+  id: number;
+  label: string;
+  companyName: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  postcode: string;
+  city: string;
+  country: string;
+  isDefaultBilling: boolean;
+  isDefaultShipping: boolean;
+};
+
+const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 
 export default function CheckoutPage() {
   const { t } = useLanguage();
   const [addressType, setAddressType] = useState<"company" | "another">("company");
   const [shippingMethod, setShippingMethod] = useState<"standard" | "express">("standard");
+  const [addresses, setAddresses] = useState<UserAddress[]>([]);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const cartItems = useCartStore((s) => s.items);
+  const cartSubtotal = useCartStore((s) => s.subtotal);
+  const cartTotalItems = useCartStore((s) => s.totalItems);
+  const backendBaseUrl = useMemo(() => {
+    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+    if (!value) return "http://localhost:3005";
+    return value.endsWith("/") ? value.slice(0, -1) : value;
+  }, []);
+
+  useEffect(() => {
+    const loggedInEmail = localStorage.getItem(AUTH_EMAIL_STORAGE_KEY) ?? "";
+    if (!loggedInEmail) {
+      setAddresses([]);
+      setSelectedAddressId(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const loadAddresses = async () => {
+      setIsLoadingAddresses(true);
+      try {
+        const response = await fetch(
+          `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
+          { signal: controller.signal },
+        );
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          data?: UserAddress[];
+        };
+        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+          throw new Error("Failed to load addresses");
+        }
+
+        setAddresses(payload.data);
+        const defaultAddress =
+          payload.data.find((address) => address.isDefaultShipping) ??
+          payload.data[0] ??
+          null;
+        setSelectedAddressId(defaultAddress?.id ?? null);
+      } catch (_error) {
+        if (controller.signal.aborted) return;
+        setAddresses([]);
+        setSelectedAddressId(null);
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoadingAddresses(false);
+        }
+      }
+    };
+
+    void loadAddresses();
+    return () => controller.abort();
+  }, [backendBaseUrl]);
+
+  const selectedAddress =
+    addresses.find((address) => address.id === selectedAddressId) ?? null;
 
   return (
     <div>
@@ -41,7 +119,15 @@ export default function CheckoutPage() {
         <BottomPadding />
         <ProductDetails />
         <BottomPadding />
-        <ShippingInformation addressType={addressType} setAddressType={setAddressType} />
+        <ShippingInformation
+          addressType={addressType}
+          setAddressType={setAddressType}
+          addresses={addresses}
+          isLoadingAddresses={isLoadingAddresses}
+          selectedAddressId={selectedAddressId}
+          setSelectedAddressId={setSelectedAddressId}
+          selectedAddress={selectedAddress}
+        />
         <BottomPadding />
         <ShippingMethod shippingMethod={shippingMethod} setShippingMethod={setShippingMethod} />
         <BottomPadding />
@@ -49,9 +135,9 @@ export default function CheckoutPage() {
         <BottomPadding />
         {/* Checkout Summary Bar */}
         <CheckoutSummaryBar
-          subtotal={250.0}
+          subtotal={cartSubtotal}
           vatPercent={19}
-          shipping={15.0}
+          shipping={shippingMethod === "express" ? 40.0 : 25.0}
           currency="€"
           onContinueHref="/boxesfetco"
         />
@@ -125,33 +211,48 @@ export default function CheckoutPage() {
   }
 
   function ProductDetails() {
+    if (cartItems.length === 0) {
+      return (
+        <div className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-sm text-gray-600">
+          Cart is empty.
+        </div>
+      );
+    }
+
     return (
-      <div className="flex flex-col sm:flex-row flex-wrap gap-6 text-sm justify-between">
-        <Image
-          src="/placeholders/box.png"
-          alt="Shopping Cart Items"
-          width={100}
-          height={100}
-          className="object-contain shrink-0"
-        />
-        <MyColumn
-          name1={t("checkout.product.itemNo")}
-          value1="BF10"
-          name2={t("checkout.product.productName")}
-          value2="BF10 BOXFIX"
-        />
-        <MyColumn
-          name1={t("checkout.product.amountQty")}
-          value1="275"
-          name2={t("checkout.product.palletPcs")}
-          value2="BF10 BOXFIX"
-        />
-        <MyColumn
-          name1={t("checkout.product.netWeight")}
-          value1="250.00 KG"
-          name2={t("checkout.product.priceWithoutTax")}
-          value2="€ 275.00"
-        />
+      <div className="space-y-4">
+        {cartItems.map((item) => (
+          <div
+            key={item.itemNo}
+            className="flex flex-col sm:flex-row flex-wrap gap-6 text-sm justify-between rounded-lg border border-gray-200 p-4"
+          >
+            <Image
+              src={item.imageUrl || "/placeholders/box.png"}
+              alt={item.name}
+              width={100}
+              height={100}
+              className="object-contain shrink-0"
+            />
+            <MyColumn
+              name1={t("checkout.product.itemNo")}
+              value1={item.itemNo}
+              name2={t("checkout.product.productName")}
+              value2={item.name}
+            />
+            <MyColumn
+              name1={t("checkout.product.amountQty")}
+              value1={String(item.quantity)}
+              name2={t("checkout.product.palletPcs")}
+              value2="-"
+            />
+            <MyColumn
+              name1={t("checkout.product.netWeight")}
+              value1="-"
+              name2={t("checkout.product.priceWithoutTax")}
+              value2={`€ ${(item.unitPrice * item.quantity).toFixed(2)}`}
+            />
+          </div>
+        ))}
       </div>
     );
   }
@@ -162,7 +263,7 @@ export default function CheckoutPage() {
         <div className="flex items-center gap-2">
           <span className="font-bold text-xl">{t("checkout.shoppingCart")}</span>
           <span className="bg-my-red rounded-full w-6 h-6 flex items-center justify-center text-white text-sm font-semibold">
-            3
+            {cartTotalItems}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -219,9 +320,19 @@ export default function CheckoutPage() {
   function ShippingInformation({
     addressType,
     setAddressType,
+    addresses,
+    isLoadingAddresses,
+    selectedAddressId,
+    setSelectedAddressId,
+    selectedAddress,
   }: {
     addressType: "company" | "another";
     setAddressType: (v: "company" | "another") => void;
+    addresses: UserAddress[];
+    isLoadingAddresses: boolean;
+    selectedAddressId: number | null;
+    setSelectedAddressId: (value: number | null) => void;
+    selectedAddress: UserAddress | null;
   }) {
     return (
       <div className="w-full">
@@ -231,11 +342,40 @@ export default function CheckoutPage() {
         <div className="rounded-lg border-2 border-gray-200 bg-white overflow-hidden">
           <div className="flex flex-col sm:flex-row min-h-[160px]">
             <div className="flex-1 p-6 flex flex-col justify-center">
-              <p className="font-bold text-black">Jhon Smith</p>
-              <p className="text-gray-600 text-sm mt-1">Strada Mircea Cel Batran</p>
-              <p className="text-gray-600 text-sm">Alexandria</p>
-              <p className="text-gray-600 text-sm">{t("checkout.country.romania")}</p>
-              <p className="text-gray-600 text-sm mt-2">Tel: XXXX XXX 558</p>
+              {isLoadingAddresses ? (
+                <p className="text-sm text-gray-600">Loading your addresses...</p>
+              ) : !selectedAddress ? (
+                <>
+                  <p className="font-bold text-black">No address selected</p>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Add an address in your account and select it here.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold text-black">
+                    {[selectedAddress.firstName, selectedAddress.lastName]
+                      .filter(Boolean)
+                      .join(" ")}
+                  </p>
+                  {selectedAddress.companyName ? (
+                    <p className="text-gray-600 text-sm mt-1">{selectedAddress.companyName}</p>
+                  ) : null}
+                  <p className="text-gray-600 text-sm mt-1">{selectedAddress.addressLine1}</p>
+                  {selectedAddress.addressLine2 ? (
+                    <p className="text-gray-600 text-sm">{selectedAddress.addressLine2}</p>
+                  ) : null}
+                  <p className="text-gray-600 text-sm">
+                    {selectedAddress.postcode} {selectedAddress.city}
+                  </p>
+                  <p className="text-gray-600 text-sm">{selectedAddress.country}</p>
+                  {selectedAddress.phone ? (
+                    <p className="text-gray-600 text-sm mt-2">
+                      Tel: {selectedAddress.phone}
+                    </p>
+                  ) : null}
+                </>
+              )}
             </div>
             <div className="sm:w-64 h-40 sm:h-auto sm:min-h-[160px] bg-gray-200 shrink-0 flex items-center justify-center text-gray-500 text-sm">
               {t("checkout.map")}
@@ -246,6 +386,29 @@ export default function CheckoutPage() {
           <p className="text-my-red font-semibold text-sm flex items-center gap-2">
             <span>•</span> {t("checkout.selectAddress")}
           </p>
+          {addresses.length > 0 ? (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {addresses.map((address) => (
+                <button
+                  key={address.id}
+                  type="button"
+                  onClick={() => setSelectedAddressId(address.id)}
+                  className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                    selectedAddressId === address.id
+                      ? "border-my-red bg-red-50 text-my-red"
+                      : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                  }`}
+                >
+                  <p className="font-semibold">
+                    {address.label || `${address.firstName} ${address.lastName}`}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {address.city}, {address.country}
+                  </p>
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-3">
             <button
               type="button"

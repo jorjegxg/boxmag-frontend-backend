@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { FaShoppingCart } from "react-icons/fa";
+import { useCartStore } from "../stores/cart_store";
 
 type Shop2Row = {
   id: number;
@@ -34,6 +35,7 @@ export function Shop2ProductsTable() {
     if (!value) return "http://localhost:3005";
     return value.endsWith("/") ? value.slice(0, -1) : value;
   }, []);
+  const addCartItem = useCartStore((s) => s.addItem);
 
   useEffect(() => {
     let cancelled = false;
@@ -222,6 +224,14 @@ export function Shop2ProductsTable() {
                   <button
                     className="h-6 w-6 rounded-md bg-[#f0ab3c] flex items-center justify-center"
                     aria-label="Add to cart"
+                    onClick={() =>
+                      addCartItem({
+                        itemNo: row.itemNo,
+                        name: row.name,
+                        unitPrice: getPriceByName(row.prices, "100")?.withoutTax ?? 0,
+                        quantity: row.qty > 0 ? row.qty : 1,
+                      })
+                    }
                   >
                     <FaShoppingCart className="text-[11px]" />
                   </button>
