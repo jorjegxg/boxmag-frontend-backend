@@ -6,6 +6,7 @@ import { boxTypesRouter } from "./routes/box-types.route";
 import { ordersRouter } from "./routes/orders.route";
 import { newsletterRouter } from "./routes/newsletter.route";
 import { authRouter } from "./routes/auth.route";
+import { addressesRouter } from "./routes/addresses.route";
 
 export const app = express();
 
@@ -26,6 +27,7 @@ app.get("/", (_req, res) => {
 app.use("/api/health", healthRouter);
 app.use("/api/box-types", boxTypesRouter);
 app.use("/api/orders", ordersRouter);
+app.use("/api/addresses", addressesRouter);
 app.use("/api/newsletter", newsletterRouter);
 app.use("/api/auth", authRouter);
 

@@ -213,7 +213,8 @@ VALUES
 INSERT INTO addresses
   (user_id, label, company_name, first_name, last_name, phone, address_line_1, postcode, city, country, is_default_billing, is_default_shipping)
 VALUES
-  (1, 'Primary', 'Boxmag Demo SRL', 'Demo', 'Customer', '+40 700 000 000', 'Str. Exemplu 10', '010101', 'Bucuresti', 'Romania', 1, 1);
+  (1, 'Primary', 'Boxmag Demo SRL', 'Demo', 'Customer', '+40 700 000 000', 'Str. Exemplu 10', '010101', 'Bucuresti', 'Romania', 1, 1),
+  (1, 'Warehouse', 'Boxmag Demo SRL', 'Demo', 'Customer', '+40 700 111 222', 'Bd. Industriilor 24', '500500', 'Brasov', 'Romania', 0, 1);
 
 INSERT INTO box_type_images
   (box_type_id, url, sort_order, alt_text, is_primary)

@@ -41,6 +41,22 @@ type UserProfile = {
   email: string;
 };
 
+type UserAddress = {
+  id: number;
+  label: string;
+  companyName: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  postcode: string;
+  city: string;
+  country: string;
+  isDefaultBilling: boolean;
+  isDefaultShipping: boolean;
+};
+
 function LoginRequiredView({
   t,
   onLoginSuccess,
@@ -188,7 +204,85 @@ function MyAccountTab({
 }
 
 /* ─── Tab content: ADDRESS ────────────────────────────────── */
-function AddressTab({ t }: { t: (key: string) => string }) {
+function AddressTab({
+  t,
+  addresses,
+  isLoading,
+  onCreateAddress,
+}: {
+  t: (key: string) => string;
+  addresses: UserAddress[];
+  isLoading: boolean;
+  onCreateAddress: (payload: {
+    label: string;
+    companyName: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    addressLine1: string;
+    addressLine2: string;
+    postcode: string;
+    city: string;
+    country: string;
+    isDefaultBilling: boolean;
+    isDefaultShipping: boolean;
+  }) => Promise<void>;
+}) {
+  const [label, setLabel] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [postcode, setPostcode] = useState("");
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("");
+  const [isDefaultBilling, setIsDefaultBilling] = useState(false);
+  const [isDefaultShipping, setIsDefaultShipping] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await onCreateAddress({
+        label,
+        companyName,
+        firstName,
+        lastName,
+        phone,
+        addressLine1,
+        addressLine2,
+        postcode,
+        city,
+        country,
+        isDefaultBilling,
+        isDefaultShipping,
+      });
+      setLabel("");
+      setCompanyName("");
+      setFirstName("");
+      setLastName("");
+      setPhone("");
+      setAddressLine1("");
+      setAddressLine2("");
+      setPostcode("");
+      setCity("");
+      setCountry("");
+      setIsDefaultBilling(false);
+      setIsDefaultShipping(false);
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error ? submitError.message : "Failed to save address",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -196,37 +290,158 @@ function AddressTab({ t }: { t: (key: string) => string }) {
         <p className={sectionSubtitleClass}>{t("account.manageShippingAddress")}</p>
       </div>
 
-      {/* Company Address */}
-      <div className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-3">
-        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{t("account.companyAddress")}</h3>
-        <div className="flex items-start gap-3 text-sm text-gray-600">
-          <FaMapMarkerAlt className="w-4 h-4 text-my-red shrink-0 mt-0.5" />
-          <div className="space-y-0.5">
-            <p className="font-semibold text-gray-800">Jhon Smith</p>
-            <p>Strada Mircea Cel Batran</p>
-            <p>Alexandria</p>
-            <p>Romania</p>
-            <p>Tel: XXXX XXX 558</p>
+      <div className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-4">
+        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+          Saved addresses
+        </h3>
+        {isLoading ? (
+          <p className="text-sm text-gray-600">Loading addresses...</p>
+        ) : addresses.length === 0 ? (
+          <p className="text-sm text-gray-600">No saved addresses yet.</p>
+        ) : (
+          <div className="space-y-4">
+            {addresses.map((address) => (
+              <div key={address.id} className="rounded-lg border border-gray-200 p-4">
+                <div className="flex items-start gap-3 text-sm text-gray-600">
+                  <FaMapMarkerAlt className="mt-0.5 h-4 w-4 shrink-0 text-my-red" />
+                  <div className="space-y-0.5">
+                    <p className="font-semibold text-gray-800">
+                      {[address.firstName, address.lastName].filter(Boolean).join(" ")}
+                    </p>
+                    {address.companyName ? <p>{address.companyName}</p> : null}
+                    {address.label ? (
+                      <p className="text-xs uppercase tracking-wide text-gray-500">
+                        {address.label}
+                      </p>
+                    ) : null}
+                    <p>{address.addressLine1}</p>
+                    {address.addressLine2 ? <p>{address.addressLine2}</p> : null}
+                    <p>
+                      {address.postcode} {address.city}
+                    </p>
+                    <p>{address.country}</p>
+                    {address.phone ? <p>Tel: {address.phone}</p> : null}
+                    <p className="text-xs text-gray-500">
+                      {address.isDefaultShipping ? "Default shipping" : ""}
+                      {address.isDefaultShipping && address.isDefaultBilling ? " • " : ""}
+                      {address.isDefaultBilling ? "Default billing" : ""}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-        <button type="button" className={saveBtnClass}>{t("account.save")}</button>
+        )}
       </div>
 
-      {/* Another Address */}
-      <div className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-3">
-        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{t("account.anotherAddress")}</h3>
-        <div className="flex items-start gap-3 text-sm text-gray-600">
-          <FaMapMarkerAlt className="w-4 h-4 text-my-red shrink-0 mt-0.5" />
-          <div className="space-y-0.5">
-            <p className="font-semibold text-gray-800">Jhon Smith</p>
-            <p>Strada Mircea Cel Batran</p>
-            <p>Alexandria</p>
-            <p>Romania</p>
-            <p>Tel: XXXX XXX 558</p>
-          </div>
+      <form
+        onSubmit={handleSubmit}
+        className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-4"
+      >
+        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+          Add new address
+        </h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <input
+            type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="Label (Home, Warehouse...)"
+            className={inputClass}
+          />
+          <input
+            type="text"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            placeholder="Company Name"
+            className={inputClass}
+          />
+          <input
+            type="text"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            placeholder="First Name *"
+            className={inputClass}
+            required
+          />
+          <input
+            type="text"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            placeholder="Last Name *"
+            className={inputClass}
+            required
+          />
+          <input
+            type="text"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Phone"
+            className={inputClass}
+          />
+          <input
+            type="text"
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            placeholder="Country *"
+            className={inputClass}
+            required
+          />
+          <input
+            type="text"
+            value={addressLine1}
+            onChange={(e) => setAddressLine1(e.target.value)}
+            placeholder="Address line 1 *"
+            className={inputClass}
+            required
+          />
+          <input
+            type="text"
+            value={addressLine2}
+            onChange={(e) => setAddressLine2(e.target.value)}
+            placeholder="Address line 2"
+            className={inputClass}
+          />
+          <input
+            type="text"
+            value={postcode}
+            onChange={(e) => setPostcode(e.target.value)}
+            placeholder="Postcode *"
+            className={inputClass}
+            required
+          />
+          <input
+            type="text"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="City *"
+            className={inputClass}
+            required
+          />
         </div>
-        <button type="button" className={saveBtnClass}>{t("account.save")}</button>
-      </div>
+        <div className="flex flex-col gap-2 text-sm text-gray-700 sm:flex-row sm:gap-6">
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={isDefaultShipping}
+              onChange={(e) => setIsDefaultShipping(e.target.checked)}
+            />
+            Default shipping
+          </label>
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={isDefaultBilling}
+              onChange={(e) => setIsDefaultBilling(e.target.checked)}
+            />
+            Default billing
+          </label>
+        </div>
+        {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+        <button type="submit" className={saveBtnClass} disabled={isSubmitting}>
+          {isSubmitting ? "Saving..." : "Save address"}
+        </button>
+      </form>
     </div>
   );
 }
@@ -401,6 +616,8 @@ export default function AccountPage() {
     email: "",
   });
   const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [addresses, setAddresses] = useState<UserAddress[]>([]);
+  const [isAddressesLoading, setIsAddressesLoading] = useState(false);
 
   useEffect(() => {
     const storedStatus = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -466,6 +683,92 @@ export default function AccountPage() {
     return () => controller.abort();
   }, [isLoggedIn, loggedInEmail]);
 
+  useEffect(() => {
+    if (!isLoggedIn || !loggedInEmail) {
+      setAddresses([]);
+      return;
+    }
+
+    const backendBaseUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
+      "http://localhost:3005";
+    const controller = new AbortController();
+
+    const loadAddresses = async () => {
+      setIsAddressesLoading(true);
+      try {
+        const response = await fetch(
+          `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
+          { signal: controller.signal },
+        );
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          data?: UserAddress[];
+        };
+        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+          throw new Error("Failed to load addresses");
+        }
+        setAddresses(payload.data);
+      } catch (_error) {
+        if (controller.signal.aborted) return;
+        setAddresses([]);
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsAddressesLoading(false);
+        }
+      }
+    };
+
+    void loadAddresses();
+    return () => controller.abort();
+  }, [isLoggedIn, loggedInEmail]);
+
+  const createAddress = async (payload: {
+    label: string;
+    companyName: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    addressLine1: string;
+    addressLine2: string;
+    postcode: string;
+    city: string;
+    country: string;
+    isDefaultBilling: boolean;
+    isDefaultShipping: boolean;
+  }) => {
+    if (!loggedInEmail) {
+      throw new Error("Missing account email.");
+    }
+
+    const backendBaseUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
+      "http://localhost:3005";
+    const response = await fetch(`${backendBaseUrl}/api/addresses`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: loggedInEmail,
+        ...payload,
+      }),
+    });
+    const json = (await response.json()) as { ok?: boolean; message?: string };
+    if (!response.ok || json.ok !== true) {
+      throw new Error(json.message ?? "Failed to save address");
+    }
+
+    const reload = await fetch(
+      `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
+    );
+    const reloadJson = (await reload.json()) as { ok?: boolean; data?: UserAddress[] };
+    if (reload.ok && reloadJson.ok === true && Array.isArray(reloadJson.data)) {
+      setAddresses(reloadJson.data);
+    }
+  };
+
+  
   const navItems: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "account", label: t("account.nav.account"), icon: <FaUser className="w-4 h-4" /> },
     { key: "address", label: t("account.nav.address"), icon: <FaMapMarkerAlt className="w-4 h-4" /> },
@@ -579,7 +882,14 @@ export default function AccountPage() {
               {activeTab === "account" && !isProfileLoading ? (
                 <MyAccountTab t={t} profile={accountProfile} />
               ) : null}
-              {activeTab === "address" && <AddressTab t={t} />}
+              {activeTab === "address" ? (
+                <AddressTab
+                  t={t}
+                  addresses={addresses}
+                  isLoading={isAddressesLoading}
+                  onCreateAddress={createAddress}
+                />
+              ) : null}
               {activeTab === "billing" && <BillingTab t={t} />}
               {activeTab === "orders" && <OrdersTab t={t} />}
             </main>
