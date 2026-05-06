@@ -11,12 +11,11 @@ import { useLanguage } from "../i18n/language-context";
 import {
   FaUser,
   FaMapMarkerAlt,
-  FaCreditCard,
   FaBoxOpen,
   FaSignOutAlt,
 } from "react-icons/fa";
 
-type Tab = "account" | "address" | "billing" | "orders";
+type Tab = "account" | "address" | "orders";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -446,92 +445,6 @@ function AddressTab({
   );
 }
 
-/* ─── Tab content: BILLING ────────────────────────────────── */
-function BillingTab({ t }: { t: (key: string) => string }) {
-  const [paymentType, setPaymentType] = useState<"credit" | "paypal" | "bank">("credit");
-  const [nameOnCard, setNameOnCard] = useState("Jhon Smith");
-  const [cardNumber, setCardNumber] = useState("**** **** **** 8758");
-  const [expMonth, setExpMonth] = useState("02");
-  const [expYear, setExpYear] = useState("2027");
-  const [cvv, setCvv] = useState("123");
-
-  const paymentOptions: { key: typeof paymentType; label: string }[] = [
-    { key: "credit", label: t("account.payment.creditCard") },
-    { key: "paypal", label: t("account.payment.paypal") },
-    { key: "bank", label: t("account.payment.bankTransfer") },
-  ];
-
-  return (
-    <div className="space-y-8">
-      <div>
-        <h2 className={sectionTitleClass}>{t("account.nav.billing")}</h2>
-        <p className={sectionSubtitleClass}>{t("account.billingManageInfo")}</p>
-      </div>
-
-      <div className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-5">
-        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{t("account.cardDetails")}</h3>
-
-        {/* Payment type selector */}
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">{t("account.paymentType")}</p>
-          <div className="flex flex-wrap gap-3">
-            {paymentOptions.map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => setPaymentType(opt.key)}
-                className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${
-                  paymentType === opt.key
-                    ? "border-my-red bg-my-red text-white"
-                    : "border-gray-300 bg-white text-gray-700 hover:border-my-red hover:text-my-red"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {paymentType === "credit" && (
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="bill-name" className="block text-xs font-semibold text-gray-500 mb-1 uppercase">{t("account.nameOnCard")}</label>
-              <input id="bill-name" type="text" value={nameOnCard} onChange={(e) => setNameOnCard(e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label htmlFor="bill-card" className="block text-xs font-semibold text-gray-500 mb-1 uppercase">{t("account.cardNumber")}</label>
-              <input id="bill-card" type="text" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} className={inputClass} />
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="bill-month" className="block text-xs font-semibold text-gray-500 mb-1 uppercase">{t("account.expirationDate")}</label>
-                <div className="flex gap-2">
-                  <input id="bill-month" type="text" value={expMonth} onChange={(e) => setExpMonth(e.target.value)} placeholder="MM" className={inputClass} maxLength={2} />
-                  <input type="text" value={expYear} onChange={(e) => setExpYear(e.target.value)} placeholder="YYYY" className={inputClass} maxLength={4} />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="bill-cvv" className="block text-xs font-semibold text-gray-500 mb-1 uppercase">{t("account.cvv")}</label>
-                <input id="bill-cvv" type="text" value={cvv} onChange={(e) => setCvv(e.target.value)} placeholder="CVV" className={inputClass} maxLength={4} />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {paymentType === "paypal" && (
-          <p className="text-sm text-gray-600">{t("account.paypalHint")}</p>
-        )}
-
-        {paymentType === "bank" && (
-          <p className="text-sm text-gray-600">{t("account.bankHint")}</p>
-        )}
-
-        <button type="button" className={saveBtnClass}>{t("account.saveCard")}</button>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Tab content: ORDERS ─────────────────────────────────── */
 const sampleOrders = [
   { date: "16-Apr-2024", orderNumber: "12912312", status: "PROCESSING" },
@@ -772,14 +685,12 @@ export default function AccountPage() {
   const navItems: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "account", label: t("account.nav.account"), icon: <FaUser className="w-4 h-4" /> },
     { key: "address", label: t("account.nav.address"), icon: <FaMapMarkerAlt className="w-4 h-4" /> },
-    { key: "billing", label: t("account.nav.billing"), icon: <FaCreditCard className="w-4 h-4" /> },
     { key: "orders", label: t("account.nav.orders"), icon: <FaBoxOpen className="w-4 h-4" /> },
   ];
 
   const titleMap: Record<Tab, string> = {
     account: t("account.title.account"),
     address: t("account.title.address"),
-    billing: t("account.title.billing"),
     orders: t("account.title.orders"),
   };
 
@@ -890,7 +801,6 @@ export default function AccountPage() {
                   onCreateAddress={createAddress}
                 />
               ) : null}
-              {activeTab === "billing" && <BillingTab t={t} />}
               {activeTab === "orders" && <OrdersTab t={t} />}
             </main>
           </div>
