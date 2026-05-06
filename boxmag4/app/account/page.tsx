@@ -14,6 +14,7 @@ import {
   FaBoxOpen,
   FaSignOutAlt,
 } from "react-icons/fa";
+import { accountSampleOrders } from "./orders/mock-orders";
 
 type Tab = "account" | "address" | "orders";
 
@@ -446,15 +447,6 @@ function AddressTab({
 }
 
 /* ─── Tab content: ORDERS ─────────────────────────────────── */
-const sampleOrders = [
-  { date: "16-Apr-2024", orderNumber: "12912312", status: "PROCESSING" },
-  { date: "12-Apr-2024", orderNumber: "12912280", status: "PROCESSING" },
-  { date: "10-Apr-2024", orderNumber: "12912240", status: "PROCESSING" },
-  { date: "07-Apr-2024", orderNumber: "12912199", status: "SHIPPED" },
-  { date: "04-Feb-2024", orderNumber: "12912140", status: "COMPLETED" },
-  { date: "01-Jan-2024", orderNumber: "12912101", status: "COMPLETED" },
-];
-
 function statusColor(status: string) {
   switch (status) {
     case "PROCESSING":
@@ -494,9 +486,10 @@ function OrdersTab({ t }: { t: (key: string) => string }) {
         </div>
 
         {/* Rows */}
-        {sampleOrders.map((order) => (
-          <div
+        {accountSampleOrders.map((order) => (
+          <Link
             key={order.orderNumber}
+            href={`/account/orders/${encodeURIComponent(order.orderNumber)}`}
             className="grid grid-cols-3 gap-4 px-5 sm:px-6 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
           >
             <span className="text-sm text-gray-700">{order.date}</span>
@@ -506,7 +499,7 @@ function OrdersTab({ t }: { t: (key: string) => string }) {
                 {statusLabel(order.status)}
               </span>
             </span>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
