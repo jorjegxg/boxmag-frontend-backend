@@ -6,7 +6,7 @@ import { B2b } from "../global/components/b2b";
 import { ServicesSection } from "../global/components/services-section";
 import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
-import { FaUserPlus } from "react-icons/fa";
+import { FaCheckCircle, FaUserPlus } from "react-icons/fa";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -221,27 +221,51 @@ export default function RegistrationPage() {
       <HaveAQuestion />
       <NewsletterSubscribe />
       {isRegistered ? (
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-6 sm:p-8 shadow-2xl text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-green-700">
-              Confirm your email
-            </h2>
-            <p className="mt-4 text-base sm:text-lg text-gray-800">
-              Verification link was sent to:
-            </p>
-            <p className="mt-2 break-all text-lg sm:text-2xl font-semibold text-my-red">
-              {registeredEmail}
-            </p>
-            <p className="mt-4 text-sm sm:text-base text-gray-600">
-              Open your inbox and click the link to activate your account.
-            </p>
-            <div className="mt-6 flex justify-center">
-              <Link
-                href="/account"
-                className="inline-flex items-center justify-center rounded-lg bg-my-red px-6 py-3 text-white font-semibold hover:bg-my-red/90 transition-colors"
-              >
-                Go to sign in
-              </Link>
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-[1px]">
+          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
+            <div className="border-b border-gray-100 bg-gray-50 px-6 py-4 sm:px-8">
+              <div className="flex items-center gap-3">
+                <FaCheckCircle className="h-7 w-7 text-green-600" />
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-green-700">
+                    Registration Successful
+                  </p>
+                  <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">
+                    Confirm your email
+                  </h2>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-6 sm:px-8 sm:py-7">
+              <p className="text-sm text-gray-600 sm:text-base">
+                We sent a verification link to the address below. Please open your inbox and
+                confirm your account before signing in.
+              </p>
+
+              <div className="mt-4 rounded-xl border border-my-red/30 bg-my-red/5 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Verification email
+                </p>
+                <p className="mt-1 break-all text-base font-semibold text-my-red sm:text-lg">
+                  {registeredEmail}
+                </p>
+              </div>
+
+              <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <Link
+                  href="/"
+                  className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Continue browsing
+                </Link>
+                <Link
+                  href="/account"
+                  className="inline-flex items-center justify-center rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white hover:bg-my-red/90 transition-colors"
+                >
+                  Go to sign in
+                </Link>
+              </div>
             </div>
           </div>
         </div>

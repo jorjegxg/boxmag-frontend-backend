@@ -536,9 +536,11 @@ function AddressTab({
           <input
             type="text"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
             placeholder="Phone"
             className={inputClass}
+            inputMode="numeric"
+            pattern="[0-9]*"
           />
           <input
             type="text"
