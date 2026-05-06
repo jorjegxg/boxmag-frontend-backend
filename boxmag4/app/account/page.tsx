@@ -75,8 +75,9 @@ function LoginRequiredView({
   );
   const [password, setPassword] = useState(isDevelopment ? "dummy123" : "");
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail || !password) {
@@ -84,10 +85,39 @@ function LoginRequiredView({
       return;
     }
 
-    localStorage.setItem(AUTH_STORAGE_KEY, "true");
-    localStorage.setItem(AUTH_EMAIL_STORAGE_KEY, normalizedEmail);
+    const backendBaseUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
+      "http://localhost:3005";
+    setIsSubmitting(true);
     setError(null);
-    onLoginSuccess(normalizedEmail);
+    try {
+      const response = await fetch(`${backendBaseUrl}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password,
+        }),
+      });
+      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.message ?? "Invalid email or password");
+      }
+
+      localStorage.setItem(AUTH_STORAGE_KEY, "true");
+      localStorage.setItem(AUTH_EMAIL_STORAGE_KEY, normalizedEmail);
+      onLoginSuccess(normalizedEmail);
+    } catch (loginError) {
+      setError(
+        loginError instanceof Error
+          ? loginError.message
+          : "Invalid email or password",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -127,8 +157,8 @@ function LoginRequiredView({
         </div>
         {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
         <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
-          <button type="submit" className={saveBtnClass}>
-            Sign in
+          <button type="submit" className={saveBtnClass} disabled={isSubmitting}>
+            {isSubmitting ? "Signing in..." : "Sign in"}
           </button>
           <Link href="/registration" className="text-sm font-semibold text-my-red hover:underline">
             {t("account.newUserRegister")}
@@ -542,7 +572,7 @@ export default function AccountPage() {
   const [activeTab, setActiveTab] = useState<Tab>("account");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loggedInEmail, setLoggedInEmail] = useState(
-    isDevelopment ? "yotrevorgxg@gmail.com" : "",
+    isDevelopment ? "customer.demo@boxmag.com" : "",
   );
   const [accountProfile, setAccountProfile] = useState<UserProfile>({
     firstName: "",

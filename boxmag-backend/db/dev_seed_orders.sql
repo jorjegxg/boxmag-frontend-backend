@@ -1,3 +1,12 @@
+INSERT INTO users
+  (email, password_hash, first_name, last_name, company_name, vat_number, phone, email_verified_at, role, is_active)
+VALUES
+  ('customer.demo@boxmag.com', 'boxmag-demo-salt:1e0226bf74cc9428fcbc486cdb7e404d60869808d61dc3a1856926ebc449c1755bd11bfcb33ee61beb3b5dd38ca86adda78c2a7bd7f24d50b5414bace188844d', 'Demo', 'Customer', 'Boxmag Demo SRL', 'RO12345678', '+40 700 000 000', CURRENT_TIMESTAMP, 'customer', 1)
+ON DUPLICATE KEY UPDATE
+  password_hash = VALUES(password_hash),
+  email_verified_at = CURRENT_TIMESTAMP,
+  is_active = 1;
+
 SET @demo_user_id := (
   SELECT id
   FROM users

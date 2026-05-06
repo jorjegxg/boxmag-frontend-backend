@@ -19,8 +19,24 @@ type RegisterPayload = {
   acceptRegulations?: unknown;
 };
 
+type LoginPayload = {
+  email?: unknown;
+  password?: unknown;
+};
+
 type ExistingUserRow = RowDataPacket & {
   id: number;
+};
+
+type LoginUserRow = RowDataPacket & {
+  id: number;
+  email: string;
+  password_hash: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  is_active: number;
+  email_verified_at: Date | string | null;
 };
 
 type UserProfileRow = RowDataPacket & {
@@ -58,6 +74,16 @@ function hashPassword(password: string): string {
   return `${salt}:${hash}`;
 }
 
+function verifyPassword(password: string, storedPasswordHash: string): boolean {
+  const [salt, expectedHash] = storedPasswordHash.split(":");
+  if (!salt || !expectedHash) return false;
+  const actualHash = crypto.scryptSync(password, salt, 64).toString("hex");
+  const actualHashBuffer = Buffer.from(actualHash, "hex");
+  const expectedHashBuffer = Buffer.from(expectedHash, "hex");
+  if (actualHashBuffer.length !== expectedHashBuffer.length) return false;
+  return crypto.timingSafeEqual(actualHashBuffer, expectedHashBuffer);
+}
+
 function sha256Hex(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
@@ -72,6 +98,88 @@ function escapeHtml(value: string): string {
 }
 
 export const authRouter = Router();
+
+authRouter.post("/login", async (req, res) => {
+  const payload = (req.body ?? {}) as LoginPayload;
+  const emailRaw = toOptionalString(payload.email);
+  const passwordRaw = toOptionalString(payload.password);
+
+  if (!emailRaw || !passwordRaw) {
+    res.status(400).json({
+      ok: false,
+      message: "Email and password are required",
+    });
+    return;
+  }
+
+  const normalizedEmail = emailRaw.toLowerCase();
+
+  try {
+    const [rows] = await mysqlPool.execute<LoginUserRow[]>(
+      `SELECT id, email, password_hash, first_name, last_name, phone, is_active, email_verified_at
+       FROM users
+       WHERE email = ?
+       LIMIT 1`,
+      [normalizedEmail]
+    );
+
+    if (rows.length === 0) {
+      res.status(401).json({
+        ok: false,
+        message: "Invalid email or password",
+      });
+      return;
+    }
+
+    const user = rows[0]!;
+    if (!verifyPassword(passwordRaw, user.password_hash)) {
+      res.status(401).json({
+        ok: false,
+        message: "Invalid email or password",
+      });
+      return;
+    }
+
+    if (!user.email_verified_at) {
+      res.status(403).json({
+        ok: false,
+        message: "Please verify your email before signing in",
+      });
+      return;
+    }
+
+    if (!user.is_active) {
+      res.status(403).json({
+        ok: false,
+        message: "Your account is inactive",
+      });
+      return;
+    }
+
+    await mysqlPool.execute(
+      `UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [user.id]
+    );
+
+    res.status(200).json({
+      ok: true,
+      data: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name ?? "",
+        lastName: user.last_name ?? "",
+        phone: user.phone ?? "",
+      },
+      message: "Login successful",
+    });
+  } catch (error) {
+    console.error("Failed to login user", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to login user",
+    });
+  }
+});
 
 authRouter.get("/profile", async (req, res) => {
   const emailRaw =
