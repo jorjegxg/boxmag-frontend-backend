@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { B2b } from "../global/components/b2b";
@@ -245,6 +245,8 @@ function AddressTab({
   addresses,
   isLoading,
   onCreateAddress,
+  onUpdateAddress,
+  onDeleteAddress,
 }: {
   t: (key: string) => string;
   addresses: UserAddress[];
@@ -263,6 +265,24 @@ function AddressTab({
     isDefaultBilling: boolean;
     isDefaultShipping: boolean;
   }) => Promise<void>;
+  onUpdateAddress: (
+    addressId: number,
+    payload: {
+      label: string;
+      companyName: string;
+      firstName: string;
+      lastName: string;
+      phone: string;
+      addressLine1: string;
+      addressLine2: string;
+      postcode: string;
+      city: string;
+      country: string;
+      isDefaultBilling: boolean;
+      isDefaultShipping: boolean;
+    },
+  ) => Promise<void>;
+  onDeleteAddress: (addressId: number) => Promise<void>;
 }) {
   const [label, setLabel] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -278,6 +298,9 @@ function AddressTab({
   const [isDefaultShipping, setIsDefaultShipping] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
+  const [deletingAddressId, setDeletingAddressId] = useState<number | null>(null);
+  const addressFormRef = useRef<HTMLFormElement | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -316,6 +339,90 @@ function AddressTab({
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const startEditAddress = (address: UserAddress) => {
+    setEditingAddressId(address.id);
+    setLabel(address.label);
+    setCompanyName(address.companyName);
+    setFirstName(address.firstName);
+    setLastName(address.lastName);
+    setPhone(address.phone);
+    setAddressLine1(address.addressLine1);
+    setAddressLine2(address.addressLine2);
+    setPostcode(address.postcode);
+    setCity(address.city);
+    setCountry(address.country);
+    setIsDefaultBilling(address.isDefaultBilling);
+    setIsDefaultShipping(address.isDefaultShipping);
+    setError(null);
+    window.setTimeout(() => {
+      addressFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  };
+
+  const cancelEdit = () => {
+    setEditingAddressId(null);
+    setLabel("");
+    setCompanyName("");
+    setFirstName("");
+    setLastName("");
+    setPhone("");
+    setAddressLine1("");
+    setAddressLine2("");
+    setPostcode("");
+    setCity("");
+    setCountry("");
+    setIsDefaultBilling(false);
+    setIsDefaultShipping(false);
+    setError(null);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAddressId) return;
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await onUpdateAddress(editingAddressId, {
+        label,
+        companyName,
+        firstName,
+        lastName,
+        phone,
+        addressLine1,
+        addressLine2,
+        postcode,
+        city,
+        country,
+        isDefaultBilling,
+        isDefaultShipping,
+      });
+      cancelEdit();
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error ? submitError.message : "Failed to update address",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteAddress = async (addressId: number) => {
+    setDeletingAddressId(addressId);
+    setError(null);
+    try {
+      await onDeleteAddress(addressId);
+      if (editingAddressId === addressId) {
+        cancelEdit();
+      }
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error ? deleteError.message : "Failed to delete address",
+      );
+    } finally {
+      setDeletingAddressId(null);
     }
   };
 
@@ -362,6 +469,23 @@ function AddressTab({
                       {address.isDefaultShipping && address.isDefaultBilling ? " • " : ""}
                       {address.isDefaultBilling ? "Default billing" : ""}
                     </p>
+                    <div className="pt-2 flex gap-3">
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-my-red hover:underline"
+                        onClick={() => startEditAddress(address)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-60"
+                        onClick={() => void handleDeleteAddress(address.id)}
+                        disabled={deletingAddressId === address.id}
+                      >
+                        {deletingAddressId === address.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -371,11 +495,12 @@ function AddressTab({
       </div>
 
       <form
-        onSubmit={handleSubmit}
+        ref={addressFormRef}
+        onSubmit={editingAddressId ? handleSaveEdit : handleSubmit}
         className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-4"
       >
         <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
-          Add new address
+          {editingAddressId ? "Edit address" : "Add new address"}
         </h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <input
@@ -474,9 +599,24 @@ function AddressTab({
           </label>
         </div>
         {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
-        <button type="submit" className={saveBtnClass} disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : "Save address"}
-        </button>
+        <div className="flex gap-3">
+          <button type="submit" className={saveBtnClass} disabled={isSubmitting}>
+            {isSubmitting
+              ? "Saving..."
+              : editingAddressId
+                ? "Update address"
+                : "Save address"}
+          </button>
+          {editingAddressId ? (
+            <button
+              type="button"
+              className="px-6 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
+              onClick={cancelEdit}
+            >
+              Cancel
+            </button>
+          ) : null}
+        </div>
       </form>
     </div>
   );
@@ -775,6 +915,80 @@ export default function AccountPage() {
     }
   };
 
+  const updateAddress = async (
+    addressId: number,
+    payload: {
+      label: string;
+      companyName: string;
+      firstName: string;
+      lastName: string;
+      phone: string;
+      addressLine1: string;
+      addressLine2: string;
+      postcode: string;
+      city: string;
+      country: string;
+      isDefaultBilling: boolean;
+      isDefaultShipping: boolean;
+    },
+  ) => {
+    if (!loggedInEmail) {
+      throw new Error("Missing account email.");
+    }
+
+    const backendBaseUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
+      "http://localhost:3005";
+    const response = await fetch(`${backendBaseUrl}/api/addresses/${addressId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: loggedInEmail,
+        ...payload,
+      }),
+    });
+    const json = (await response.json()) as { ok?: boolean; message?: string };
+    if (!response.ok || json.ok !== true) {
+      throw new Error(json.message ?? "Failed to update address");
+    }
+
+    const reload = await fetch(
+      `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
+    );
+    const reloadJson = (await reload.json()) as { ok?: boolean; data?: UserAddress[] };
+    if (reload.ok && reloadJson.ok === true && Array.isArray(reloadJson.data)) {
+      setAddresses(reloadJson.data);
+    }
+  };
+
+  const deleteAddress = async (addressId: number) => {
+    if (!loggedInEmail) {
+      throw new Error("Missing account email.");
+    }
+
+    const backendBaseUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
+      "http://localhost:3005";
+    const response = await fetch(
+      `${backendBaseUrl}/api/addresses/${addressId}?email=${encodeURIComponent(loggedInEmail)}`,
+      { method: "DELETE" },
+    );
+    const json = (await response.json()) as { ok?: boolean; message?: string };
+    if (!response.ok || json.ok !== true) {
+      throw new Error(json.message ?? "Failed to delete address");
+    }
+
+    const reload = await fetch(
+      `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
+    );
+    const reloadJson = (await reload.json()) as { ok?: boolean; data?: UserAddress[] };
+    if (reload.ok && reloadJson.ok === true && Array.isArray(reloadJson.data)) {
+      setAddresses(reloadJson.data);
+    }
+  };
+
   
   const navItems: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "account", label: t("account.nav.account"), icon: <FaUser className="w-4 h-4" /> },
@@ -893,6 +1107,8 @@ export default function AccountPage() {
                   addresses={addresses}
                   isLoading={isAddressesLoading}
                   onCreateAddress={createAddress}
+                  onUpdateAddress={updateAddress}
+                  onDeleteAddress={deleteAddress}
                 />
               ) : null}
               {activeTab === "orders" ? (

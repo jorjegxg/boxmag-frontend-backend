@@ -38,6 +38,22 @@ type CreateAddressPayload = {
   isDefaultShipping?: unknown;
 };
 
+type UpdateAddressPayload = {
+  email?: unknown;
+  label?: unknown;
+  companyName?: unknown;
+  firstName?: unknown;
+  lastName?: unknown;
+  phone?: unknown;
+  addressLine1?: unknown;
+  addressLine2?: unknown;
+  postcode?: unknown;
+  city?: unknown;
+  country?: unknown;
+  isDefaultBilling?: unknown;
+  isDefaultShipping?: unknown;
+};
+
 function toOptionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -182,6 +198,158 @@ addressesRouter.post("/", async (req, res) => {
     res.status(500).json({
       ok: false,
       message: "Failed to create address",
+    });
+  }
+});
+
+addressesRouter.put("/:addressId", async (req, res) => {
+  const addressId = Number(req.params.addressId);
+  const payload = (req.body ?? {}) as UpdateAddressPayload;
+  const email = toRequiredString(payload.email)?.toLowerCase() ?? null;
+  const firstName = toRequiredString(payload.firstName);
+  const lastName = toRequiredString(payload.lastName);
+  const addressLine1 = toRequiredString(payload.addressLine1);
+  const postcode = toRequiredString(payload.postcode);
+  const city = toRequiredString(payload.city);
+  const country = toRequiredString(payload.country);
+
+  if (
+    !Number.isInteger(addressId) ||
+    addressId <= 0 ||
+    !email ||
+    !firstName ||
+    !lastName ||
+    !addressLine1 ||
+    !postcode ||
+    !city ||
+    !country
+  ) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid update address payload",
+    });
+    return;
+  }
+
+  const label = toOptionalString(payload.label);
+  const companyName = toOptionalString(payload.companyName);
+  const phone = toOptionalString(payload.phone);
+  const addressLine2 = toOptionalString(payload.addressLine2);
+  const isDefaultBilling = payload.isDefaultBilling === true;
+  const isDefaultShipping = payload.isDefaultShipping === true;
+
+  try {
+    const [userRows] = await mysqlPool.execute<UserRow[]>(
+      `SELECT id FROM users WHERE email = ? LIMIT 1`,
+      [email]
+    );
+    if (userRows.length === 0) {
+      res.status(404).json({
+        ok: false,
+        message: "User not found",
+      });
+      return;
+    }
+
+    const userId = userRows[0]!.id;
+    const [result] = await mysqlPool.execute<ResultSetHeader>(
+      `UPDATE addresses
+       SET label = ?, company_name = ?, first_name = ?, last_name = ?, phone = ?,
+           address_line_1 = ?, address_line_2 = ?, postcode = ?, city = ?, country = ?,
+           is_default_billing = ?, is_default_shipping = ?
+       WHERE id = ? AND user_id = ?`,
+      [
+        label,
+        companyName,
+        firstName,
+        lastName,
+        phone,
+        addressLine1,
+        addressLine2,
+        postcode,
+        city,
+        country,
+        isDefaultBilling ? 1 : 0,
+        isDefaultShipping ? 1 : 0,
+        addressId,
+        userId,
+      ]
+    );
+
+    if (result.affectedRows === 0) {
+      res.status(404).json({
+        ok: false,
+        message: "Address not found",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      ok: true,
+      data: {
+        id: addressId,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to update address", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to update address",
+    });
+  }
+});
+
+addressesRouter.delete("/:addressId", async (req, res) => {
+  const addressId = Number(req.params.addressId);
+  const email =
+    typeof req.query.email === "string" ? req.query.email.trim().toLowerCase() : "";
+
+  if (!Number.isInteger(addressId) || addressId <= 0 || !email) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid delete address payload",
+    });
+    return;
+  }
+
+  try {
+    const [userRows] = await mysqlPool.execute<UserRow[]>(
+      `SELECT id FROM users WHERE email = ? LIMIT 1`,
+      [email]
+    );
+    if (userRows.length === 0) {
+      res.status(404).json({
+        ok: false,
+        message: "User not found",
+      });
+      return;
+    }
+
+    const userId = userRows[0]!.id;
+    const [result] = await mysqlPool.execute<ResultSetHeader>(
+      `DELETE FROM addresses WHERE id = ? AND user_id = ?`,
+      [addressId, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      res.status(404).json({
+        ok: false,
+        message: "Address not found",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      ok: true,
+      data: {
+        id: addressId,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to delete address", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to delete address",
     });
   }
 });
