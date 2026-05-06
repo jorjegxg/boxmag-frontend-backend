@@ -14,7 +14,6 @@ import {
   FaBoxOpen,
   FaSignOutAlt,
 } from "react-icons/fa";
-import { accountSampleOrders } from "./orders/mock-orders";
 
 type Tab = "account" | "address" | "orders";
 
@@ -57,6 +56,13 @@ type UserAddress = {
   isDefaultShipping: boolean;
 };
 
+type UserOrder = {
+  id: number;
+  orderNumber: string;
+  status: string;
+  createdAt: string;
+};
+
 function LoginRequiredView({
   t,
   onLoginSuccess,
@@ -65,7 +71,7 @@ function LoginRequiredView({
   onLoginSuccess: (email: string) => void;
 }) {
   const [email, setEmail] = useState(
-    isDevelopment ? "yotrevorgxg@gmail.com" : "",
+    isDevelopment ? "customer.demo@boxmag.com" : "",
   );
   const [password, setPassword] = useState(isDevelopment ? "dummy123" : "");
   const [error, setError] = useState<string | null>(null);
@@ -460,12 +466,30 @@ function statusColor(status: string) {
   }
 }
 
-function OrdersTab({ t }: { t: (key: string) => string }) {
+function OrdersTab({
+  t,
+  orders,
+  isLoading,
+}: {
+  t: (key: string) => string;
+  orders: UserOrder[];
+  isLoading: boolean;
+}) {
+  const formatDate = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
   const statusLabel = (status: string) => {
-    if (status === "PROCESSING") return t("account.status.processing");
-    if (status === "SHIPPED") return t("account.status.shipped");
-    if (status === "COMPLETED") return t("account.status.completed");
-    return status;
+    const normalized = status.trim().toLowerCase();
+    if (normalized === "processing" || normalized === "in progress") return t("account.status.processing");
+    if (normalized === "shipped") return t("account.status.shipped");
+    if (normalized === "completed" || normalized === "done") return t("account.status.completed");
+    return status.toUpperCase();
   };
 
   return (
@@ -485,14 +509,18 @@ function OrdersTab({ t }: { t: (key: string) => string }) {
           <span className="text-xs font-bold text-gray-500 uppercase">{t("account.status")}</span>
         </div>
 
-        {/* Rows */}
-        {accountSampleOrders.map((order) => (
+        {isLoading ? (
+          <p className="px-5 py-4 text-sm text-gray-600 sm:px-6">Loading orders...</p>
+        ) : orders.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-gray-600 sm:px-6">No orders found.</p>
+        ) : (
+          orders.map((order) => (
           <Link
-            key={order.orderNumber}
-            href={`/account/orders/${encodeURIComponent(order.orderNumber)}`}
+            key={order.id}
+            href={`/account/orders/${order.id}`}
             className="grid grid-cols-3 gap-4 px-5 sm:px-6 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
           >
-            <span className="text-sm text-gray-700">{order.date}</span>
+            <span className="text-sm text-gray-700">{formatDate(order.createdAt)}</span>
             <span className="text-sm text-gray-700 font-medium">{order.orderNumber}</span>
             <span>
               <span className={`inline-block text-xs font-bold uppercase px-2.5 py-1 rounded-full ${statusColor(order.status)}`}>
@@ -500,7 +528,8 @@ function OrdersTab({ t }: { t: (key: string) => string }) {
               </span>
             </span>
           </Link>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
@@ -524,6 +553,8 @@ export default function AccountPage() {
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [isAddressesLoading, setIsAddressesLoading] = useState(false);
+  const [orders, setOrders] = useState<UserOrder[]>([]);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(false);
 
   useEffect(() => {
     const storedStatus = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -586,6 +617,46 @@ export default function AccountPage() {
     };
 
     void loadProfile();
+    return () => controller.abort();
+  }, [isLoggedIn, loggedInEmail]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !loggedInEmail) {
+      setOrders([]);
+      return;
+    }
+
+    const backendBaseUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
+      "http://localhost:3005";
+    const controller = new AbortController();
+
+    const loadOrders = async () => {
+      setIsOrdersLoading(true);
+      try {
+        const response = await fetch(
+          `${backendBaseUrl}/api/orders?email=${encodeURIComponent(loggedInEmail)}`,
+          { signal: controller.signal },
+        );
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          data?: UserOrder[];
+        };
+        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+          throw new Error("Failed to load orders");
+        }
+        setOrders(payload.data);
+      } catch (_error) {
+        if (controller.signal.aborted) return;
+        setOrders([]);
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsOrdersLoading(false);
+        }
+      }
+    };
+
+    void loadOrders();
     return () => controller.abort();
   }, [isLoggedIn, loggedInEmail]);
 
@@ -794,7 +865,9 @@ export default function AccountPage() {
                   onCreateAddress={createAddress}
                 />
               ) : null}
-              {activeTab === "orders" && <OrdersTab t={t} />}
+              {activeTab === "orders" ? (
+                <OrdersTab t={t} orders={orders} isLoading={isOrdersLoading} />
+              ) : null}
             </main>
           </div>
         )}

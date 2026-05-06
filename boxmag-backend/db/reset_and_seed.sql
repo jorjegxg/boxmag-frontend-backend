@@ -216,6 +216,18 @@ VALUES
   (1, 'Primary', 'Boxmag Demo SRL', 'Demo', 'Customer', '+40 700 000 000', 'Str. Exemplu 10', '010101', 'Bucuresti', 'Romania', 1, 1),
   (1, 'Warehouse', 'Boxmag Demo SRL', 'Demo', 'Customer', '+40 700 111 222', 'Bd. Industriilor 24', '500500', 'Brasov', 'Romania', 0, 1);
 
+INSERT INTO orders
+  (user_id, box_type_id, box_type_name, cardboard_type, cardboard_colour, box_print, length_mm, width_mm, height_mm, size_type, transport, quantity, ftl, attachment_name, message, accepted_terms, status)
+VALUES
+  (1, 1, 'Boxfix, E-commerce Boxes Fefco 703 - B Wave', '1.21B-31', 'Brown', 'No print', 215, 155, 110, 'standard', 'courier', 200, 0, NULL, 'Please deliver in the first part of the day.', 1, 'in progress'),
+  (1, 4, 'Shipping Box - Fefco 427 (Size: 343X245X47 mm) - B Wave', '1.21B-31', 'White', 'Flexo 1 color', 343, 245, 47, 'fixed', 'pallet', 100, 0, NULL, 'Fragile products, handle with care.', 1, 'completed');
+
+INSERT INTO contacts
+  (order_id, first_name, surname, company_name, vat_number, email, phone, address, postcode, city, country, create_account, consent_phone, consent_email)
+VALUES
+  (1, 'Demo', 'Customer', 'Boxmag Demo SRL', 'RO12345678', 'customer.demo@boxmag.com', '+40 700 000 000', 'Str. Exemplu 10', '010101', 'Bucuresti', 'Romania', 1, 1, 1),
+  (2, 'Demo', 'Customer', 'Boxmag Demo SRL', 'RO12345678', 'customer.demo@boxmag.com', '+40 700 000 000', 'Bd. Industriilor 24', '500500', 'Brasov', 'Romania', 1, 1, 1);
+
 INSERT INTO box_type_images
   (box_type_id, url, sort_order, alt_text, is_primary)
 VALUES

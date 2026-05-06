@@ -92,17 +92,24 @@ type OrderListRow = RowDataPacket & {
   country: string;
 };
 
-ordersRouter.get("/", async (_req, res) => {
+ordersRouter.get("/", async (req, res) => {
+  const emailFilter =
+    typeof req.query.email === "string" && req.query.email.trim().length > 0
+      ? req.query.email.trim().toLowerCase()
+      : null;
+
   try {
-    const [rows] = await mysqlPool.query<OrderListRow[]>(
-      `SELECT o.id, o.box_type_name, o.cardboard_type, o.cardboard_colour, o.box_print,
+    const sql = `SELECT o.id, o.box_type_name, o.cardboard_type, o.cardboard_colour, o.box_print,
               o.length_mm, o.width_mm, o.height_mm, o.size_type, o.transport,
               o.quantity, o.attachment_name, o.message, o.status, o.created_at,
               c.first_name, c.surname, c.company_name, c.email, c.phone, c.city, c.country
        FROM orders o
        LEFT JOIN contacts c ON c.order_id = o.id
-       ORDER BY o.created_at DESC, o.id DESC`
-    );
+       ${emailFilter ? "WHERE LOWER(c.email) = ?" : ""}
+       ORDER BY o.created_at DESC, o.id DESC`;
+    const [rows] = emailFilter
+      ? await mysqlPool.query<OrderListRow[]>(sql, [emailFilter])
+      : await mysqlPool.query<OrderListRow[]>(sql);
 
     res.json({
       ok: true,
@@ -139,6 +146,83 @@ ordersRouter.get("/", async (_req, res) => {
     res.status(500).json({
       ok: false,
       message: "Failed to load orders",
+    });
+  }
+});
+
+ordersRouter.get("/:orderId", async (req, res) => {
+  const orderId = Number(req.params.orderId);
+  const emailFilter =
+    typeof req.query.email === "string" && req.query.email.trim().length > 0
+      ? req.query.email.trim().toLowerCase()
+      : null;
+
+  if (!Number.isInteger(orderId) || orderId <= 0) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid order id",
+    });
+    return;
+  }
+
+  try {
+    const sql = `SELECT o.id, o.box_type_name, o.cardboard_type, o.cardboard_colour, o.box_print,
+              o.length_mm, o.width_mm, o.height_mm, o.size_type, o.transport,
+              o.quantity, o.attachment_name, o.message, o.status, o.created_at,
+              c.first_name, c.surname, c.company_name, c.email, c.phone, c.city, c.country
+       FROM orders o
+       LEFT JOIN contacts c ON c.order_id = o.id
+       WHERE o.id = ?
+       ${emailFilter ? "AND LOWER(c.email) = ?" : ""}
+       LIMIT 1`;
+    const [rows] = emailFilter
+      ? await mysqlPool.query<OrderListRow[]>(sql, [orderId, emailFilter])
+      : await mysqlPool.query<OrderListRow[]>(sql, [orderId]);
+
+    if (rows.length === 0) {
+      res.status(404).json({
+        ok: false,
+        message: "Order not found",
+      });
+      return;
+    }
+
+    const row = rows[0]!;
+    res.json({
+      ok: true,
+      data: {
+        id: row.id,
+        orderNumber: `ORD-${String(row.id).padStart(4, "0")}`,
+        customerName:
+          [row.first_name, row.surname].filter(Boolean).join(" ").trim() ||
+          row.company_name ||
+          "Unknown customer",
+        companyName: row.company_name,
+        boxTypeName: row.box_type_name,
+        cardboardType: row.cardboard_type,
+        cardboardColour: row.cardboard_colour,
+        boxPrint: row.box_print,
+        size:
+          row.length_mm != null && row.width_mm != null && row.height_mm != null
+            ? `${row.length_mm} x ${row.width_mm} x ${row.height_mm} mm (${row.size_type})`
+            : `N/A (${row.size_type})`,
+        transport: row.transport,
+        quantity: row.quantity,
+        attachmentName: row.attachment_name,
+        message: row.message ?? "",
+        status: row.status,
+        email: row.email,
+        phone: row.phone,
+        city: row.city,
+        country: row.country,
+        createdAt: row.created_at,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to load order details", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to load order details",
     });
   }
 });

@@ -9,6 +9,7 @@
     "start": "node dist/server.js",
     "check": "tsc --noEmit",
     "db:reset": "bash ./db/reset_and_seed.sh",
+    "db:dev": "bash ./db/dev_seed_orders.sh",
     "db:seed:images": "node ./db/seed_minio_images.js"
   },
   "keywords": [],
