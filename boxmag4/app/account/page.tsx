@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { B2b } from "../global/components/b2b";
@@ -30,6 +30,84 @@ const sectionSubtitleClass =
 
 const saveBtnClass =
   "px-6 py-2.5 rounded-lg bg-my-red text-white font-semibold text-sm hover:bg-my-red/90 transition-colors";
+
+const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
+const isDevelopment = process.env.NODE_ENV === "development";
+
+function LoginRequiredView({
+  t,
+  onLoginSuccess,
+}: {
+  t: (key: string) => string;
+  onLoginSuccess: () => void;
+}) {
+  const [email, setEmail] = useState(
+    isDevelopment ? "yotrevorgxg@gmail.com" : "",
+  );
+  const [password, setPassword] = useState(isDevelopment ? "dummy123" : "");
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
+
+    localStorage.setItem(AUTH_STORAGE_KEY, "true");
+    setError(null);
+    onLoginSuccess();
+  };
+
+  return (
+    <div className="mx-auto w-full max-w-xl rounded-lg border border-gray-200 bg-white p-6 sm:p-8">
+      <h2 className="text-2xl font-bold text-gray-900">Sign in</h2>
+      <p className="mt-2 text-sm text-gray-600">
+        Sign in to access your account details, addresses, billing and orders.
+      </p>
+      <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+        <div>
+          <label htmlFor="account-login-email" className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+            {t("account.emailAddress")}
+          </label>
+          <input
+            id="account-login-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={inputClass}
+            placeholder="you@example.com"
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="account-login-password" className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+            {t("account.password")}
+          </label>
+          <input
+            id="account-login-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={inputClass}
+            placeholder="Password"
+            required
+          />
+        </div>
+        {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+        <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
+          <button type="submit" className={saveBtnClass}>
+            Sign in
+          </button>
+          <Link href="/registration" className="text-sm font-semibold text-my-red hover:underline">
+            {t("account.newUserRegister")}
+          </Link>
+        </div>
+      </form>
+    </div>
+  );
+}
 
 /* ─── Tab content: MY ACCOUNT ─────────────────────────────── */
 function MyAccountTab({ t }: { t: (key: string) => string }) {
@@ -298,6 +376,12 @@ export default function AccountPage() {
   const { t } = useLanguage();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("account");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const storedStatus = localStorage.getItem(AUTH_STORAGE_KEY);
+    setIsLoggedIn(storedStatus === "true");
+  }, []);
 
   const navItems: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "account", label: t("account.nav.account"), icon: <FaUser className="w-4 h-4" /> },
@@ -343,59 +427,68 @@ export default function AccountPage() {
 
       {/* Sidebar + Content */}
       <section className="w-full px-4 sm:px-6 lg:px-20 pb-12">
-        <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-6">
+        {!isLoggedIn ? (
+          <LoginRequiredView t={t} onLoginSuccess={() => setIsLoggedIn(true)} />
+        ) : (
+          <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-6">
 
-          {/* ── Sidebar ── */}
-          <aside className="lg:w-64 shrink-0">
-            <nav className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-              {navItems.map((item) => (
+            {/* ── Sidebar ── */}
+            <aside className="lg:w-64 shrink-0">
+              <nav className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+                {navItems.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setActiveTab(item.key)}
+                    className={`w-full flex items-center gap-3 px-5 py-3.5 text-sm font-bold uppercase tracking-wide transition-colors border-b border-gray-100 last:border-b-0 ${
+                      activeTab === item.key
+                        ? "bg-my-red text-white"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </button>
+                ))}
+
+                {/* Divider */}
+                <div className="border-t border-gray-200" />
+
+                {/* Sign Out */}
                 <button
-                  key={item.key}
                   type="button"
-                  onClick={() => setActiveTab(item.key)}
-                  className={`w-full flex items-center gap-3 px-5 py-3.5 text-sm font-bold uppercase tracking-wide transition-colors border-b border-gray-100 last:border-b-0 ${
-                    activeTab === item.key
-                      ? "bg-my-red text-white"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
+                  onClick={() => {
+                    localStorage.removeItem(AUTH_STORAGE_KEY);
+                    setIsLoggedIn(false);
+                    setActiveTab("account");
+                    router.push("/account");
+                  }}
+                  className="w-full flex items-center gap-3 px-5 py-3.5 text-sm font-bold uppercase tracking-wide text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
                 >
-                  {item.icon}
-                  {item.label}
+                  <FaSignOutAlt className="w-4 h-4" />
+                  {t("account.signOut")}
                 </button>
-              ))}
 
-              {/* Divider */}
-              <div className="border-t border-gray-200" />
+                {/* Delete Account */}
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-3 px-5 py-3.5 text-sm font-bold uppercase tracking-wide text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  <FaTrashAlt className="w-4 h-4" />
+                  {t("account.deleteAccount")}
+                </button>
+              </nav>
+            </aside>
 
-              {/* Sign Out */}
-              <button
-                type="button"
-                onClick={() => router.push("/")}
-                className="w-full flex items-center gap-3 px-5 py-3.5 text-sm font-bold uppercase tracking-wide text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
-              >
-                <FaSignOutAlt className="w-4 h-4" />
-                {t("account.signOut")}
-              </button>
-
-              {/* Delete Account */}
-              <button
-                type="button"
-                className="w-full flex items-center gap-3 px-5 py-3.5 text-sm font-bold uppercase tracking-wide text-red-500 hover:bg-red-50 transition-colors"
-              >
-                <FaTrashAlt className="w-4 h-4" />
-                {t("account.deleteAccount")}
-              </button>
-            </nav>
-          </aside>
-
-          {/* ── Content ── */}
-          <main className="flex-1 min-w-0">
-            {activeTab === "account" && <MyAccountTab t={t} />}
-            {activeTab === "address" && <AddressTab t={t} />}
-            {activeTab === "billing" && <BillingTab t={t} />}
-            {activeTab === "orders" && <OrdersTab t={t} />}
-          </main>
-        </div>
+            {/* ── Content ── */}
+            <main className="flex-1 min-w-0">
+              {activeTab === "account" && <MyAccountTab t={t} />}
+              {activeTab === "address" && <AddressTab t={t} />}
+              {activeTab === "billing" && <BillingTab t={t} />}
+              {activeTab === "orders" && <OrdersTab t={t} />}
+            </main>
+          </div>
+        )}
       </section>
 
       <ServicesSection />
