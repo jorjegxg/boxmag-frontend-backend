@@ -22,13 +22,17 @@ type BoxTypeProduct = {
   productName: string;
 };
 
+const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
+const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
+
 function buildProductDetailsHref(product: BoxTypeProduct): string {
   return `/products/${encodeURIComponent(product.boxTypeKey)}?itemNo=${encodeURIComponent(product.itemNo)}`;
 }
 
 export function Header() {
-  const { t, language } = useLanguage();
-  const totalItems = useCartStore((s) => s.totalItems);
+  const { t } = useLanguage();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const distinctItemTypes = useCartStore((s) => s.items.length);
   const subtotal = useCartStore((s) => s.subtotal);
   const [query, setQuery] = useState("");
   const [defaultBoxTypes, setDefaultBoxTypes] = useState<BoxType[]>([]);
@@ -79,6 +83,18 @@ export function Header() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const syncAuthState = () => {
+      const storedStatus = localStorage.getItem(AUTH_STORAGE_KEY);
+      const storedEmail = localStorage.getItem(AUTH_EMAIL_STORAGE_KEY);
+      setIsLoggedIn(storedStatus === "true" && Boolean(storedEmail?.trim()));
+    };
+
+    syncAuthState();
+    window.addEventListener("storage", syncAuthState);
+    return () => window.removeEventListener("storage", syncAuthState);
+  }, []);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -399,7 +415,7 @@ export function Header() {
                 className="h-6 w-6"
               />
               <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-my-red text-[10px] font-bold text-white">
-                {totalItems}
+                {distinctItemTypes}
               </span>
             </span>
             <span className="text-xs font-medium text-black">
@@ -420,24 +436,13 @@ export function Header() {
               height={64}
               className="h-6 w-6"
             />
-            {language === "ro" ? (
+            {!isLoggedIn ? (
               <>
-                <span className="text-xs font-medium text-black">
-                  {t("header.account")}
-                </span>
-                <span className="text-xs font-medium text-black">
-                  {t("header.user").toLowerCase()}
-                </span>
+                <span className="text-xs font-medium text-black">{t("header.signIn")}</span>
+                <span className="text-xs font-medium text-black">{t("header.register")}</span>
               </>
             ) : (
-              <>
-                <span className="text-xs font-medium text-black">
-                  {t("header.user")}
-                </span>
-                <span className="text-xs font-medium text-black">
-                  {t("header.account")}
-                </span>
-              </>
+              <span className="text-xs font-medium text-black">{t("header.userAccount")}</span>
             )}
           </Link>
         </div>

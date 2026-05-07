@@ -39,7 +39,6 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
   const cartItems = useCartStore((s) => s.items);
   const cartSubtotal = useCartStore((s) => s.subtotal);
-  const cartTotalItems = useCartStore((s) => s.totalItems);
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
     if (!value) return "http://localhost:3005";
@@ -263,7 +262,7 @@ export default function CheckoutPage() {
         <div className="flex items-center gap-2">
           <span className="font-bold text-xl">{t("checkout.shoppingCart")}</span>
           <span className="bg-my-red rounded-full w-6 h-6 flex items-center justify-center text-white text-sm font-semibold">
-            {cartTotalItems}
+            {cartItems.length}
           </span>
         </div>
         <div className="flex items-center gap-2">

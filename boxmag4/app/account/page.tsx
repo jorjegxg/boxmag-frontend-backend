@@ -626,13 +626,18 @@ function AddressTab({
 
 /* ─── Tab content: ORDERS ─────────────────────────────────── */
 function statusColor(status: string) {
-  switch (status) {
-    case "PROCESSING":
+  const normalized = status.trim().toLowerCase();
+  switch (normalized) {
+    case "processing":
+    case "in progress":
       return "text-yellow-600 bg-yellow-50";
-    case "SHIPPED":
+    case "shipped":
       return "text-blue-600 bg-blue-50";
-    case "COMPLETED":
+    case "completed":
+    case "done":
       return "text-green-600 bg-green-50";
+    case "new":
+      return "text-my-red bg-red-50";
     default:
       return "text-gray-600 bg-gray-50";
   }
