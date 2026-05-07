@@ -33,6 +33,7 @@ const saveBtnClass =
 
 const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
+const AUTH_CHANGED_EVENT = "boxmag-auth-changed";
 const isDevelopment = process.env.NODE_ENV === "development";
 
 type UserProfile = {
@@ -111,6 +112,7 @@ function LoginRequiredView({
 
       localStorage.setItem(AUTH_STORAGE_KEY, "true");
       localStorage.setItem(AUTH_EMAIL_STORAGE_KEY, normalizedEmail);
+      window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
       onLoginSuccess(normalizedEmail);
     } catch (loginError) {
       setError(
@@ -1091,6 +1093,7 @@ export default function AccountPage() {
                   onClick={() => {
                     localStorage.removeItem(AUTH_STORAGE_KEY);
                     localStorage.removeItem(AUTH_EMAIL_STORAGE_KEY);
+                    window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
                     setIsLoggedIn(false);
                     setLoggedInEmail("");
                     setAccountProfile({

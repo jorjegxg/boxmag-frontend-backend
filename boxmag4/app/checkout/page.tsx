@@ -391,7 +391,15 @@ export default function CheckoutPage() {
                 <button
                   key={address.id}
                   type="button"
-                  onClick={() => setSelectedAddressId(address.id)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const scrollY = window.scrollY;
+                    setSelectedAddressId(address.id);
+                    const btn = e.currentTarget as HTMLButtonElement;
+                    btn.blur();
+                    requestAnimationFrame(() => window.scrollTo(0, scrollY));
+                  }}
                   className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                     selectedAddressId === address.id
                       ? "border-my-red bg-red-50 text-my-red"

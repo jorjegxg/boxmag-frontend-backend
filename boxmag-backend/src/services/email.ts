@@ -43,3 +43,46 @@ export async function sendVerificationEmail(params: {
     `,
   });
 }
+
+export async function sendNewOrderNotificationEmail(params: {
+  orderId: number;
+  customerName: string;
+  customerEmail: string;
+  companyName: string;
+  quantity: number;
+  boxTypeName: string;
+  message: string;
+}): Promise<void> {
+  const orderNumber = `ORD-${String(params.orderId).padStart(4, "0")}`;
+  await transporter.sendMail({
+    from: env.emailFrom,
+    to: "comenzi@reko-packaging.ro",
+    subject: `Comanda noua ${orderNumber}`,
+    text: [
+      "A fost creata o comanda noua in platforma Boxmag.",
+      "",
+      `Numar comanda: ${orderNumber}`,
+      `Client: ${params.customerName}`,
+      `Companie: ${params.companyName}`,
+      `Email client: ${params.customerEmail}`,
+      `Box type: ${params.boxTypeName}`,
+      `Cantitate: ${params.quantity}`,
+      "",
+      "Mesaj client:",
+      params.message,
+    ].join("\n"),
+    html: `
+      <p>A fost creata o comanda noua in platforma <strong>Boxmag</strong>.</p>
+      <ul>
+        <li><strong>Numar comanda:</strong> ${orderNumber}</li>
+        <li><strong>Client:</strong> ${params.customerName}</li>
+        <li><strong>Companie:</strong> ${params.companyName}</li>
+        <li><strong>Email client:</strong> ${params.customerEmail}</li>
+        <li><strong>Box type:</strong> ${params.boxTypeName}</li>
+        <li><strong>Cantitate:</strong> ${params.quantity}</li>
+      </ul>
+      <p><strong>Mesaj client:</strong></p>
+      <p>${params.message.replace(/\n/g, "<br/>")}</p>
+    `,
+  });
+}

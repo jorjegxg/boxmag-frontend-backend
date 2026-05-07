@@ -24,6 +24,7 @@ type BoxTypeProduct = {
 
 const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
+const AUTH_CHANGED_EVENT = "boxmag-auth-changed";
 
 function buildProductDetailsHref(product: BoxTypeProduct): string {
   return `/products/${encodeURIComponent(product.boxTypeKey)}?itemNo=${encodeURIComponent(product.itemNo)}`;
@@ -91,9 +92,23 @@ export function Header() {
       setIsLoggedIn(storedStatus === "true" && Boolean(storedEmail?.trim()));
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        syncAuthState();
+      }
+    };
+
     syncAuthState();
     window.addEventListener("storage", syncAuthState);
-    return () => window.removeEventListener("storage", syncAuthState);
+    window.addEventListener(AUTH_CHANGED_EVENT, syncAuthState);
+    window.addEventListener("focus", syncAuthState);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("storage", syncAuthState);
+      window.removeEventListener(AUTH_CHANGED_EVENT, syncAuthState);
+      window.removeEventListener("focus", syncAuthState);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -442,7 +457,10 @@ export function Header() {
                 <span className="text-xs font-medium text-black">{t("header.register")}</span>
               </>
             ) : (
-              <span className="text-xs font-medium text-black">{t("header.userAccount")}</span>
+              <>
+                <span className="text-xs font-medium text-black">{t("header.user")}</span>
+                <span className="text-xs font-medium text-black">{t("header.account")}</span>
+              </>
             )}
           </Link>
         </div>

@@ -2,6 +2,10 @@ import { Router } from "express";
 import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { PoolConnection } from "mysql2/promise";
 import { mysqlPool } from "../db/mysql";
+import {
+  isEmailTransportConfigured,
+  sendNewOrderNotificationEmail,
+} from "../services/email";
 
 type CreateOrderPayload = {
   boxTypeId?: unknown;
@@ -342,6 +346,27 @@ ordersRouter.post("/", async (req, res) => {
     );
 
     await conn.commit();
+
+    if (isEmailTransportConfigured()) {
+      try {
+        const customerName = `${firstName} ${surname}`.trim();
+        await sendNewOrderNotificationEmail({
+          orderId,
+          customerName,
+          customerEmail: email,
+          companyName,
+          quantity,
+          boxTypeName,
+          message,
+        });
+      } catch (emailError) {
+        console.error("Order created, but failed to send internal order email", emailError);
+      }
+    } else {
+      console.warn(
+        "Order created but SMTP is not configured; internal order notification email skipped",
+      );
+    }
 
     res.status(201).json({
       ok: true,
