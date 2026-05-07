@@ -7,6 +7,7 @@ import { ordersRouter } from "./routes/orders.route";
 import { newsletterRouter } from "./routes/newsletter.route";
 import { authRouter } from "./routes/auth.route";
 import { addressesRouter } from "./routes/addresses.route";
+import { shippingMethodsRouter } from "./routes/shipping-methods.route";
 
 export const app = express();
 
@@ -30,4 +31,5 @@ app.use("/api/orders", ordersRouter);
 app.use("/api/addresses", addressesRouter);
 app.use("/api/newsletter", newsletterRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/shipping-methods", shippingMethodsRouter);
 

@@ -61,6 +61,15 @@ type AdminOrder = {
   country: string;
   createdAt: string;
 };
+type AdminShippingMethod = {
+  id: number;
+  key: string;
+  name: string;
+  etaText: string;
+  price: number;
+  isActive: boolean;
+  sortOrder: number;
+};
 type OrderStatusValue = "new" | "in progress" | "completed" | "done";
 const ORDER_STATUS_OPTIONS: OrderStatusValue[] = [
   "new",
@@ -92,6 +101,16 @@ export default function AdminPage() {
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
+  const [shippingMethods, setShippingMethods] = useState<AdminShippingMethod[]>([]);
+  const [isLoadingShippingMethods, setIsLoadingShippingMethods] = useState(true);
+  const [shippingMethodsError, setShippingMethodsError] = useState<string | null>(null);
+  const [updatingShippingMethodId, setUpdatingShippingMethodId] = useState<number | null>(null);
+  const [newShippingKey, setNewShippingKey] = useState("");
+  const [newShippingName, setNewShippingName] = useState("");
+  const [newShippingEtaText, setNewShippingEtaText] = useState("");
+  const [newShippingPrice, setNewShippingPrice] = useState("");
+  const [newShippingSortOrder, setNewShippingSortOrder] = useState("0");
+  const [newShippingIsActive, setNewShippingIsActive] = useState(true);
 
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -220,6 +239,37 @@ export default function AdminPage() {
     void loadOrders();
   }, [backendBaseUrl]);
 
+  const loadShippingMethods = async () => {
+    setIsLoadingShippingMethods(true);
+    setShippingMethodsError(null);
+    try {
+      const response = await fetch(`${backendBaseUrl}/api/shipping-methods?includeInactive=true`);
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        data?: AdminShippingMethod[];
+        message?: string;
+      };
+      if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+      }
+      setShippingMethods(
+        payload.data.sort((a, b) =>
+          a.sortOrder === b.sortOrder ? a.id - b.id : a.sortOrder - b.sortOrder,
+        ),
+      );
+    } catch (error) {
+      setShippingMethodsError(
+        error instanceof Error ? error.message : "Failed to load shipping methods",
+      );
+    } finally {
+      setIsLoadingShippingMethods(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadShippingMethods();
+  }, [backendBaseUrl]);
+
   const handleOrderStatusChange = async (
     orderId: number,
     nextStatus: OrderStatusValue,
@@ -252,6 +302,105 @@ export default function AdminPage() {
       );
     } finally {
       setUpdatingOrderId(null);
+    }
+  };
+
+  const handleAddShippingMethod = async () => {
+    const priceValue = Number(newShippingPrice);
+    const sortOrderValue = Number(newShippingSortOrder);
+    if (
+      !newShippingKey.trim() ||
+      !newShippingName.trim() ||
+      !newShippingEtaText.trim() ||
+      !Number.isFinite(priceValue) ||
+      priceValue < 0 ||
+      !Number.isFinite(sortOrderValue)
+    ) {
+      setShippingMethodsError("Please fill all shipping method fields correctly.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${backendBaseUrl}/api/shipping-methods`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          key: newShippingKey.trim().toLowerCase(),
+          name: newShippingName.trim(),
+          etaText: newShippingEtaText.trim(),
+          price: priceValue,
+          sortOrder: sortOrderValue,
+          isActive: newShippingIsActive,
+        }),
+      });
+      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+      }
+      setNewShippingKey("");
+      setNewShippingName("");
+      setNewShippingEtaText("");
+      setNewShippingPrice("");
+      setNewShippingSortOrder("0");
+      setNewShippingIsActive(true);
+      await loadShippingMethods();
+    } catch (error) {
+      setShippingMethodsError(
+        error instanceof Error ? error.message : "Failed to create shipping method",
+      );
+    }
+  };
+
+  const handleUpdateShippingMethod = async (method: AdminShippingMethod) => {
+    setUpdatingShippingMethodId(method.id);
+    try {
+      const response = await fetch(`${backendBaseUrl}/api/shipping-methods/${method.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          key: method.key,
+          name: method.name,
+          etaText: method.etaText,
+          price: method.price,
+          sortOrder: method.sortOrder,
+          isActive: method.isActive,
+        }),
+      });
+      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+      }
+      await loadShippingMethods();
+    } catch (error) {
+      setShippingMethodsError(
+        error instanceof Error ? error.message : "Failed to update shipping method",
+      );
+    } finally {
+      setUpdatingShippingMethodId(null);
+    }
+  };
+
+  const handleDeleteShippingMethod = async (shippingMethodId: number) => {
+    setUpdatingShippingMethodId(shippingMethodId);
+    try {
+      const response = await fetch(`${backendBaseUrl}/api/shipping-methods/${shippingMethodId}`, {
+        method: "DELETE",
+      });
+      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+      }
+      await loadShippingMethods();
+    } catch (error) {
+      setShippingMethodsError(
+        error instanceof Error ? error.message : "Failed to delete shipping method",
+      );
+    } finally {
+      setUpdatingShippingMethodId(null);
     }
   };
 
@@ -415,6 +564,219 @@ export default function AdminPage() {
       </section>
 
       <section className="w-full bg-white px-6 lg:px-20 pb-8">
+        <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden mb-8">
+          <SectionTitle
+            title="Shipping Methods"
+            subtitle="Checkout methods managed from admin"
+          />
+          <div className="p-6 lg:p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+              <Field
+                label="Key"
+                placeholder="standard"
+                value={newShippingKey}
+                onChange={setNewShippingKey}
+              />
+              <Field
+                label="Name"
+                placeholder="Standard Delivery"
+                value={newShippingName}
+                onChange={setNewShippingName}
+              />
+              <Field
+                label="ETA Text"
+                placeholder="Estimated 7-10 days"
+                value={newShippingEtaText}
+                onChange={setNewShippingEtaText}
+              />
+              <Field
+                label="Price"
+                placeholder="25"
+                value={newShippingPrice}
+                onChange={setNewShippingPrice}
+              />
+              <Field
+                label="Sort Order"
+                placeholder="1"
+                value={newShippingSortOrder}
+                onChange={setNewShippingSortOrder}
+              />
+              <label className="flex items-end gap-2">
+                <input
+                  type="checkbox"
+                  checked={newShippingIsActive}
+                  onChange={(event) => setNewShippingIsActive(event.target.checked)}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm font-semibold text-gray-800 pb-2">Active</span>
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => void handleAddShippingMethod()}
+                className="bg-my-yellow hover:bg-my-yellow-bright text-black font-semibold px-5 py-2.5 rounded-lg transition-colors"
+              >
+                Add shipping method
+              </button>
+            </div>
+            <div className="rounded-xl border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-my-light-gray2 text-gray-800">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold">Key</th>
+                      <th className="px-4 py-3 text-left font-semibold">Name</th>
+                      <th className="px-4 py-3 text-left font-semibold">ETA</th>
+                      <th className="px-4 py-3 text-left font-semibold">Price</th>
+                      <th className="px-4 py-3 text-left font-semibold">Sort</th>
+                      <th className="px-4 py-3 text-left font-semibold">Active</th>
+                      <th className="px-4 py-3 text-left font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoadingShippingMethods ? (
+                      <tr className="border-t border-gray-200">
+                        <td className="px-4 py-3 text-gray-500" colSpan={7}>
+                          Loading shipping methods...
+                        </td>
+                      </tr>
+                    ) : null}
+                    {!isLoadingShippingMethods && shippingMethods.length === 0 ? (
+                      <tr className="border-t border-gray-200">
+                        <td className="px-4 py-3 text-gray-500" colSpan={7}>
+                          No shipping methods found.
+                        </td>
+                      </tr>
+                    ) : null}
+                    {!isLoadingShippingMethods
+                      ? shippingMethods.map((method) => (
+                          <tr key={method.id} className="border-t border-gray-200">
+                            <td className="px-4 py-3">
+                              <input
+                                value={method.key}
+                                onChange={(event) =>
+                                  setShippingMethods((prev) =>
+                                    prev.map((item) =>
+                                      item.id === method.id
+                                        ? { ...item, key: event.target.value }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                                className="h-9 rounded-md border border-gray-300 bg-white px-2 text-xs"
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <input
+                                value={method.name}
+                                onChange={(event) =>
+                                  setShippingMethods((prev) =>
+                                    prev.map((item) =>
+                                      item.id === method.id
+                                        ? { ...item, name: event.target.value }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                                className="h-9 rounded-md border border-gray-300 bg-white px-2 text-xs"
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <input
+                                value={method.etaText}
+                                onChange={(event) =>
+                                  setShippingMethods((prev) =>
+                                    prev.map((item) =>
+                                      item.id === method.id
+                                        ? { ...item, etaText: event.target.value }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                                className="h-9 rounded-md border border-gray-300 bg-white px-2 text-xs"
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <input
+                                type="number"
+                                value={String(method.price)}
+                                onChange={(event) =>
+                                  setShippingMethods((prev) =>
+                                    prev.map((item) =>
+                                      item.id === method.id
+                                        ? { ...item, price: Number(event.target.value) || 0 }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                                className="h-9 w-24 rounded-md border border-gray-300 bg-white px-2 text-xs"
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <input
+                                type="number"
+                                value={String(method.sortOrder)}
+                                onChange={(event) =>
+                                  setShippingMethods((prev) =>
+                                    prev.map((item) =>
+                                      item.id === method.id
+                                        ? { ...item, sortOrder: Number(event.target.value) || 0 }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                                className="h-9 w-20 rounded-md border border-gray-300 bg-white px-2 text-xs"
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <input
+                                type="checkbox"
+                                checked={method.isActive}
+                                onChange={(event) =>
+                                  setShippingMethods((prev) =>
+                                    prev.map((item) =>
+                                      item.id === method.id
+                                        ? { ...item, isActive: event.target.checked }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                                className="h-4 w-4"
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  disabled={updatingShippingMethodId === method.id}
+                                  onClick={() => void handleUpdateShippingMethod(method)}
+                                  className="rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black hover:bg-my-yellow-bright disabled:opacity-60"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={updatingShippingMethodId === method.id}
+                                  onClick={() => void handleDeleteShippingMethod(method.id)}
+                                  className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      : null}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {shippingMethodsError ? (
+              <p className="text-sm text-red-600">{shippingMethodsError}</p>
+            ) : null}
+          </div>
+        </div>
         <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
           <SectionTitle
             title="Box Types Management"

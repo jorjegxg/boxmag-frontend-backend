@@ -41,11 +41,47 @@ type ManualAddress = {
 };
 
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
+const SHIPPING_METHODS_CACHE_KEY = "boxmag.checkout.shippingMethods.v1";
+const SHIPPING_METHODS_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
+
+type ShippingMethodOption = {
+  id: number;
+  key: string;
+  name: string;
+  etaText: string;
+  price: number;
+  isActive: boolean;
+  sortOrder: number;
+};
+
+const FALLBACK_SHIPPING_METHODS: ShippingMethodOption[] = [
+  {
+    id: 1,
+    key: "standard",
+    name: "Standard Delivery",
+    etaText: "Estimated 7-10 days",
+    price: 25,
+    isActive: true,
+    sortOrder: 1,
+  },
+  {
+    id: 2,
+    key: "express",
+    name: "Express Delivery",
+    etaText: "Estimated 2-4 days",
+    price: 40,
+    isActive: true,
+    sortOrder: 2,
+  },
+];
 
 export default function CheckoutPage() {
   const { t } = useLanguage();
   const [addressType, setAddressType] = useState<"company" | "another">("company");
-  const [shippingMethod, setShippingMethod] = useState<"standard" | "express">("standard");
+  const [shippingMethod, setShippingMethod] = useState<string>("standard");
+  const [shippingMethods, setShippingMethods] = useState<ShippingMethodOption[]>(
+    FALLBACK_SHIPPING_METHODS,
+  );
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
@@ -62,11 +98,79 @@ export default function CheckoutPage() {
   });
   const cartItems = useCartStore((s) => s.items);
   const cartSubtotal = useCartStore((s) => s.subtotal);
+  const cartTotalItems = useCartStore((s) => s.totalItems);
+  const clearCart = useCartStore((s) => s.clearCart);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [submitOrderMessage, setSubmitOrderMessage] = useState<string | null>(null);
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
     if (!value) return "http://localhost:3005";
     return value.endsWith("/") ? value.slice(0, -1) : value;
   }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    try {
+      const cached = localStorage.getItem(SHIPPING_METHODS_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached) as {
+          updatedAt?: number;
+          data?: ShippingMethodOption[];
+        };
+        if (
+          typeof parsed.updatedAt === "number" &&
+          Date.now() - parsed.updatedAt < SHIPPING_METHODS_CACHE_TTL_MS &&
+          Array.isArray(parsed.data) &&
+          parsed.data.length > 0
+        ) {
+          setShippingMethods(parsed.data);
+          if (!parsed.data.some((method) => method.key === shippingMethod)) {
+            setShippingMethod(parsed.data[0]!.key);
+          }
+        }
+      }
+    } catch (_error) {
+      // Ignore cache read errors and continue with network fetch.
+    }
+
+    const loadShippingMethods = async () => {
+      try {
+        const response = await fetch(`${backendBaseUrl}/api/shipping-methods`);
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          data?: ShippingMethodOption[];
+        };
+        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+          throw new Error("Failed to load shipping methods");
+        }
+
+        const nextMethods = payload.data
+          .filter((method) => method.isActive)
+          .sort((a, b) => a.sortOrder - b.sortOrder);
+        if (isCancelled || nextMethods.length === 0) return;
+
+        setShippingMethods(nextMethods);
+        if (!nextMethods.some((method) => method.key === shippingMethod)) {
+          setShippingMethod(nextMethods[0]!.key);
+        }
+        localStorage.setItem(
+          SHIPPING_METHODS_CACHE_KEY,
+          JSON.stringify({
+            updatedAt: Date.now(),
+            data: nextMethods,
+          }),
+        );
+      } catch (_error) {
+        if (isCancelled) return;
+      }
+    };
+
+    void loadShippingMethods();
+    return () => {
+      isCancelled = true;
+    };
+  }, [backendBaseUrl, shippingMethod]);
 
   useEffect(() => {
     const loggedInEmail = localStorage.getItem(AUTH_EMAIL_STORAGE_KEY) ?? "";
@@ -115,6 +219,128 @@ export default function CheckoutPage() {
 
   const selectedAddress =
     addresses.find((address) => address.id === selectedAddressId) ?? null;
+  const selectedShippingMethod =
+    shippingMethods.find((method) => method.key === shippingMethod) ??
+    shippingMethods[0] ??
+    FALLBACK_SHIPPING_METHODS[0];
+  const orderShipping = selectedShippingMethod?.price ?? 0;
+  const orderVat = +(cartSubtotal * (19 / 100)).toFixed(2);
+  const orderTotal = +(cartSubtotal + orderVat + orderShipping).toFixed(2);
+
+  const handlePlaceOrder = async () => {
+    if (cartItems.length === 0) {
+      setSubmitOrderMessage("Cart is empty.");
+      return;
+    }
+
+    const loggedInEmail = (localStorage.getItem(AUTH_EMAIL_STORAGE_KEY) ?? "").trim();
+    if (!loggedInEmail) {
+      setSubmitOrderMessage("Please log in before placing an order.");
+      return;
+    }
+
+    const activeAddress =
+      addressType === "another"
+        ? {
+            firstName: manualAddress.firstName.trim(),
+            lastName: manualAddress.lastName.trim(),
+            companyName: manualAddress.companyName.trim(),
+            phone: manualAddress.phone.trim(),
+            addressLine1: manualAddress.addressLine1.trim(),
+            postcode: manualAddress.postcode.trim(),
+            city: manualAddress.city.trim(),
+            country: manualAddress.country.trim(),
+          }
+        : {
+            firstName: selectedAddress?.firstName.trim() ?? "",
+            lastName: selectedAddress?.lastName.trim() ?? "",
+            companyName: selectedAddress?.companyName.trim() ?? "",
+            phone: selectedAddress?.phone.trim() ?? "",
+            addressLine1: selectedAddress?.addressLine1.trim() ?? "",
+            postcode: selectedAddress?.postcode.trim() ?? "",
+            city: selectedAddress?.city.trim() ?? "",
+            country: selectedAddress?.country.trim() ?? "",
+          };
+
+    if (
+      !activeAddress.firstName ||
+      !activeAddress.lastName ||
+      !activeAddress.addressLine1 ||
+      !activeAddress.postcode ||
+      !activeAddress.city ||
+      !activeAddress.country
+    ) {
+      setSubmitOrderMessage("Please complete shipping address details.");
+      return;
+    }
+
+    const orderMessageLines = [
+      "Checkout cart order",
+      "",
+      "Items:",
+      ...cartItems.map(
+        (item) =>
+          `- ${item.itemNo} | ${item.name} | qty ${item.quantity} | unit € ${item.unitPrice.toFixed(2)} | line € ${(item.unitPrice * item.quantity).toFixed(2)}`,
+      ),
+      "",
+      `Shipping method: ${selectedShippingMethod?.name ?? "N/A"} (${selectedShippingMethod?.etaText ?? "-"})`,
+      `Subtotal: € ${cartSubtotal.toFixed(2)}`,
+      `VAT (19%): € ${orderVat.toFixed(2)}`,
+      `Shipping: € ${orderShipping.toFixed(2)}`,
+      `Total: € ${orderTotal.toFixed(2)}`,
+    ];
+
+    setIsSubmittingOrder(true);
+    setSubmitOrderMessage(null);
+    try {
+      const response = await fetch(`${backendBaseUrl}/api/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          boxTypeName: "Checkout Cart Order",
+          cardboardType: "N/A",
+          cardboardColour: "N/A",
+          boxPrint: "N/A",
+          sizeType: "N/A",
+          transport: selectedShippingMethod?.name ?? "N/A",
+          quantity: cartTotalItems || 1,
+          message: orderMessageLines.join("\n"),
+          acceptedTerms: true,
+          firstName: activeAddress.firstName,
+          surname: activeAddress.lastName,
+          companyName:
+            activeAddress.companyName ||
+            `${activeAddress.firstName} ${activeAddress.lastName}`.trim(),
+          vatNumber: null,
+          email: loggedInEmail,
+          phone: activeAddress.phone || "N/A",
+          address: activeAddress.addressLine1,
+          postcode: activeAddress.postcode,
+          city: activeAddress.city,
+          country: activeAddress.country,
+          createAccount: false,
+          consentPhone: true,
+          consentEmail: true,
+          ftl: false,
+        }),
+      });
+      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+      }
+
+      clearCart();
+      setSubmitOrderMessage("Order placed successfully.");
+    } catch (error) {
+      setSubmitOrderMessage(
+        error instanceof Error ? error.message : "Failed to place order.",
+      );
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
   const defaultShippingAddress =
     addresses.find((address) => address.isDefaultShipping) ?? addresses[0] ?? null;
   const alternativeAddresses = addresses.filter(
@@ -175,7 +401,11 @@ export default function CheckoutPage() {
           selectedAddress={selectedAddress}
         />
         <BottomPadding />
-        <ShippingMethod shippingMethod={shippingMethod} setShippingMethod={setShippingMethod} />
+        <ShippingMethod
+          shippingMethod={shippingMethod}
+          setShippingMethod={setShippingMethod}
+          shippingMethods={shippingMethods}
+        />
         <BottomPadding />
         <hr className="border-gray-200" />
         <BottomPadding />
@@ -183,9 +413,12 @@ export default function CheckoutPage() {
         <CheckoutSummaryBar
           subtotal={cartSubtotal}
           vatPercent={19}
-          shipping={shippingMethod === "express" ? 40.0 : 25.0}
+          shipping={orderShipping}
           currency="€"
           onContinueHref="/boxesfetco"
+          onPlaceOrder={() => void handlePlaceOrder()}
+          isSubmittingOrder={isSubmittingOrder}
+          submitOrderMessage={submitOrderMessage}
         />
         <BottomPadding />
       </ResponsiveLayoutWithPadding>
@@ -206,12 +439,18 @@ export default function CheckoutPage() {
     shipping,
     currency = "€",
     onContinueHref = "/boxesfetco",
+    onPlaceOrder,
+    isSubmittingOrder,
+    submitOrderMessage,
   }: {
     subtotal: number;
     vatPercent: number;
     shipping: number;
     currency?: string;
     onContinueHref?: string;
+    onPlaceOrder: () => void;
+    isSubmittingOrder: boolean;
+    submitOrderMessage: string | null;
   }) {
     const vat = +(subtotal * (vatPercent / 100)).toFixed(2);
     const total = +(subtotal + vat + shipping).toFixed(2);
@@ -248,6 +487,19 @@ export default function CheckoutPage() {
                 <span className="text-base font-bold">
                   {money(total, currency)}
                 </span>
+              </div>
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={onPlaceOrder}
+                  disabled={isSubmittingOrder}
+                  className="inline-flex items-center justify-center rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-my-red/90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmittingOrder ? "Placing order..." : "Place order"}
+                </button>
+                {submitOrderMessage ? (
+                  <p className="mt-2 text-sm text-gray-700">{submitOrderMessage}</p>
+                ) : null}
               </div>
             </div>
           </div>
@@ -612,9 +864,11 @@ export default function CheckoutPage() {
   function ShippingMethod({
     shippingMethod,
     setShippingMethod,
+    shippingMethods,
   }: {
-    shippingMethod: "standard" | "express";
-    setShippingMethod: (v: "standard" | "express") => void;
+    shippingMethod: string;
+    setShippingMethod: (v: string) => void;
+    shippingMethods: ShippingMethodOption[];
   }) {
     return (
       <div className="w-full">
@@ -622,62 +876,41 @@ export default function CheckoutPage() {
           {t("checkout.shippingMethod")}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const scrollY = window.scrollY;
-              setShippingMethod("standard");
-              const btn = e.currentTarget as HTMLButtonElement;
-              btn.blur();
-              requestAnimationFrame(() => window.scrollTo(0, scrollY));
-            }}
-            className={`flex items-start gap-4 p-5 rounded-lg border-2 text-left transition-colors ${
-              shippingMethod === "standard"
-                ? "border-my-red bg-white"
-                : "border-gray-200 bg-white hover:border-gray-300"
-            }`}
-          >
-            <span className={`shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 ${shippingMethod === "standard" ? "border-my-red" : "border-gray-300"}`}>
-              {shippingMethod === "standard" && (
-                <span className="h-2.5 w-2.5 rounded-full bg-my-red" />
-              )}
-            </span>
-            <div>
-              <p className="font-bold text-black">{t("checkout.standardDelivery")}</p>
-              <p className="text-gray-500 text-sm mt-0.5">{t("checkout.standardEta")}</p>
-              <p className="font-bold text-black mt-2">USD 25$</p>
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const scrollY = window.scrollY;
-              setShippingMethod("express");
-              const btn = e.currentTarget as HTMLButtonElement;
-              btn.blur();
-              requestAnimationFrame(() => window.scrollTo(0, scrollY));
-            }}
-            className={`flex items-start gap-4 p-5 rounded-lg border-2 text-left transition-colors ${
-              shippingMethod === "express"
-                ? "border-my-red bg-white"
-                : "border-gray-200 bg-white hover:border-gray-300"
-            }`}
-          >
-            <span className={`shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 ${shippingMethod === "express" ? "border-my-red" : "border-gray-300"}`}>
-              {shippingMethod === "express" && (
-                <span className="h-2.5 w-2.5 rounded-full bg-my-red" />
-              )}
-            </span>
-            <div>
-              <p className="font-bold text-black">{t("checkout.expressDelivery")}</p>
-              <p className="text-gray-500 text-sm mt-0.5">{t("checkout.expressEta")}</p>
-              <p className="font-bold text-black mt-2">USD 40$</p>
-            </div>
-          </button>
+          {shippingMethods.map((method) => (
+            <button
+              key={method.id}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const scrollY = window.scrollY;
+                setShippingMethod(method.key);
+                const btn = e.currentTarget as HTMLButtonElement;
+                btn.blur();
+                requestAnimationFrame(() => window.scrollTo(0, scrollY));
+              }}
+              className={`flex items-start gap-4 p-5 rounded-lg border-2 text-left transition-colors ${
+                shippingMethod === method.key
+                  ? "border-my-red bg-white"
+                  : "border-gray-200 bg-white hover:border-gray-300"
+              }`}
+            >
+              <span
+                className={`shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+                  shippingMethod === method.key ? "border-my-red" : "border-gray-300"
+                }`}
+              >
+                {shippingMethod === method.key && (
+                  <span className="h-2.5 w-2.5 rounded-full bg-my-red" />
+                )}
+              </span>
+              <div>
+                <p className="font-bold text-black">{method.name}</p>
+                <p className="text-gray-500 text-sm mt-0.5">{method.etaText}</p>
+                <p className="font-bold text-black mt-2">€ {method.price.toFixed(2)}</p>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
     );
