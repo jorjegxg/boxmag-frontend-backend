@@ -44,6 +44,7 @@ type UserProfileRow = RowDataPacket & {
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
+  vat_number: string | null;
 };
 
 type PendingRegistrationRow = RowDataPacket & {
@@ -194,7 +195,7 @@ authRouter.get("/profile", async (req, res) => {
 
   try {
     const [rows] = await mysqlPool.execute<UserProfileRow[]>(
-      `SELECT email, first_name, last_name, phone
+      `SELECT email, first_name, last_name, phone, vat_number
        FROM users
        WHERE email = ?
        LIMIT 1`,
@@ -217,6 +218,7 @@ authRouter.get("/profile", async (req, res) => {
         firstName: user.first_name ?? "",
         lastName: user.last_name ?? "",
         phone: user.phone ?? "",
+        vatNumber: user.vat_number ?? "",
       },
     });
   } catch (error) {

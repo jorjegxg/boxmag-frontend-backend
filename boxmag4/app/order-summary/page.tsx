@@ -14,6 +14,7 @@ import useBusinessStore from "../business/store/business_store";
 import { useLanguage } from "../i18n/language-context";
 import useBusinessOrderStore from "../stores/business_order_store";
 import { useNotification } from "../global/components/notification-center";
+import europeanCountries from "./european-countries.json";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -22,6 +23,11 @@ const invalidInputClass =
 const VAT_NUMBER_REGEX = /^([A-Z]{2})?[A-Z0-9]{2,12}$/i;
 const shouldAutofillOrderSummary = ["dev", "development"].includes(
   process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() ?? "",
+);
+const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
+const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
+const EUROPEAN_COUNTRY_CODES = new Set(
+  europeanCountries.map((country) => country.code),
 );
 type RequiredFieldKey =
   | "firstName"
@@ -93,6 +99,7 @@ export default function OrderSummaryPage() {
     country: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasLoadedAccountDefaults, setHasLoadedAccountDefaults] = useState(false);
 
   const boxes = useBusinessStore((s) => s.boxes);
   const carboardTypes = useBusinessStore((s) => s.carboarbonTypeOptions);
@@ -101,6 +108,8 @@ export default function OrderSummaryPage() {
   const typeOfSizes = useBusinessStore((s) => s.typeOfSizes);
   const transportOptions = useBusinessStore((s) => s.transportOptions);
   const draft = useBusinessOrderStore((s) => s.draft);
+  const resetDraft = useBusinessOrderStore((s) => s.resetDraft);
+  const resetSelections = useBusinessStore((s) => s.resetSelections);
 
   const selectedBox = boxes.find((b) => b.isSelected);
   const selectedType = carboardTypes.find((t) => t.isSelected);
@@ -125,6 +134,110 @@ export default function OrderSummaryPage() {
     if (!value) return "http://localhost:3005";
     return value.endsWith("/") ? value.slice(0, -1) : value;
   })();
+
+  useEffect(() => {
+    if (hasLoadedAccountDefaults) return;
+
+    const isLoggedIn = localStorage.getItem(AUTH_STORAGE_KEY) === "true";
+    const loggedInEmail = localStorage.getItem(AUTH_EMAIL_STORAGE_KEY)?.trim() ?? "";
+    if (!isLoggedIn || !loggedInEmail) {
+      setHasLoadedAccountDefaults(true);
+      return;
+    }
+
+    let isCancelled = false;
+    const loadAccountDefaults = async () => {
+      try {
+        const [profileResponse, addressesResponse] = await Promise.all([
+          fetch(
+            `${backendBaseUrl}/api/auth/profile?email=${encodeURIComponent(loggedInEmail)}`,
+          ),
+          fetch(
+            `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
+          ),
+        ]);
+
+        const profilePayload = (await profileResponse.json()) as {
+          ok?: boolean;
+          data?: {
+            firstName?: string;
+            lastName?: string;
+            phone?: string;
+            email?: string;
+            vatNumber?: string;
+          };
+        };
+        const addressesPayload = (await addressesResponse.json()) as {
+          ok?: boolean;
+          data?: Array<{
+            companyName?: string;
+            addressLine1?: string;
+            addressLine2?: string;
+            postcode?: string;
+            city?: string;
+            country?: string;
+            isDefaultShipping?: boolean;
+            isDefaultBilling?: boolean;
+          }>;
+        };
+
+        if (isCancelled) return;
+
+        const addresses = Array.isArray(addressesPayload.data)
+          ? addressesPayload.data
+          : [];
+        const defaultAddress =
+          addresses.find((entry) => entry.isDefaultShipping) ??
+          addresses.find((entry) => entry.isDefaultBilling) ??
+          addresses[0] ??
+          null;
+
+        const normalizeCountry = (value: string | undefined): string => {
+          const normalized = (value ?? "").trim().toUpperCase();
+          if (EUROPEAN_COUNTRY_CODES.has(normalized)) {
+            return normalized;
+          }
+          return "";
+        };
+
+        if (profileResponse.ok && profilePayload.ok === true && profilePayload.data) {
+          setFirstName((prev) => prev || String(profilePayload.data?.firstName ?? ""));
+          setSurname((prev) => prev || String(profilePayload.data?.lastName ?? ""));
+          setPhone((prev) => prev || String(profilePayload.data?.phone ?? ""));
+          setEmail((prev) => prev || String(profilePayload.data?.email ?? loggedInEmail));
+          setVatNumber((prev) => prev || String(profilePayload.data?.vatNumber ?? ""));
+        } else {
+          setEmail((prev) => prev || loggedInEmail);
+        }
+
+        if (defaultAddress) {
+          setCompanyName((prev) => prev || String(defaultAddress.companyName ?? ""));
+          setAddress((prev) =>
+            prev ||
+            [defaultAddress.addressLine1, defaultAddress.addressLine2]
+              .filter(Boolean)
+              .join(", "),
+          );
+          setPostcode((prev) => prev || String(defaultAddress.postcode ?? ""));
+          setCity((prev) => prev || String(defaultAddress.city ?? ""));
+          setCountry((prev) => prev || normalizeCountry(defaultAddress.country));
+        }
+      } catch (_error) {
+        if (!isCancelled) {
+          setEmail((prev) => prev || loggedInEmail);
+        }
+      } finally {
+        if (!isCancelled) {
+          setHasLoadedAccountDefaults(true);
+        }
+      }
+    };
+
+    void loadAccountDefaults();
+    return () => {
+      isCancelled = true;
+    };
+  }, [backendBaseUrl, hasLoadedAccountDefaults]);
 
   useEffect(() => {
     if (!hasRequiredOrderData) {
@@ -291,6 +404,8 @@ export default function OrderSummaryPage() {
         type: "success",
         message: "Order sent successfully.",
       });
+      resetSelections();
+      resetDraft();
       router.push("/");
     } catch (error) {
       notify({
@@ -464,13 +579,11 @@ export default function OrderSummaryPage() {
                   }
                 }} className={requiredFieldErrors.country ? invalidInputClass : inputClass}>
                   <option value="">{t("orderSummary.country")}</option>
-                  <option value="RO">Romania</option>
-                  <option value="DE">Germany</option>
-                  <option value="FR">France</option>
-                  <option value="IT">Italy</option>
-                  <option value="ES">Spain</option>
-                  <option value="NL">Netherlands</option>
-                  <option value="OTHER">Other</option>
+                  {europeanCountries.map((countryOption) => (
+                    <option key={countryOption.code} value={countryOption.code}>
+                      {countryOption.name}
+                    </option>
+                  ))}
                 </select>
                 {requiredFieldErrors.country ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.countryRequired")}</p> : null}
               </div>

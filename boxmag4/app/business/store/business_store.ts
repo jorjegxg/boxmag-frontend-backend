@@ -36,6 +36,7 @@ type BusinessState = {
 
     transportOptions: TransportOption[];
     confirmTransportOption: (id: number) => void;
+    resetSelections: () => void;
 };
 
 const useBusinessStore = create<BusinessState>((set) => ({
@@ -138,7 +139,18 @@ const useBusinessStore = create<BusinessState>((set) => ({
         set((state) => ({
             transportOptions: state.transportOptions.map((option) => option.id === id ? ({...option, isSelected : true}) : ({...option, isSelected : false})  )
         }));
-    }
+    },
+    resetSelections: () => {
+        set((state) => ({
+            boxes: state.boxes.map((box) => ({ ...box, isSelected: false })),
+            carboarbonTypeOptions: state.carboarbonTypeOptions.map((option) => ({ ...option, isSelected: false })),
+            boxColorOptions: state.boxColorOptions.map((option) => ({ ...option, isSelected: false })),
+            boxPrintOptions: state.boxPrintOptions.map((option) => ({ ...option, isSelected: false })),
+            typeOfSizes: state.typeOfSizes.map((option) => ({ ...option, isSelected: false })),
+            boxSizes: state.boxSizes.map((option) => ({ ...option, isSelected: false })),
+            transportOptions: state.transportOptions.map((option) => ({ ...option, isSelected: false })),
+        }));
+    },
 }));
 
 export default useBusinessStore;
