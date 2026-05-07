@@ -324,7 +324,7 @@ authRouter.post("/register", async (req, res) => {
     );
 
     const verifyUrl =
-      `${env.backendPublicUrl.replace(/\/$/, "")}/api/auth/verify-email` +
+      `${env.frontendBaseUrl.replace(/\/$/, "")}/verify-email` +
       `?token=${encodeURIComponent(verificationToken)}`;
 
     await sendVerificationEmail({

@@ -13,6 +13,8 @@ import {
   FaMapMarkerAlt,
   FaBoxOpen,
   FaSignOutAlt,
+  FaEye,
+  FaEyeSlash,
 } from "react-icons/fa";
 
 type Tab = "account" | "address" | "orders";
@@ -74,6 +76,7 @@ function LoginRequiredView({
     isDevelopment ? "customer.demo@boxmag.com" : "",
   );
   const [password, setPassword] = useState(isDevelopment ? "dummy123" : "");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -145,15 +148,25 @@ function LoginRequiredView({
           <label htmlFor="account-login-password" className="mb-1 block text-xs font-semibold uppercase text-gray-500">
             {t("account.password")}
           </label>
-          <input
-            id="account-login-password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={inputClass}
-            placeholder="Password"
-            required
-          />
+          <div className="relative">
+            <input
+              id="account-login-password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`${inputClass} pr-12`}
+              placeholder="Password"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
         {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
         <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">

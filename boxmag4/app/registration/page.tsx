@@ -7,6 +7,7 @@ import { ServicesSection } from "../global/components/services-section";
 import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { FaCheckCircle, FaUserPlus } from "react-icons/fa";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -36,6 +37,8 @@ export default function RegistrationPage() {
   } | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const backendBaseUrl = React.useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -162,11 +165,48 @@ export default function RegistrationPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="reg-password" className="block text-sm font-semibold text-gray-800 mb-1">Password *</label>
-                <input id="reg-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className={inputClass} required minLength={6} />
+                <div className="relative">
+                  <input
+                    id="reg-password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Password"
+                    className={`${inputClass} pr-12`}
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label htmlFor="reg-confirm" className="block text-sm font-semibold text-gray-800 mb-1">Confirm Password *</label>
-                <input id="reg-confirm" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm Password" className={inputClass} required />
+                <div className="relative">
+                  <input
+                    id="reg-confirm"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm Password"
+                    className={`${inputClass} pr-12`}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  >
+                    {showConfirmPassword ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
