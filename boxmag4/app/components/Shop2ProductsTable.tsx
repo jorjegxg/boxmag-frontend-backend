@@ -190,6 +190,11 @@ export function Shop2ProductsTable() {
         <tbody className="bg-[#f2f2f2]">
           {rows.map((row) => (
             <tr key={row.id} className="text-black">
+              {(() => {
+                const qtyToAdd = Number(row.qty);
+                const canAddToCart = Number.isFinite(qtyToAdd) && qtyToAdd > 0;
+                return (
+                  <>
               <td className="border border-[#d9d9d9] px-2 py-3">{row.itemNo}</td>
               <td className="border border-[#d9d9d9] px-2 py-3 font-semibold text-[11px] leading-tight">
                 {row.name}
@@ -224,13 +229,16 @@ export function Shop2ProductsTable() {
                   <button
                     className="h-6 w-6 rounded-md bg-[#f0ab3c] flex items-center justify-center"
                     aria-label="Add to cart"
+                    disabled={!canAddToCart}
                     onClick={() =>
-                      addCartItem({
-                        itemNo: row.itemNo,
-                        name: row.name,
-                        unitPrice: getPriceByName(row.prices, "100")?.withoutTax ?? 0,
-                        quantity: row.qty > 0 ? row.qty : 1,
-                      })
+                      canAddToCart
+                        ? addCartItem({
+                            itemNo: row.itemNo,
+                            name: row.name,
+                            unitPrice: getPriceByName(row.prices, "100")?.withoutTax ?? 0,
+                            quantity: qtyToAdd,
+                          })
+                        : undefined
                     }
                   >
                     <FaShoppingCart className="text-[11px]" />
@@ -242,6 +250,9 @@ export function Shop2ProductsTable() {
                   +{row.palletPcs}
                 </span>
               </td>
+                  </>
+                );
+              })()}
             </tr>
           ))}
         </tbody>

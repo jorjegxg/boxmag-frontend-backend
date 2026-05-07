@@ -34,5 +34,6 @@ export interface Product {
   weightPieceGr: number
   weightPalletKg: number
   amountQtyInPcs: number
+  defaultAmountQtyInPcs?: number
   palletPcs: number
 }

@@ -8,6 +8,7 @@ type TableStoreType = {
   loadProducts: (args: { backendBaseUrl: string; boxTypeId: number }) => Promise<void>;
   increment: (itemNo: string) => void;
   decrement: (itemNo: string) => void;
+  resetAmountQty: (itemNo: string) => void;
 };
 const incrementNumber = 20;
 const configuredTaxPercent = Number(process.env.NEXT_PUBLIC_TAX_PERCENT ?? "21");
@@ -49,6 +50,7 @@ const useTableEComStore = create<TableStoreType>((set) => ({
           weightPieceGr: Number(row.weightPieceGr ?? 0),
           weightPalletKg: Number(row.weightPalletKg ?? 0),
           amountQtyInPcs: Number(row.amountQtyInPcs ?? 0),
+          defaultAmountQtyInPcs: Number(row.amountQtyInPcs ?? 0),
           palletPcs: Number(row.palletPcs ?? 0),
         } satisfies Product;
       });
@@ -82,6 +84,17 @@ const useTableEComStore = create<TableStoreType>((set) => ({
                 el.amountQtyInPcs - incrementNumber >= 0
                   ? el.amountQtyInPcs - incrementNumber
                   : 0,
+            }
+          : el
+      ),
+    })),
+  resetAmountQty: (itemNo: string) =>
+    set((state) => ({
+      products: state.products.map((el) =>
+        el.itemNo == itemNo
+          ? {
+              ...el,
+              amountQtyInPcs: el.defaultAmountQtyInPcs ?? el.amountQtyInPcs,
             }
           : el
       ),

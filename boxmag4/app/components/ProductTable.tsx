@@ -5,6 +5,7 @@ import { Product } from "../types/product";
 import { useLanguage } from "../i18n/language-context";
 import { useEffect, useMemo } from "react";
 import { useCartStore } from "../stores/cart_store";
+import { useNotification } from "../global/components/notification-center";
 
 export function ProductsTable() {
   const { t } = useLanguage();
@@ -14,7 +15,9 @@ export function ProductsTable() {
   const loadProducts = useTableEComStore((s) => s.loadProducts);
   const incrementProducts = useTableEComStore((s) => s.increment);
   const decrementProducts = useTableEComStore((s) => s.decrement);
+  const resetAmountQty = useTableEComStore((s) => s.resetAmountQty);
   const addCartItem = useCartStore((s) => s.addItem);
+  const { notify } = useNotification();
 
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -54,6 +57,15 @@ export function ProductsTable() {
         ) : null}
         {products.map((product: Product) => (
           <tr key={product.itemNo} className="hover:bg-my-light-gray">
+            {/*
+              Add-to-cart must use exactly the value shown in "Amount QTY in pcs".
+            */}
+            {(() => {
+              const qtyToAdd = Number(product.amountQtyInPcs);
+              const canAddToCart = Number.isFinite(qtyToAdd) && qtyToAdd > 0;
+              const basePrice = product.prices[0]?.withoutTax ?? 0;
+              return (
+                <>
             <td className="px-3 py-2 font-medium">{product.itemNo}</td>
             <td className="px-3 py-2">{product.name}</td>
             <td className="px-3 py-2">{product.internalDimensionsMM.l}</td>
@@ -114,15 +126,22 @@ export function ProductsTable() {
                 <span>{product.amountQtyInPcs}</span>
                 <span>
                   <button
+                    disabled={!canAddToCart}
                     onClick={() => {
-                      const basePrice = product.prices[0]?.withoutTax ?? 0;
+                      if (!canAddToCart) return;
                       addCartItem({
                         itemNo: product.itemNo,
                         name: product.name,
                         unitPrice: basePrice,
-                        quantity: product.amountQtyInPcs > 0 ? product.amountQtyInPcs : 1,
+                        quantity: qtyToAdd,
                       });
+                      notify({
+                        type: "success",
+                        message: `Added ${qtyToAdd} pcs to cart.`,
+                      });
+                      resetAmountQty(product.itemNo);
                     }}
+                    className={canAddToCart ? "" : "opacity-50 cursor-not-allowed"}
                   >
                     <FaShoppingCart />
                   </button>
@@ -136,6 +155,9 @@ export function ProductsTable() {
                 +{product.palletPcs}
               </div>
             </td>
+                </>
+              );
+            })()}
           </tr>
         ))}
       </tbody>
