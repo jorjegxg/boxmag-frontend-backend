@@ -28,6 +28,18 @@ type UserAddress = {
   isDefaultShipping: boolean;
 };
 
+type ManualAddress = {
+  firstName: string;
+  lastName: string;
+  companyName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  postcode: string;
+  city: string;
+  country: string;
+};
+
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 
 export default function CheckoutPage() {
@@ -37,6 +49,17 @@ export default function CheckoutPage() {
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [manualAddress, setManualAddress] = useState<ManualAddress>({
+    firstName: "",
+    lastName: "",
+    companyName: "",
+    phone: "",
+    addressLine1: "",
+    addressLine2: "",
+    postcode: "",
+    city: "",
+    country: "",
+  });
   const cartItems = useCartStore((s) => s.items);
   const cartSubtotal = useCartStore((s) => s.subtotal);
   const backendBaseUrl = useMemo(() => {
@@ -92,6 +115,30 @@ export default function CheckoutPage() {
 
   const selectedAddress =
     addresses.find((address) => address.id === selectedAddressId) ?? null;
+  const defaultShippingAddress =
+    addresses.find((address) => address.isDefaultShipping) ?? addresses[0] ?? null;
+  const alternativeAddresses = addresses.filter(
+    (address) => address.id !== defaultShippingAddress?.id,
+  );
+
+  useEffect(() => {
+    if (addresses.length === 0) {
+      setSelectedAddressId(null);
+      return;
+    }
+
+    if (addressType === "company") {
+      setSelectedAddressId(defaultShippingAddress?.id ?? null);
+      return;
+    }
+
+    setSelectedAddressId(null);
+  }, [
+    addressType,
+    addresses,
+    alternativeAddresses,
+    defaultShippingAddress,
+  ]);
 
   return (
     <div>
@@ -343,6 +390,39 @@ export default function CheckoutPage() {
             <div className="flex-1 p-6 flex flex-col justify-center">
               {isLoadingAddresses ? (
                 <p className="text-sm text-gray-600">Loading your addresses...</p>
+              ) : addressType === "another" ? (
+                <>
+                  <p className="font-bold text-black">
+                    {[manualAddress.firstName, manualAddress.lastName]
+                      .filter(Boolean)
+                      .join(" ")
+                      .trim() || "New address"}
+                  </p>
+                  {manualAddress.companyName ? (
+                    <p className="text-gray-600 text-sm mt-1">{manualAddress.companyName}</p>
+                  ) : null}
+                  {manualAddress.addressLine1 ? (
+                    <p className="text-gray-600 text-sm mt-1">{manualAddress.addressLine1}</p>
+                  ) : (
+                    <p className="text-gray-600 text-sm mt-1">
+                      Fill the form below with a new shipping address.
+                    </p>
+                  )}
+                  {manualAddress.addressLine2 ? (
+                    <p className="text-gray-600 text-sm">{manualAddress.addressLine2}</p>
+                  ) : null}
+                  {(manualAddress.postcode || manualAddress.city) && (
+                    <p className="text-gray-600 text-sm">
+                      {manualAddress.postcode} {manualAddress.city}
+                    </p>
+                  )}
+                  {manualAddress.country ? (
+                    <p className="text-gray-600 text-sm">{manualAddress.country}</p>
+                  ) : null}
+                  {manualAddress.phone ? (
+                    <p className="text-gray-600 text-sm mt-2">Tel: {manualAddress.phone}</p>
+                  ) : null}
+                </>
               ) : !selectedAddress ? (
                 <>
                   <p className="font-bold text-black">No address selected</p>
@@ -385,45 +465,108 @@ export default function CheckoutPage() {
           <p className="text-my-red font-semibold text-sm flex items-center gap-2">
             <span>•</span> {t("checkout.selectAddress")}
           </p>
-          {addresses.length > 0 ? (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {addresses.map((address) => (
-                <button
-                  key={address.id}
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const scrollY = window.scrollY;
-                    setSelectedAddressId(address.id);
-                    const btn = e.currentTarget as HTMLButtonElement;
-                    btn.blur();
-                    requestAnimationFrame(() => window.scrollTo(0, scrollY));
-                  }}
-                  className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                    selectedAddressId === address.id
-                      ? "border-my-red bg-red-50 text-my-red"
-                      : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
-                  }`}
-                >
-                  <p className="font-semibold">
-                    {address.label || `${address.firstName} ${address.lastName}`}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {address.city}, {address.country}
-                  </p>
-                </button>
-              ))}
+          {addressType === "company" ? (
+            <p className="text-sm text-gray-600">
+              Company address uses your default shipping address.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <input
+                type="text"
+                value={manualAddress.firstName}
+                onChange={(e) =>
+                  setManualAddress((prev) => ({ ...prev, firstName: e.target.value }))
+                }
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+                placeholder="First name"
+              />
+              <input
+                type="text"
+                value={manualAddress.lastName}
+                onChange={(e) =>
+                  setManualAddress((prev) => ({ ...prev, lastName: e.target.value }))
+                }
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+                placeholder="Last name"
+              />
+              <input
+                type="text"
+                value={manualAddress.companyName}
+                onChange={(e) =>
+                  setManualAddress((prev) => ({ ...prev, companyName: e.target.value }))
+                }
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red sm:col-span-2"
+                placeholder="Company name (optional)"
+              />
+              <input
+                type="text"
+                value={manualAddress.addressLine1}
+                onChange={(e) =>
+                  setManualAddress((prev) => ({ ...prev, addressLine1: e.target.value }))
+                }
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red sm:col-span-2"
+                placeholder="Address line 1"
+              />
+              <input
+                type="text"
+                value={manualAddress.addressLine2}
+                onChange={(e) =>
+                  setManualAddress((prev) => ({ ...prev, addressLine2: e.target.value }))
+                }
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red sm:col-span-2"
+                placeholder="Address line 2 (optional)"
+              />
+              <input
+                type="text"
+                value={manualAddress.postcode}
+                onChange={(e) =>
+                  setManualAddress((prev) => ({ ...prev, postcode: e.target.value }))
+                }
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+                placeholder="Postcode"
+              />
+              <input
+                type="text"
+                value={manualAddress.city}
+                onChange={(e) =>
+                  setManualAddress((prev) => ({ ...prev, city: e.target.value }))
+                }
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+                placeholder="City"
+              />
+              <input
+                type="text"
+                value={manualAddress.country}
+                onChange={(e) =>
+                  setManualAddress((prev) => ({ ...prev, country: e.target.value }))
+                }
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+                placeholder="Country"
+              />
+              <input
+                type="tel"
+                value={manualAddress.phone}
+                onChange={(e) =>
+                  setManualAddress((prev) => ({ ...prev, phone: e.target.value }))
+                }
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+                placeholder="Phone"
+              />
             </div>
-          ) : null}
+          )}
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
+                const scrollY = window.scrollY;
                 setAddressType("company");
                 const btn = e.currentTarget as HTMLButtonElement;
-                requestAnimationFrame(() => btn.blur());
+                requestAnimationFrame(() => {
+                  btn.blur();
+                  window.scrollTo(0, scrollY);
+                });
               }}
               className={`px-4 py-2 rounded-lg border-2 font-semibold text-sm transition-colors ${
                 addressType === "company"
@@ -437,9 +580,14 @@ export default function CheckoutPage() {
               type="button"
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
+                const scrollY = window.scrollY;
                 setAddressType("another");
                 const btn = e.currentTarget as HTMLButtonElement;
-                requestAnimationFrame(() => btn.blur());
+                requestAnimationFrame(() => {
+                  btn.blur();
+                  window.scrollTo(0, scrollY);
+                });
               }}
               className={`px-4 py-2 rounded-lg border-2 font-semibold text-sm transition-colors ${
                 addressType === "another"
