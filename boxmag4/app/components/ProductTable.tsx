@@ -7,7 +7,7 @@ import { useEffect, useMemo } from "react";
 import { useCartStore } from "../stores/cart_store";
 import { useNotification } from "../global/components/notification-center";
 
-export function ProductsTable() {
+export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
   const { t } = useLanguage();
   const products = useTableEComStore((s) => s.products);
   const isLoading = useTableEComStore((s) => s.isLoading);
@@ -26,8 +26,8 @@ export function ProductsTable() {
   }, []);
 
   useEffect(() => {
-    void loadProducts({ backendBaseUrl, boxTypeId: 1 });
-  }, [backendBaseUrl, loadProducts]);
+    void loadProducts({ backendBaseUrl, boxTypeId });
+  }, [backendBaseUrl, boxTypeId, loadProducts]);
 
   return (
     <div className="overflow-x-auto rounded-xl border border-my-light-gray">
@@ -132,6 +132,7 @@ export function ProductsTable() {
                       addCartItem({
                         itemNo: product.itemNo,
                         name: product.name,
+                        imageUrl: product.imageUrl,
                         unitPrice: basePrice,
                         quantity: qtyToAdd,
                       });

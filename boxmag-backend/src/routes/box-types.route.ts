@@ -55,6 +55,9 @@ type BoxTypeProductPriceRow = RowDataPacket & {
   price_name: string;
   price_without_tax: string;
 };
+type BoxTypePrimaryImageRow = RowDataPacket & {
+  url: string;
+};
 
 export const boxTypesRouter = Router();
 
@@ -350,6 +353,16 @@ boxTypesRouter.get("/:id/products", async (req, res) => {
   }
 
   try {
+    const [imageRows] = await mysqlPool.query<BoxTypePrimaryImageRow[]>(
+      `SELECT url
+       FROM box_type_images
+       WHERE box_type_id = ?
+       ORDER BY is_primary DESC, sort_order ASC, id ASC
+       LIMIT 1`,
+      [boxTypeId]
+    );
+    const primaryImageUrl = imageRows[0]?.url ?? null;
+
     const [productRows] = await mysqlPool.query<BoxTypeProductRow[]>(
       `SELECT id, box_type_id, item_no, product_name, internal_l_mm, internal_w_mm, internal_h_mm,
               quality_cardboard, pallet_l_cm, pallet_w_cm, pallet_h_cm, weight_piece_gr, weight_pallet_kg,
@@ -413,6 +426,7 @@ boxTypesRouter.get("/:id/products", async (req, res) => {
         weightPalletKg: Number(row.weight_pallet_kg),
         amountQtyInPcs: row.amount_qty_in_pcs,
         palletPcs: row.pallet_pcs,
+        imageUrl: primaryImageUrl,
         prices: pricesByProductId.get(row.id) ?? [],
       })),
     });

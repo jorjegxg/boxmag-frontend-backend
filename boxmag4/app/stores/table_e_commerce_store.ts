@@ -31,6 +31,7 @@ const useTableEComStore = create<TableStoreType>((set) => ({
         return {
           itemNo: String(row.itemNo ?? ""),
           name: String(row.productName ?? ""),
+          imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : undefined,
           internalDimensionsMM: {
             l: Number(row.internalDimensionsMM?.l ?? 0),
             w: Number(row.internalDimensionsMM?.w ?? 0),

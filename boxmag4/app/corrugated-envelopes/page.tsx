@@ -1,6 +1,6 @@
 "use client";
 
-import { Shop2ProductsTable } from "../components/Shop2ProductsTable";
+import { ProductsTable } from "../components/ProductTable";
 import { B2b } from "../global/components/b2b";
 import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
@@ -133,7 +133,7 @@ export default function CorrugatedEnvelopesPage() {
             BUSSINES TO SEND PRODUCTS WITH POST VIA COURIER.
           </h1>
           <div className="-mx-4 sm:mx-0 min-w-0">
-            <Shop2ProductsTable />
+            <ProductsTable boxTypeId={9} />
             <p className="mt-5 text-sm text-gray-500">
               Showing 1-5 of 5 item(s)
             </p>

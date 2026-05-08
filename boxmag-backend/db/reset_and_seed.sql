@@ -219,29 +219,6 @@ VALUES
   (8, 'Height Adjustable Shipping Box - Fefco 710, B Wave', 'height-adjustable-shipping-box-fefco-710', 1),
   (9, 'Corrugated cardboard envelope', 'corrugated-cardboard-envelope', 1);
 
-INSERT INTO users
-  (email, password_hash, first_name, last_name, company_name, vat_number, phone, email_verified_at, role, is_active)
-VALUES
-  ('customer.demo@boxmag.com', 'boxmag-demo-salt:1e0226bf74cc9428fcbc486cdb7e404d60869808d61dc3a1856926ebc449c1755bd11bfcb33ee61beb3b5dd38ca86adda78c2a7bd7f24d50b5414bace188844d', 'Demo', 'Customer', 'Boxmag Demo SRL', 'RO12345678', '+40 700 000 000', CURRENT_TIMESTAMP, 'customer', 1);
-
-INSERT INTO addresses
-  (user_id, label, company_name, first_name, last_name, phone, address_line_1, postcode, city, country, is_default_billing, is_default_shipping)
-VALUES
-  (1, 'Primary', 'Boxmag Demo SRL', 'Demo', 'Customer', '+40 700 000 000', 'Str. Exemplu 10', '010101', 'Bucuresti', 'Romania', 1, 1),
-  (1, 'Warehouse', 'Boxmag Demo SRL', 'Demo', 'Customer', '+40 700 111 222', 'Bd. Industriilor 24', '500500', 'Brasov', 'Romania', 0, 1);
-
-INSERT INTO orders
-  (user_id, box_type_id, box_type_name, cardboard_type, cardboard_colour, box_print, length_mm, width_mm, height_mm, size_type, transport, quantity, ftl, attachment_name, message, accepted_terms, status)
-VALUES
-  (1, 1, 'Boxfix, E-commerce Boxes Fefco 703 - B Wave', '1.21B-31', 'Brown', 'No print', 215, 155, 110, 'standard', 'courier', 200, 0, NULL, 'Please deliver in the first part of the day.', 1, 'in progress'),
-  (1, 4, 'Shipping Box - Fefco 427 (Size: 343X245X47 mm) - B Wave', '1.21B-31', 'White', 'Flexo 1 color', 343, 245, 47, 'fixed', 'pallet', 100, 0, NULL, 'Fragile products, handle with care.', 1, 'completed');
-
-INSERT INTO contacts
-  (order_id, first_name, surname, company_name, vat_number, email, phone, address, postcode, city, country, create_account, consent_phone, consent_email)
-VALUES
-  (1, 'Demo', 'Customer', 'Boxmag Demo SRL', 'RO12345678', 'customer.demo@boxmag.com', '+40 700 000 000', 'Str. Exemplu 10', '010101', 'Bucuresti', 'Romania', 1, 1, 1),
-  (2, 'Demo', 'Customer', 'Boxmag Demo SRL', 'RO12345678', 'customer.demo@boxmag.com', '+40 700 000 000', 'Bd. Industriilor 24', '500500', 'Brasov', 'Romania', 1, 1, 1);
-
 INSERT INTO shipping_methods
   (method_key, name, eta_text, price, is_active, sort_order)
 VALUES

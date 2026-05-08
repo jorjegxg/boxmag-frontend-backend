@@ -27,6 +27,7 @@ export interface PalletPriceTier {
 export interface Product {
   itemNo: string
   name: string
+  imageUrl?: string
   internalDimensionsMM: DimensionsMM
   qualityCardboard: string
   palletDimensionsCM: PalletDimensionsCM

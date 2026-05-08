@@ -14,6 +14,34 @@ SET @demo_user_id := (
   LIMIT 1
 );
 
+DELETE FROM addresses
+WHERE user_id = @demo_user_id
+  AND label IN ('Primary', 'Warehouse');
+
+INSERT INTO addresses
+  (
+    user_id, label, company_name, first_name, last_name, phone,
+    address_line_1, address_line_2, postcode, city, country,
+    is_default_billing, is_default_shipping
+  )
+SELECT
+  @demo_user_id, 'Primary', 'Boxmag Demo SRL', 'Demo', 'Customer', '+40 700 000 000',
+  'Str. Exemplu 10', NULL, '010101', 'Bucuresti', 'Romania',
+  1, 1
+WHERE @demo_user_id IS NOT NULL;
+
+INSERT INTO addresses
+  (
+    user_id, label, company_name, first_name, last_name, phone,
+    address_line_1, address_line_2, postcode, city, country,
+    is_default_billing, is_default_shipping
+  )
+SELECT
+  @demo_user_id, 'Warehouse', 'Boxmag Demo SRL', 'Demo', 'Customer', '+40 700 111 222',
+  'Bd. Industriilor 24', NULL, '500500', 'Brasov', 'Romania',
+  0, 1
+WHERE @demo_user_id IS NOT NULL;
+
 DELETE c
 FROM contacts c
 JOIN orders o ON o.id = c.order_id
