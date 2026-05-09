@@ -11,6 +11,7 @@ import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { useLanguage } from "../i18n/language-context";
 import { useCartStore } from "../stores/cart_store";
+import { FaTrashAlt } from "react-icons/fa";
 
 type UserAddress = {
   id: number;
@@ -98,6 +99,8 @@ export default function CheckoutPage() {
   });
   const cartItems = useCartStore((s) => s.items);
   const cartSubtotal = useCartStore((s) => s.subtotal);
+  const setCartItemQuantity = useCartStore((s) => s.setQuantity);
+  const removeCartItem = useCartStore((s) => s.removeItem);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [submitOrderMessage, setSubmitOrderMessage] = useState<string | null>(null);
   const backendBaseUrl = useMemo(() => {
@@ -526,7 +529,7 @@ export default function CheckoutPage() {
             className="flex flex-col sm:flex-row flex-wrap gap-6 text-sm justify-between rounded-lg border border-gray-200 p-4"
           >
             <Image
-              src={item.imageUrl || "/placeholders/box.png"}
+              src={item.imageUrl || "/b2b/boxes/box.png"}
               alt={item.name}
               width={100}
               height={100}
@@ -550,6 +553,46 @@ export default function CheckoutPage() {
               name2={t("checkout.product.priceWithoutTax")}
               value2={`€ ${(item.unitPrice * item.quantity).toFixed(2)}`}
             />
+            <div className="flex min-w-[220px] flex-col items-start justify-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="font-bold">Quantity</span>
+                <button
+                  type="button"
+                  onClick={() => setCartItemQuantity(item.itemNo, Math.max(1, item.quantity - 1))}
+                  className="h-8 w-8 rounded border border-gray-300 text-base leading-none hover:bg-gray-50"
+                  aria-label={`Decrease quantity for ${item.name}`}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={item.quantity}
+                  onChange={(e) => {
+                    const parsed = Number(e.target.value);
+                    if (!Number.isFinite(parsed)) return;
+                    setCartItemQuantity(item.itemNo, Math.max(1, Math.floor(parsed)));
+                  }}
+                  className="w-20 rounded border border-gray-300 px-2 py-1 text-center"
+                />
+                <button
+                  type="button"
+                  onClick={() => setCartItemQuantity(item.itemNo, item.quantity + 1)}
+                  className="h-8 w-8 rounded border border-gray-300 text-base leading-none hover:bg-gray-50"
+                  aria-label={`Increase quantity for ${item.name}`}
+                >
+                  +
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => removeCartItem(item.itemNo)}
+                className="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+              >
+                <FaTrashAlt className="h-3.5 w-3.5" />
+                Remove product
+              </button>
+            </div>
           </div>
         ))}
       </div>
