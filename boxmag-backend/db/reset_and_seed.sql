@@ -128,13 +128,26 @@ CREATE TABLE IF NOT EXISTS orders (
   ftl TINYINT(1) NOT NULL DEFAULT 0,
   attachment_name VARCHAR(255) NULL,
   message TEXT NOT NULL,
+  items_json LONGTEXT NULL,
   accepted_terms TINYINT(1) NOT NULL DEFAULT 1,
   status VARCHAR(40) NOT NULL DEFAULT 'new',
+  stripe_session_id VARCHAR(255) NULL,
+  stripe_payment_intent_id VARCHAR(255) NULL,
+  payment_status VARCHAR(40) NOT NULL DEFAULT 'pending',
+  total_amount_cents INT UNSIGNED NULL,
+  subtotal_cents INT UNSIGNED NULL,
+  vat_percent DECIMAL(6,2) NULL,
+  vat_cents INT UNSIGNED NULL,
+  shipping_cents INT UNSIGNED NULL,
+  shipping_method VARCHAR(120) NULL,
+  shipping_eta VARCHAR(120) NULL,
+  currency VARCHAR(10) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_orders_user
     FOREIGN KEY (user_id) REFERENCES users(id)
-    ON DELETE SET NULL
+    ON DELETE SET NULL,
+  INDEX idx_orders_stripe_session_id (stripe_session_id)
 );
 
 CREATE TABLE IF NOT EXISTS addresses (

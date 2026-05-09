@@ -85,7 +85,17 @@ type OrderListRow = RowDataPacket & {
   quantity: number;
   attachment_name: string | null;
   message: string | null;
+  items_json: string | null;
   status: string;
+  payment_status: string | null;
+  total_amount_cents: number | null;
+  subtotal_cents: number | null;
+  vat_percent: string | number | null;
+  vat_cents: number | null;
+  shipping_cents: number | null;
+  shipping_method: string | null;
+  shipping_eta: string | null;
+  currency: string | null;
   created_at: string;
   first_name: string;
   surname: string;
@@ -96,6 +106,89 @@ type OrderListRow = RowDataPacket & {
   country: string;
 };
 
+type CartLineItem = {
+  itemNo: string;
+  name: string;
+  unitPrice: number;
+  quantity: number;
+  lineTotal: number;
+  imageUrl: string | null;
+};
+
+function parseCartItemsJson(raw: string | null): CartLineItem[] | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    const result: CartLineItem[] = [];
+    for (const entry of parsed) {
+      if (!entry || typeof entry !== "object") continue;
+      const candidate = entry as Record<string, unknown>;
+      const itemNo = typeof candidate.itemNo === "string" ? candidate.itemNo : "";
+      const name = typeof candidate.name === "string" ? candidate.name : "";
+      const unitPrice = Number(candidate.unitPrice ?? 0);
+      const quantity = Number(candidate.quantity ?? 0);
+      const lineTotalRaw = candidate.lineTotal;
+      const lineTotal =
+        typeof lineTotalRaw === "number" && Number.isFinite(lineTotalRaw)
+          ? lineTotalRaw
+          : +(unitPrice * quantity).toFixed(2);
+      const imageUrl =
+        typeof candidate.imageUrl === "string" && candidate.imageUrl.length > 0
+          ? candidate.imageUrl
+          : null;
+      if (!itemNo && !name) continue;
+      result.push({
+        itemNo,
+        name,
+        unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
+        quantity: Number.isFinite(quantity) ? quantity : 0,
+        lineTotal,
+        imageUrl,
+      });
+    }
+    return result.length > 0 ? result : null;
+  } catch {
+    return null;
+  }
+}
+
+function centsToAmount(value: number | null): number | null {
+  if (value == null) return null;
+  return Math.round(value) / 100;
+}
+
+function vatPercentToNumber(value: string | number | null): number | null {
+  if (value == null) return null;
+  const num = typeof value === "string" ? Number(value) : value;
+  return Number.isFinite(num) ? num : null;
+}
+
+function buildPriceBreakdown(row: OrderListRow) {
+  const subtotal = centsToAmount(row.subtotal_cents);
+  const vatAmount = centsToAmount(row.vat_cents);
+  const shipping = centsToAmount(row.shipping_cents);
+  const total = centsToAmount(row.total_amount_cents);
+  if (
+    subtotal == null &&
+    vatAmount == null &&
+    shipping == null &&
+    total == null
+  ) {
+    return null;
+  }
+  return {
+    subtotal,
+    vatPercent: vatPercentToNumber(row.vat_percent),
+    vatAmount,
+    shipping,
+    total,
+    currency: row.currency ?? null,
+    shippingMethod: row.shipping_method ?? null,
+    shippingEta: row.shipping_eta ?? null,
+  };
+}
+
 ordersRouter.get("/", async (req, res) => {
   const emailFilter =
     typeof req.query.email === "string" && req.query.email.trim().length > 0
@@ -105,7 +198,10 @@ ordersRouter.get("/", async (req, res) => {
   try {
     const sql = `SELECT o.id, o.box_type_name, o.cardboard_type, o.cardboard_colour, o.box_print,
               o.length_mm, o.width_mm, o.height_mm, o.size_type, o.transport,
-              o.quantity, o.attachment_name, o.message, o.status, o.created_at,
+              o.quantity, o.attachment_name, o.message, o.items_json, o.status,
+              o.payment_status, o.total_amount_cents, o.subtotal_cents,
+              o.vat_percent, o.vat_cents, o.shipping_cents, o.shipping_method,
+              o.shipping_eta, o.currency, o.created_at,
               c.first_name, c.surname, c.company_name, c.email, c.phone, c.city, c.country
        FROM orders o
        LEFT JOIN contacts c ON c.order_id = o.id
@@ -137,6 +233,9 @@ ordersRouter.get("/", async (req, res) => {
         quantity: row.quantity,
         attachmentName: row.attachment_name,
         message: row.message ?? "",
+        items: parseCartItemsJson(row.items_json),
+        priceBreakdown: buildPriceBreakdown(row),
+        paymentStatus: row.payment_status ?? null,
         status: row.status,
         email: row.email,
         phone: row.phone,
@@ -172,7 +271,10 @@ ordersRouter.get("/:orderId", async (req, res) => {
   try {
     const sql = `SELECT o.id, o.box_type_name, o.cardboard_type, o.cardboard_colour, o.box_print,
               o.length_mm, o.width_mm, o.height_mm, o.size_type, o.transport,
-              o.quantity, o.attachment_name, o.message, o.status, o.created_at,
+              o.quantity, o.attachment_name, o.message, o.items_json, o.status,
+              o.payment_status, o.total_amount_cents, o.subtotal_cents,
+              o.vat_percent, o.vat_cents, o.shipping_cents, o.shipping_method,
+              o.shipping_eta, o.currency, o.created_at,
               c.first_name, c.surname, c.company_name, c.email, c.phone, c.city, c.country
        FROM orders o
        LEFT JOIN contacts c ON c.order_id = o.id
@@ -214,6 +316,9 @@ ordersRouter.get("/:orderId", async (req, res) => {
         quantity: row.quantity,
         attachmentName: row.attachment_name,
         message: row.message ?? "",
+        items: parseCartItemsJson(row.items_json),
+        priceBreakdown: buildPriceBreakdown(row),
+        paymentStatus: row.payment_status ?? null,
         status: row.status,
         email: row.email,
         phone: row.phone,

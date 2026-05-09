@@ -98,8 +98,6 @@ export default function CheckoutPage() {
   });
   const cartItems = useCartStore((s) => s.items);
   const cartSubtotal = useCartStore((s) => s.subtotal);
-  const cartTotalItems = useCartStore((s) => s.totalItems);
-  const clearCart = useCartStore((s) => s.clearCart);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [submitOrderMessage, setSubmitOrderMessage] = useState<string | null>(null);
   const backendBaseUrl = useMemo(() => {
@@ -274,70 +272,73 @@ export default function CheckoutPage() {
       return;
     }
 
-    const orderMessageLines = [
-      "Checkout cart order",
-      "",
-      "Items:",
-      ...cartItems.map(
-        (item) =>
-          `- ${item.itemNo} | ${item.name} | qty ${item.quantity} | unit € ${item.unitPrice.toFixed(2)} | line € ${(item.unitPrice * item.quantity).toFixed(2)}`,
-      ),
-      "",
-      `Shipping method: ${selectedShippingMethod?.name ?? "N/A"} (${selectedShippingMethod?.etaText ?? "-"})`,
-      `Subtotal: € ${cartSubtotal.toFixed(2)}`,
-      `VAT (19%): € ${orderVat.toFixed(2)}`,
-      `Shipping: € ${orderShipping.toFixed(2)}`,
-      `Total: € ${orderTotal.toFixed(2)}`,
-    ];
-
     setIsSubmittingOrder(true);
-    setSubmitOrderMessage(null);
+    setSubmitOrderMessage("Redirecting to secure payment...");
     try {
-      const response = await fetch(`${backendBaseUrl}/api/orders`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${backendBaseUrl}/api/payments/create-checkout-session`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: loggedInEmail,
+            cartItems: cartItems.map((item) => ({
+              itemNo: item.itemNo,
+              name: item.name,
+              unitPrice: item.unitPrice,
+              quantity: item.quantity,
+              imageUrl: item.imageUrl ?? null,
+            })),
+            shipping: {
+              name: selectedShippingMethod?.name ?? "N/A",
+              etaText: selectedShippingMethod?.etaText ?? "",
+              price: orderShipping,
+            },
+            vatPercent: 19,
+            address: {
+              firstName: activeAddress.firstName,
+              lastName: activeAddress.lastName,
+              companyName: activeAddress.companyName,
+              phone: activeAddress.phone,
+              address: activeAddress.addressLine1,
+              postcode: activeAddress.postcode,
+              city: activeAddress.city,
+              country: activeAddress.country,
+            },
+            vatNumber: null,
+            consentPhone: true,
+            consentEmail: true,
+            acceptedTerms: true,
+          }),
         },
-        body: JSON.stringify({
-          boxTypeName: "Checkout Cart Order",
-          cardboardType: "N/A",
-          cardboardColour: "N/A",
-          boxPrint: "N/A",
-          sizeType: "N/A",
-          transport: selectedShippingMethod?.name ?? "N/A",
-          quantity: cartTotalItems || 1,
-          message: orderMessageLines.join("\n"),
-          acceptedTerms: true,
-          firstName: activeAddress.firstName,
-          surname: activeAddress.lastName,
-          companyName:
-            activeAddress.companyName ||
-            `${activeAddress.firstName} ${activeAddress.lastName}`.trim(),
-          vatNumber: null,
-          email: loggedInEmail,
-          phone: activeAddress.phone || "N/A",
-          address: activeAddress.addressLine1,
-          postcode: activeAddress.postcode,
-          city: activeAddress.city,
-          country: activeAddress.country,
-          createAccount: false,
-          consentPhone: true,
-          consentEmail: true,
-          ftl: false,
-        }),
-      });
-      const payload = (await response.json()) as { ok?: boolean; message?: string };
-      if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+      );
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+        data?: { url?: string; orderId?: number; sessionId?: string };
+      };
+      if (!response.ok || payload.ok !== true || !payload.data?.url) {
+        throw new Error(
+          payload.message ?? `Failed with status ${response.status}`,
+        );
       }
 
-      clearCart();
-      setSubmitOrderMessage("Order placed successfully.");
+      try {
+        sessionStorage.setItem(
+          "boxmag.checkout.pendingOrderId",
+          String(payload.data.orderId ?? ""),
+        );
+      } catch (_storageError) {
+        // ignore
+      }
+
+      window.location.href = payload.data.url;
     } catch (error) {
       setSubmitOrderMessage(
-        error instanceof Error ? error.message : "Failed to place order.",
+        error instanceof Error ? error.message : "Failed to start checkout.",
       );
-    } finally {
       setIsSubmittingOrder(false);
     }
   };

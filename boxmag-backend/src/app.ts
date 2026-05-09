@@ -8,6 +8,10 @@ import { newsletterRouter } from "./routes/newsletter.route";
 import { authRouter } from "./routes/auth.route";
 import { addressesRouter } from "./routes/addresses.route";
 import { shippingMethodsRouter } from "./routes/shipping-methods.route";
+import {
+  paymentsRouter,
+  stripeWebhookHandler,
+} from "./routes/payments.route";
 
 export const app = express();
 
@@ -16,6 +20,15 @@ app.use(
     origin: env.corsOrigin === "*" ? true : env.corsOrigin,
   })
 );
+
+// Stripe webhook must be registered BEFORE express.json() so that the raw
+// request body is available for signature verification.
+app.post(
+  "/api/payments/webhook",
+  express.raw({ type: "application/json" }),
+  stripeWebhookHandler,
+);
+
 app.use(express.json());
 
 app.get("/", (_req, res) => {
@@ -32,4 +45,5 @@ app.use("/api/addresses", addressesRouter);
 app.use("/api/newsletter", newsletterRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/shipping-methods", shippingMethodsRouter);
+app.use("/api/payments", paymentsRouter);
 

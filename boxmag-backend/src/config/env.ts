@@ -39,5 +39,14 @@ export const env = {
   minioPublicBaseUrl:
     process.env.MINIO_PUBLIC_BASE_URL ??
     `http://localhost:${toNumber(process.env.MINIO_PORT_API, 9000)}`,
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+  stripeCurrency: (process.env.STRIPE_CURRENCY ?? "eur").toLowerCase(),
+  stripeSuccessUrl:
+    process.env.STRIPE_SUCCESS_URL ??
+    `${process.env.FRONTEND_BASE_URL ?? "http://localhost:3006"}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+  stripeCancelUrl:
+    process.env.STRIPE_CANCEL_URL ??
+    `${process.env.FRONTEND_BASE_URL ?? "http://localhost:3006"}/checkout/cancel`,
 };
 
