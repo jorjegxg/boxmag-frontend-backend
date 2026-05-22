@@ -568,7 +568,7 @@ export default function CheckoutPage() {
                     if (!Number.isFinite(parsed)) return;
                     setCartItemQuantity(item.itemNo, Math.max(1, Math.floor(parsed)));
                   }}
-                  className="w-20 rounded border border-gray-300 px-2 py-1 text-center"
+                  className="w-20 rounded border border-gray-300 px-2 py-1 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
                 <button
                   type="button"
