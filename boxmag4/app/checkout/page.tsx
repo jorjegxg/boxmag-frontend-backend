@@ -230,13 +230,13 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) {
-      setSubmitOrderMessage("Cart is empty.");
+      setSubmitOrderMessage(t("checkout.error.cartEmpty"));
       return;
     }
 
     const loggedInEmail = (localStorage.getItem(AUTH_EMAIL_STORAGE_KEY) ?? "").trim();
     if (!loggedInEmail) {
-      setSubmitOrderMessage("Please log in before placing an order.");
+      setSubmitOrderMessage(t("checkout.error.loginRequired"));
       return;
     }
 
@@ -271,12 +271,12 @@ export default function CheckoutPage() {
       !activeAddress.city ||
       !activeAddress.country
     ) {
-      setSubmitOrderMessage("Please complete shipping address details.");
+      setSubmitOrderMessage(t("checkout.error.addressIncomplete"));
       return;
     }
 
     setIsSubmittingOrder(true);
-    setSubmitOrderMessage("Redirecting to secure payment...");
+    setSubmitOrderMessage(t("checkout.redirecting"));
     try {
       const response = await fetch(
         `${backendBaseUrl}/api/payments/create-checkout-session`,
@@ -340,7 +340,7 @@ export default function CheckoutPage() {
       window.location.href = payload.data.url;
     } catch (error) {
       setSubmitOrderMessage(
-        error instanceof Error ? error.message : "Failed to start checkout.",
+        error instanceof Error ? error.message : t("checkout.error.startCheckout"),
       );
       setIsSubmittingOrder(false);
     }
@@ -353,6 +353,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (addresses.length === 0) {
+      setAddressType("another");
       setSelectedAddressId(null);
       return;
     }
@@ -499,7 +500,7 @@ export default function CheckoutPage() {
                   disabled={isSubmittingOrder}
                   className="inline-flex items-center justify-center rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-my-red/90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isSubmittingOrder ? "Placing order..." : "Place order"}
+                  {isSubmittingOrder ? t("checkout.placingOrder") : t("checkout.placeOrder")}
                 </button>
                 {submitOrderMessage ? (
                   <p className="mt-2 text-sm text-gray-700">{submitOrderMessage}</p>
@@ -516,7 +517,7 @@ export default function CheckoutPage() {
     if (cartItems.length === 0) {
       return (
         <div className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-sm text-gray-600">
-          Cart is empty.
+          {t("checkout.cartEmpty")}
         </div>
       );
     }
@@ -555,12 +556,12 @@ export default function CheckoutPage() {
             />
             <div className="flex min-w-[220px] flex-col items-start justify-center gap-3">
               <div className="flex items-center gap-2">
-                <span className="font-bold">Quantity</span>
+                <span className="font-bold">{t("checkout.quantity")}</span>
                 <button
                   type="button"
                   onClick={() => setCartItemQuantity(item.itemNo, Math.max(1, item.quantity - 1))}
                   className="h-8 w-8 rounded border border-gray-300 text-base leading-none hover:bg-gray-50"
-                  aria-label={`Decrease quantity for ${item.name}`}
+                  aria-label={t("checkout.aria.decreaseQuantity")}
                 >
                   -
                 </button>
@@ -579,7 +580,7 @@ export default function CheckoutPage() {
                   type="button"
                   onClick={() => setCartItemQuantity(item.itemNo, item.quantity + 1)}
                   className="h-8 w-8 rounded border border-gray-300 text-base leading-none hover:bg-gray-50"
-                  aria-label={`Increase quantity for ${item.name}`}
+                  aria-label={t("checkout.aria.increaseQuantity")}
                 >
                   +
                 </button>
@@ -590,7 +591,7 @@ export default function CheckoutPage() {
                 className="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
               >
                 <FaTrashAlt className="h-3.5 w-3.5" />
-                Remove product
+                {t("checkout.removeProduct")}
               </button>
             </div>
           </div>
@@ -610,7 +611,7 @@ export default function CheckoutPage() {
         </div>
         <div className="flex items-center gap-2">
           <GrayText text={t("checkout.orderType")} />
-          <GrayText text="B2B" />
+          <GrayText text={t("common.b2b")} />
         </div>
       </div>
     );
@@ -676,6 +677,8 @@ export default function CheckoutPage() {
     setSelectedAddressId: (value: number | null) => void;
     selectedAddress: UserAddress | null;
   }) {
+    const hasSavedAddresses = addresses.length > 0;
+
     return (
       <div className="w-full">
         <h2 className="font-bold text-black text-base sm:text-lg mb-4 uppercase tracking-wide">
@@ -685,14 +688,14 @@ export default function CheckoutPage() {
           <div className="flex flex-col sm:flex-row min-h-[160px]">
             <div className="flex-1 p-6 flex flex-col justify-center">
               {isLoadingAddresses ? (
-                <p className="text-sm text-gray-600">Loading your addresses...</p>
+                <p className="text-sm text-gray-600">{t("checkout.address.loading")}</p>
               ) : addressType === "another" ? (
                 <>
                   <p className="font-bold text-black">
                     {[manualAddress.firstName, manualAddress.lastName]
                       .filter(Boolean)
                       .join(" ")
-                      .trim() || "New address"}
+                      .trim() || t("checkout.address.newAddress")}
                   </p>
                   {manualAddress.companyName ? (
                     <p className="text-gray-600 text-sm mt-1">{manualAddress.companyName}</p>
@@ -701,7 +704,7 @@ export default function CheckoutPage() {
                     <p className="text-gray-600 text-sm mt-1">{manualAddress.addressLine1}</p>
                   ) : (
                     <p className="text-gray-600 text-sm mt-1">
-                      Fill the form below with a new shipping address.
+                      {t("checkout.address.fillFormHint")}
                     </p>
                   )}
                   {manualAddress.addressLine2 ? (
@@ -716,14 +719,16 @@ export default function CheckoutPage() {
                     <p className="text-gray-600 text-sm">{manualAddress.country}</p>
                   ) : null}
                   {manualAddress.phone ? (
-                    <p className="text-gray-600 text-sm mt-2">Tel: {manualAddress.phone}</p>
+                    <p className="text-gray-600 text-sm mt-2">
+                      {t("checkout.address.tel")} {manualAddress.phone}
+                    </p>
                   ) : null}
                 </>
               ) : !selectedAddress ? (
                 <>
-                  <p className="font-bold text-black">No address selected</p>
+                  <p className="font-bold text-black">{t("checkout.address.noAddressTitle")}</p>
                   <p className="text-gray-600 text-sm mt-1">
-                    Add an address in your account and select it here.
+                    {t("checkout.address.noAddressHint")}
                   </p>
                 </>
               ) : (
@@ -746,7 +751,7 @@ export default function CheckoutPage() {
                   <p className="text-gray-600 text-sm">{selectedAddress.country}</p>
                   {selectedAddress.phone ? (
                     <p className="text-gray-600 text-sm mt-2">
-                      Tel: {selectedAddress.phone}
+                      {t("checkout.address.tel")} {selectedAddress.phone}
                     </p>
                   ) : null}
                 </>
@@ -763,7 +768,7 @@ export default function CheckoutPage() {
           </p>
           {addressType === "company" ? (
             <p className="text-sm text-gray-600">
-              Company address uses your default shipping address.
+              {t("checkout.address.companyDefaultHint")}
             </p>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -774,7 +779,7 @@ export default function CheckoutPage() {
                   setManualAddress((prev) => ({ ...prev, firstName: e.target.value }))
                 }
                 className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
-                placeholder="First name"
+                placeholder={t("checkout.placeholder.firstName")}
               />
               <input
                 type="text"
@@ -783,7 +788,7 @@ export default function CheckoutPage() {
                   setManualAddress((prev) => ({ ...prev, lastName: e.target.value }))
                 }
                 className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
-                placeholder="Last name"
+                placeholder={t("checkout.placeholder.lastName")}
               />
               <input
                 type="text"
@@ -792,7 +797,7 @@ export default function CheckoutPage() {
                   setManualAddress((prev) => ({ ...prev, companyName: e.target.value }))
                 }
                 className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red sm:col-span-2"
-                placeholder="Company name (optional)"
+                placeholder={t("checkout.placeholder.companyName")}
               />
               <input
                 type="text"
@@ -801,7 +806,7 @@ export default function CheckoutPage() {
                   setManualAddress((prev) => ({ ...prev, addressLine1: e.target.value }))
                 }
                 className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red sm:col-span-2"
-                placeholder="Address line 1"
+                placeholder={t("checkout.placeholder.addressLine1")}
               />
               <input
                 type="text"
@@ -810,7 +815,7 @@ export default function CheckoutPage() {
                   setManualAddress((prev) => ({ ...prev, addressLine2: e.target.value }))
                 }
                 className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red sm:col-span-2"
-                placeholder="Address line 2 (optional)"
+                placeholder={t("checkout.placeholder.addressLine2")}
               />
               <input
                 type="text"
@@ -819,7 +824,7 @@ export default function CheckoutPage() {
                   setManualAddress((prev) => ({ ...prev, postcode: e.target.value }))
                 }
                 className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
-                placeholder="Postcode"
+                placeholder={t("checkout.placeholder.postcode")}
               />
               <input
                 type="text"
@@ -828,7 +833,7 @@ export default function CheckoutPage() {
                   setManualAddress((prev) => ({ ...prev, city: e.target.value }))
                 }
                 className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
-                placeholder="City"
+                placeholder={t("checkout.placeholder.city")}
               />
               <input
                 type="text"
@@ -837,7 +842,7 @@ export default function CheckoutPage() {
                   setManualAddress((prev) => ({ ...prev, country: e.target.value }))
                 }
                 className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
-                placeholder="Country"
+                placeholder={t("checkout.placeholder.country")}
               />
               <input
                 type="tel"
@@ -846,54 +851,56 @@ export default function CheckoutPage() {
                   setManualAddress((prev) => ({ ...prev, phone: e.target.value }))
                 }
                 className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
-                placeholder="Phone"
+                placeholder={t("checkout.placeholder.phone")}
               />
             </div>
           )}
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const scrollY = window.scrollY;
-                setAddressType("company");
-                const btn = e.currentTarget as HTMLButtonElement;
-                requestAnimationFrame(() => {
-                  btn.blur();
-                  window.scrollTo(0, scrollY);
-                });
-              }}
-              className={`px-4 py-2 rounded-lg border-2 font-semibold text-sm transition-colors ${
-                addressType === "company"
-                  ? "border-my-red text-my-red bg-white"
-                  : "border-gray-300 text-gray-600 hover:border-gray-400"
-              }`}
-            >
-              {t("checkout.companyAddress")}
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const scrollY = window.scrollY;
-                setAddressType("another");
-                const btn = e.currentTarget as HTMLButtonElement;
-                requestAnimationFrame(() => {
-                  btn.blur();
-                  window.scrollTo(0, scrollY);
-                });
-              }}
-              className={`px-4 py-2 rounded-lg border-2 font-semibold text-sm transition-colors ${
-                addressType === "another"
-                  ? "border-my-red text-my-red bg-white"
-                  : "border-gray-300 text-gray-600 hover:border-gray-400"
-              }`}
-            >
-              {t("checkout.anotherAddress")}
-            </button>
-          </div>
+          {hasSavedAddresses ? (
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const scrollY = window.scrollY;
+                  setAddressType("company");
+                  const btn = e.currentTarget as HTMLButtonElement;
+                  requestAnimationFrame(() => {
+                    btn.blur();
+                    window.scrollTo(0, scrollY);
+                  });
+                }}
+                className={`px-4 py-2 rounded-lg border-2 font-semibold text-sm transition-colors ${
+                  addressType === "company"
+                    ? "border-my-red text-my-red bg-white"
+                    : "border-gray-300 text-gray-600 hover:border-gray-400"
+                }`}
+              >
+                {t("checkout.companyAddress")}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const scrollY = window.scrollY;
+                  setAddressType("another");
+                  const btn = e.currentTarget as HTMLButtonElement;
+                  requestAnimationFrame(() => {
+                    btn.blur();
+                    window.scrollTo(0, scrollY);
+                  });
+                }}
+                className={`px-4 py-2 rounded-lg border-2 font-semibold text-sm transition-colors ${
+                  addressType === "another"
+                    ? "border-my-red text-my-red bg-white"
+                    : "border-gray-300 text-gray-600 hover:border-gray-400"
+                }`}
+              >
+                {t("checkout.anotherAddress")}
+              </button>
+            </div>
+          ) : null}
           <p className="text-my-red font-semibold text-sm flex items-center gap-2 mt-3">
             <span>•</span>{" "}
             <Link href="/account" className="hover:underline">
