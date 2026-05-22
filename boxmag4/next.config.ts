@@ -42,6 +42,16 @@ const nextConfig: NextConfig = {
       process.env.NEXT_PUBLIC_APP_ENV ??
       readRootEnvValue("NODE_ENV") ??
       "development",
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:
+      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ??
+      readRootEnvValue("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY") ??
+      readRootEnvValue("GOOGLE_MAPS_API_KEY") ??
+      "",
+    GOOGLE_MAPS_API_KEY:
+      process.env.GOOGLE_MAPS_API_KEY ??
+      readRootEnvValue("GOOGLE_MAPS_API_KEY") ??
+      readRootEnvValue("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY") ??
+      "",
   },
 
   turbopack: {

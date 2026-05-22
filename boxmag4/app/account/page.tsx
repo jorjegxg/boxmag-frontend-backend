@@ -309,8 +309,8 @@ function AddressTab({
   const [postcode, setPostcode] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
-  const [isDefaultBilling, setIsDefaultBilling] = useState(false);
-  const [isDefaultShipping, setIsDefaultShipping] = useState(false);
+  const [isDefaultBilling, setIsDefaultBilling] = useState(true);
+  const [isDefaultShipping, setIsDefaultShipping] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
@@ -346,8 +346,8 @@ function AddressTab({
       setPostcode("");
       setCity("");
       setCountry("");
-      setIsDefaultBilling(false);
-      setIsDefaultShipping(false);
+      setIsDefaultBilling(true);
+      setIsDefaultShipping(true);
     } catch (submitError) {
       setError(
         submitError instanceof Error ? submitError.message : "Failed to save address",
@@ -389,8 +389,8 @@ function AddressTab({
     setPostcode("");
     setCity("");
     setCountry("");
-    setIsDefaultBilling(false);
-    setIsDefaultShipping(false);
+    setIsDefaultBilling(true);
+    setIsDefaultShipping(true);
     setError(null);
   };
 

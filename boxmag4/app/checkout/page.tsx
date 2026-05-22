@@ -12,6 +12,10 @@ import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { useLanguage } from "../i18n/language-context";
 import { useCartStore } from "../stores/cart_store";
 import { FaTrashAlt } from "react-icons/fa";
+import {
+  CheckoutAddressMap,
+  type MapAddressInput,
+} from "./components/checkout-address-map";
 
 type UserAddress = {
   id: number;
@@ -178,6 +182,8 @@ export default function CheckoutPage() {
     if (!loggedInEmail) {
       setAddresses([]);
       setSelectedAddressId(null);
+      setAddressType("another");
+      setIsLoadingAddresses(false);
       return;
     }
 
@@ -347,9 +353,6 @@ export default function CheckoutPage() {
   };
   const defaultShippingAddress =
     addresses.find((address) => address.isDefaultShipping) ?? addresses[0] ?? null;
-  const alternativeAddresses = addresses.filter(
-    (address) => address.id !== defaultShippingAddress?.id,
-  );
 
   useEffect(() => {
     if (addresses.length === 0) {
@@ -358,18 +361,9 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (addressType === "company") {
-      setSelectedAddressId(defaultShippingAddress?.id ?? null);
-      return;
-    }
-
-    setSelectedAddressId(null);
-  }, [
-    addressType,
-    addresses,
-    alternativeAddresses,
-    defaultShippingAddress,
-  ]);
+    setAddressType("company");
+    setSelectedAddressId(defaultShippingAddress?.id ?? null);
+  }, [addresses, defaultShippingAddress?.id]);
 
   return (
     <div>
@@ -678,6 +672,24 @@ export default function CheckoutPage() {
     selectedAddress: UserAddress | null;
   }) {
     const hasSavedAddresses = addresses.length > 0;
+    const useManualAddressForm = !hasSavedAddresses || addressType === "another";
+
+    const mapAddress: MapAddressInput | null =
+      useManualAddressForm
+        ? {
+            addressLine1: manualAddress.addressLine1,
+            addressLine2: manualAddress.addressLine2,
+            city: manualAddress.city,
+            country: manualAddress.country,
+          }
+        : selectedAddress
+          ? {
+              addressLine1: selectedAddress.addressLine1,
+              addressLine2: selectedAddress.addressLine2,
+              city: selectedAddress.city,
+              country: selectedAddress.country,
+            }
+          : null;
 
     return (
       <div className="w-full">
@@ -689,7 +701,7 @@ export default function CheckoutPage() {
             <div className="flex-1 p-6 flex flex-col justify-center">
               {isLoadingAddresses ? (
                 <p className="text-sm text-gray-600">{t("checkout.address.loading")}</p>
-              ) : addressType === "another" ? (
+              ) : useManualAddressForm ? (
                 <>
                   <p className="font-bold text-black">
                     {[manualAddress.firstName, manualAddress.lastName]
@@ -757,20 +769,18 @@ export default function CheckoutPage() {
                 </>
               )}
             </div>
-            <div className="sm:w-64 h-40 sm:h-auto sm:min-h-[160px] bg-gray-200 shrink-0 flex items-center justify-center text-gray-500 text-sm">
-              {t("checkout.map")}
+            <div className="h-40 w-full shrink-0 overflow-hidden sm:h-auto sm:min-h-[160px] sm:w-64">
+              <CheckoutAddressMap address={mapAddress} />
             </div>
           </div>
         </div>
         <div className="mt-4 space-y-2">
-          <p className="text-my-red font-semibold text-sm flex items-center gap-2">
-            <span>•</span> {t("checkout.selectAddress")}
-          </p>
-          {addressType === "company" ? (
-            <p className="text-sm text-gray-600">
-              {t("checkout.address.companyDefaultHint")}
+          {hasSavedAddresses ? (
+            <p className="text-my-red font-semibold text-sm flex items-center gap-2">
+              <span>•</span> {t("checkout.selectAddress")}
             </p>
-          ) : (
+          ) : null}
+          {useManualAddressForm ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <input
                 type="text"
@@ -854,52 +864,32 @@ export default function CheckoutPage() {
                 placeholder={t("checkout.placeholder.phone")}
               />
             </div>
+          ) : (
+            <p className="text-sm text-gray-600">{t("checkout.address.companyDefaultHint")}</p>
           )}
           {hasSavedAddresses ? (
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const scrollY = window.scrollY;
-                  setAddressType("company");
-                  const btn = e.currentTarget as HTMLButtonElement;
-                  requestAnimationFrame(() => {
-                    btn.blur();
-                    window.scrollTo(0, scrollY);
-                  });
-                }}
-                className={`px-4 py-2 rounded-lg border-2 font-semibold text-sm transition-colors ${
-                  addressType === "company"
-                    ? "border-my-red text-my-red bg-white"
-                    : "border-gray-300 text-gray-600 hover:border-gray-400"
-                }`}
-              >
-                {t("checkout.companyAddress")}
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const scrollY = window.scrollY;
-                  setAddressType("another");
-                  const btn = e.currentTarget as HTMLButtonElement;
-                  requestAnimationFrame(() => {
-                    btn.blur();
-                    window.scrollTo(0, scrollY);
-                  });
-                }}
-                className={`px-4 py-2 rounded-lg border-2 font-semibold text-sm transition-colors ${
-                  addressType === "another"
-                    ? "border-my-red text-my-red bg-white"
-                    : "border-gray-300 text-gray-600 hover:border-gray-400"
-                }`}
-              >
-                {t("checkout.anotherAddress")}
-              </button>
-            </div>
+            <p className="text-sm">
+              {addressType === "company" ? (
+                <button
+                  type="button"
+                  onClick={() => setAddressType("another")}
+                  className="font-semibold text-my-red hover:underline"
+                >
+                  {t("checkout.useAnotherAddress")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddressType("company");
+                    setSelectedAddressId(defaultShippingAddress?.id ?? null);
+                  }}
+                  className="font-semibold text-my-red hover:underline"
+                >
+                  {t("checkout.useSavedAddress")}
+                </button>
+              )}
+            </p>
           ) : null}
           <p className="text-my-red font-semibold text-sm flex items-center gap-2 mt-3">
             <span>•</span>{" "}
