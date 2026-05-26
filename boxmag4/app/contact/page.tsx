@@ -66,6 +66,7 @@ export default function ContactUsPage() {
 
     if (!firstName.trim()) registerMissingField("firstName", t("contact.firstName"));
     if (!surname.trim()) registerMissingField("surname", t("contact.surname"));
+    if (!companyName.trim()) registerMissingField("companyName", t("contact.companyName"));
     if (!email.trim()) registerMissingField("email", t("contact.email"));
     if (!phone.trim()) registerMissingField("phone", t("contact.phone"));
     if (!country.trim()) registerMissingField("country", t("contact.country"));
@@ -201,6 +202,7 @@ export default function ContactUsPage() {
                 <input
                   id="firstName"
                   type="text"
+                  required
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder={t("contact.firstName")}
@@ -217,6 +219,7 @@ export default function ContactUsPage() {
                 <input
                   id="surname"
                   type="text"
+                  required
                   value={surname}
                   onChange={(e) => setSurname(e.target.value)}
                   placeholder={t("contact.surname")}
@@ -235,6 +238,7 @@ export default function ContactUsPage() {
                 <input
                   id="companyName"
                   type="text"
+                  required
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   placeholder={t("contact.companyName")}
@@ -272,6 +276,7 @@ export default function ContactUsPage() {
                 <input
                   id="email"
                   type="email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@yourwebsite.com"
@@ -288,6 +293,7 @@ export default function ContactUsPage() {
                 <input
                   id="phone"
                   type="tel"
+                  required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder={t("contact.phone")}
@@ -304,6 +310,7 @@ export default function ContactUsPage() {
               </label>
               <select
                 id="country"
+                required
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
                 className={inputClass}
@@ -363,6 +370,7 @@ export default function ContactUsPage() {
               </label>
               <textarea
                 id="message"
+                required
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder={t("contact.typeMessage")}

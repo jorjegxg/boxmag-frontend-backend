@@ -136,6 +136,7 @@ export async function POST(req: Request): Promise<Response> {
     const requiredFields: Array<keyof ContactPayload> = [
       "firstName",
       "surname",
+      "companyName",
       "email",
       "phone",
       "country",
