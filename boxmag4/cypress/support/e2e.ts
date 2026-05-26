@@ -1,5 +1,5 @@
 // Global support file for Cypress E2E tests
-// Add custom commands or global hooks here
+import "./commands";
 
 Cypress.on("uncaught:exception", (err) => {
   // Prevent Next.js hydration errors from failing tests
