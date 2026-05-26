@@ -41,7 +41,15 @@ type MapStatus = "empty" | "loading" | "ready";
 
 export function CheckoutAddressMap({ address }: { address: MapAddressInput | null }) {
   const { t } = useLanguage();
-  const query = useMemo(() => buildMapQuery(address), [address]);
+  const query = useMemo(
+    () => buildMapQuery(address),
+    [
+      address?.addressLine1,
+      address?.addressLine2,
+      address?.city,
+      address?.country,
+    ],
+  );
   const [debouncedQuery, setDebouncedQuery] = useState<string | null>(null);
   const [status, setStatus] = useState<MapStatus>("empty");
 
@@ -52,6 +60,10 @@ export function CheckoutAddressMap({ address }: { address: MapAddressInput | nul
       return;
     }
 
+    if (query === debouncedQuery) {
+      return;
+    }
+
     setStatus("loading");
     const timer = window.setTimeout(() => {
       setDebouncedQuery(query);
@@ -59,7 +71,7 @@ export function CheckoutAddressMap({ address }: { address: MapAddressInput | nul
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [query]);
+  }, [query, debouncedQuery]);
 
   const googleMapsLink =
     query != null

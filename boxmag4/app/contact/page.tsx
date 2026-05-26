@@ -69,6 +69,7 @@ export default function ContactUsPage() {
     if (!email.trim()) registerMissingField("email", t("contact.email"));
     if (!phone.trim()) registerMissingField("phone", t("contact.phone"));
     if (!country.trim()) registerMissingField("country", t("contact.country"));
+    if (!vatNumber.trim()) registerMissingField("vatNumber", t("contact.vatNumber"));
     if (!message.trim()) registerMissingField("message", t("contact.message"));
 
     if (missingFields.length > 0) {
@@ -87,10 +88,8 @@ export default function ContactUsPage() {
       return;
     }
 
-    const vatCheck = vatNumber.trim()
-      ? checkVAT(vatNumber.trim().toUpperCase(), countries)
-      : null;
-    if (vatCheck && !vatCheck.isValid && !vatCheck.isValidFormat) {
+    const vatCheck = checkVAT(vatNumber.trim().toUpperCase(), countries);
+    if (!vatCheck.isValid && !vatCheck.isValidFormat) {
       notify({
         type: "error",
         message:
@@ -252,6 +251,7 @@ export default function ContactUsPage() {
                 <input
                   id="vatNumber"
                   type="text"
+                  required
                   value={vatNumber}
                   onChange={(e) => setVatNumber(e.target.value)}
                   placeholder={t("contact.vatNumber")}

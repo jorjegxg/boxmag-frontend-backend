@@ -139,6 +139,7 @@ export async function POST(req: Request): Promise<Response> {
       "email",
       "phone",
       "country",
+      "vatNumber",
       "message",
     ];
 
@@ -176,11 +177,8 @@ export async function POST(req: Request): Promise<Response> {
       );
     }
 
-    const vatCheck =
-      typeof body.vatNumber === "string" && body.vatNumber.trim().length > 0
-        ? checkVAT(body.vatNumber.trim().toUpperCase(), countries)
-        : null;
-    if (vatCheck && !vatCheck.isValid && !vatCheck.isValidFormat) {
+    const vatCheck = checkVAT(body.vatNumber.trim().toUpperCase(), countries);
+    if (!vatCheck.isValid && !vatCheck.isValidFormat) {
       return Response.json(
         {
           message:
