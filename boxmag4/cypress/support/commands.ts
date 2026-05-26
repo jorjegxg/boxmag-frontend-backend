@@ -34,6 +34,14 @@ export type MockOrder = {
   createdAt: string;
 };
 
+type AccountTab = "account" | "address" | "orders";
+
+const TAB_LABELS: Record<AccountTab, string> = {
+  account: "MY ACCOUNT",
+  address: "ADDRESS",
+  orders: "ORDERS",
+};
+
 declare global {
   namespace Cypress {
     interface Chainable {
@@ -49,6 +57,7 @@ declare global {
         addresses?: MockAddress[];
         orders?: MockOrder[];
       }): Chainable<void>;
+      openAccountTab(tab: AccountTab): Chainable<void>;
     }
   }
 }
@@ -124,5 +133,9 @@ Cypress.Commands.add(
     cy.wait(["@getProfile", "@getAddresses", "@getOrders"]);
   },
 );
+
+Cypress.Commands.add("openAccountTab", (tab: AccountTab) => {
+  cy.contains("button", TAB_LABELS[tab]).click();
+});
 
 export {};
