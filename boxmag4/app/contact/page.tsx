@@ -388,14 +388,14 @@ export default function ContactUsPage() {
               <span className="text-sm text-gray-700">
                 {t("contact.termsPrefix")}
                 <Link
-                  href="/terms"
+                  href="/regulations"
                   className="text-my-red font-medium underline hover:no-underline"
                 >
                   {t("contact.terms")}
                 </Link>{" "}
                 {t("contact.and")}
                 <Link
-                  href="/privacy"
+                  href="/privacy-policy"
                   className="text-my-red font-medium underline hover:no-underline"
                 >
                   {t("contact.privacy")}
