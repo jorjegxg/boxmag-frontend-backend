@@ -292,18 +292,12 @@ export default function RegistrationPage() {
                 </p>
               </div>
 
-              <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <Link
-                  href="/"
-                  className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Continue browsing
-                </Link>
+              <div className="mt-6 flex justify-end">
                 <Link
                   href="/account"
                   className="inline-flex items-center justify-center rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white hover:bg-my-red/90 transition-colors"
                 >
-                  Go to sign in
+                  Back to login
                 </Link>
               </div>
             </div>
