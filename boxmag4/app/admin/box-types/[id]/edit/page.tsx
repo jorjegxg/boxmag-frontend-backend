@@ -235,7 +235,10 @@ export default function EditBoxTypePage() {
         nextImages = [...nextImages, ...uploaded];
       }
 
-      if (nextImages.length === 0 || nextImages.filter((image) => image.isPrimary).length !== 1) {
+      if (
+        nextImages.length === 0 ||
+        nextImages.filter((image) => image.isPrimary).length !== 1
+      ) {
         throw new Error("Image gallery must include exactly one primary image");
       }
 
@@ -322,7 +325,10 @@ export default function EditBoxTypePage() {
       if (next.length > 0 && !next.some((image) => image.isPrimary)) {
         next[0] = { ...next[0], isPrimary: true };
       }
-      return next.map((image, currentIndex) => ({ ...image, sortOrder: currentIndex }));
+      return next.map((image, currentIndex) => ({
+        ...image,
+        sortOrder: currentIndex,
+      }));
     });
   }
 
@@ -511,7 +517,10 @@ export default function EditBoxTypePage() {
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {images.map((image, index) => (
-                    <div key={`${image.id ?? "new"}-${index}`} className="space-y-2">
+                    <div
+                      key={`${image.id ?? "new"}-${index}`}
+                      className="space-y-2"
+                    >
                       <img
                         src={image.url}
                         alt={title || "Box type preview"}

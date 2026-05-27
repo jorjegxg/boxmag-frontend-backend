@@ -81,14 +81,18 @@ const FALLBACK_SHIPPING_METHODS: ShippingMethodOption[] = [
 
 export default function CheckoutPage() {
   const { t } = useLanguage();
-  const [addressType, setAddressType] = useState<"company" | "another">("company");
-  const [shippingMethod, setShippingMethod] = useState<string>("standard");
-  const [shippingMethods, setShippingMethods] = useState<ShippingMethodOption[]>(
-    FALLBACK_SHIPPING_METHODS,
+  const [addressType, setAddressType] = useState<"company" | "another">(
+    "company",
   );
+  const [shippingMethod, setShippingMethod] = useState<string>("standard");
+  const [shippingMethods, setShippingMethods] = useState<
+    ShippingMethodOption[]
+  >(FALLBACK_SHIPPING_METHODS);
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
-  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
+    null,
+  );
   const [manualAddress, setManualAddress] = useState<ManualAddress>({
     firstName: "",
     lastName: "",
@@ -105,11 +109,17 @@ export default function CheckoutPage() {
   const setCartItemQuantity = useCartStore((s) => s.setQuantity);
   const removeCartItem = useCartStore((s) => s.removeItem);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
-  const [submitOrderMessage, setSubmitOrderMessage] = useState<string | null>(null);
+  const [submitOrderMessage, setSubmitOrderMessage] = useState<string | null>(
+    null,
+  );
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
     if (!value) return "http://localhost:3005";
     return value.endsWith("/") ? value.slice(0, -1) : value;
+  }, []);
+  const taxPercent = useMemo(() => {
+    const value = Number(process.env.NEXT_PUBLIC_TAX_PERCENT ?? "21");
+    return Number.isFinite(value) ? value : 21;
   }, []);
 
   useEffect(() => {
@@ -145,7 +155,11 @@ export default function CheckoutPage() {
           ok?: boolean;
           data?: ShippingMethodOption[];
         };
-        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+        if (
+          !response.ok ||
+          payload.ok !== true ||
+          !Array.isArray(payload.data)
+        ) {
           throw new Error("Failed to load shipping methods");
         }
 
@@ -198,7 +212,11 @@ export default function CheckoutPage() {
           ok?: boolean;
           data?: UserAddress[];
         };
-        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+        if (
+          !response.ok ||
+          payload.ok !== true ||
+          !Array.isArray(payload.data)
+        ) {
           throw new Error("Failed to load addresses");
         }
 
@@ -230,7 +248,7 @@ export default function CheckoutPage() {
     shippingMethods[0] ??
     FALLBACK_SHIPPING_METHODS[0];
   const orderShipping = selectedShippingMethod?.price ?? 0;
-  const orderVat = +(cartSubtotal * (19 / 100)).toFixed(2);
+  const orderVat = +(cartSubtotal * (taxPercent / 100)).toFixed(2);
   const orderTotal = +(cartSubtotal + orderVat + orderShipping).toFixed(2);
 
   const handlePlaceOrder = async () => {
@@ -245,7 +263,9 @@ export default function CheckoutPage() {
       return;
     }
 
-    const loggedInEmail = (localStorage.getItem(AUTH_EMAIL_STORAGE_KEY) ?? "").trim();
+    const loggedInEmail = (
+      localStorage.getItem(AUTH_EMAIL_STORAGE_KEY) ?? ""
+    ).trim();
     if (!loggedInEmail) {
       setSubmitOrderMessage(t("checkout.error.loginRequired"));
       return;
@@ -310,7 +330,7 @@ export default function CheckoutPage() {
               etaText: selectedShippingMethod?.etaText ?? "",
               price: orderShipping,
             },
-            vatPercent: 19,
+            vatPercent: taxPercent,
             address: {
               firstName: activeAddress.firstName,
               lastName: activeAddress.lastName,
@@ -351,13 +371,17 @@ export default function CheckoutPage() {
       window.location.href = payload.data.url;
     } catch (error) {
       setSubmitOrderMessage(
-        error instanceof Error ? error.message : t("checkout.error.startCheckout"),
+        error instanceof Error
+          ? error.message
+          : t("checkout.error.startCheckout"),
       );
       setIsSubmittingOrder(false);
     }
   };
   const defaultShippingAddress =
-    addresses.find((address) => address.isDefaultShipping) ?? addresses[0] ?? null;
+    addresses.find((address) => address.isDefaultShipping) ??
+    addresses[0] ??
+    null;
 
   useEffect(() => {
     if (addresses.length === 0) {
@@ -381,7 +405,9 @@ export default function CheckoutPage() {
             {t("common.home")}
           </Link>{" "}
           <span className="mx-2">→</span>
-          <span className="text-gray-700 font-semibold">{t("checkout.breadcrumb.checkout")}</span>
+          <span className="text-gray-700 font-semibold">
+            {t("checkout.breadcrumb.checkout")}
+          </span>
         </div>
       </section>
 
@@ -424,7 +450,7 @@ export default function CheckoutPage() {
         {/* Checkout Summary Bar */}
         <CheckoutSummaryBar
           subtotal={cartSubtotal}
-          vatPercent={19}
+          vatPercent={taxPercent}
           shipping={orderShipping}
           currency="€"
           onContinueHref="/boxesfetco"
@@ -482,13 +508,17 @@ export default function CheckoutPage() {
 
           <div className="ml-0 sm:ml-auto flex flex-col items-start sm:items-end order-1 sm:order-2">
             <div className="grid grid-cols-[1fr_auto] gap-x-8 gap-y-2 text-sm text-right w-full sm:w-auto">
-              <div className="font-semibold tracking-wide">{t("checkout.subtotal")}</div>
+              <div className="font-semibold tracking-wide">
+                {t("checkout.subtotal")}
+              </div>
               <div className="text-my-gray">{money(subtotal, currency)}</div>
               <div className="font-semibold tracking-wide">
                 {t("checkout.vatTax")} ({vatPercent}%)
               </div>
               <div className="text-my-gray">{money(vat, currency)}</div>
-              <div className="font-semibold tracking-wide">{t("checkout.shipping")}</div>
+              <div className="font-semibold tracking-wide">
+                {t("checkout.shipping")}
+              </div>
               <div className="text-my-gray">{money(shipping, currency)}</div>
             </div>
             <div className="mt-6">
@@ -507,10 +537,14 @@ export default function CheckoutPage() {
                   disabled={isSubmittingOrder}
                   className="inline-flex items-center justify-center rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-my-red/90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isSubmittingOrder ? t("checkout.placingOrder") : t("checkout.placeOrder")}
+                  {isSubmittingOrder
+                    ? t("checkout.placingOrder")
+                    : t("checkout.placeOrder")}
                 </button>
                 {submitOrderMessage ? (
-                  <p className="mt-2 text-sm text-gray-700">{submitOrderMessage}</p>
+                  <p className="mt-2 text-sm text-gray-700">
+                    {submitOrderMessage}
+                  </p>
                 ) : null}
               </div>
             </div>
@@ -524,7 +558,9 @@ export default function CheckoutPage() {
     return (
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-xl">{t("checkout.shoppingCart")}</span>
+          <span className="font-bold text-xl">
+            {t("checkout.shoppingCart")}
+          </span>
           <span className="bg-my-red rounded-full w-6 h-6 flex items-center justify-center text-white text-sm font-semibold">
             {cartItems.length}
           </span>
@@ -616,7 +652,9 @@ export default function CheckoutPage() {
             >
               <span
                 className={`shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
-                  shippingMethod === method.key ? "border-my-red" : "border-gray-300"
+                  shippingMethod === method.key
+                    ? "border-my-red"
+                    : "border-gray-300"
                 }`}
               >
                 {shippingMethod === method.key && (
@@ -626,7 +664,9 @@ export default function CheckoutPage() {
               <div>
                 <p className="font-bold text-black">{method.name}</p>
                 <p className="text-gray-500 text-sm mt-0.5">{method.etaText}</p>
-                <p className="font-bold text-black mt-2">€ {method.price.toFixed(2)}</p>
+                <p className="font-bold text-black mt-2">
+                  € {method.price.toFixed(2)}
+                </p>
               </div>
             </button>
           ))}
@@ -804,7 +844,9 @@ function CheckoutProductDetails({
                 quantity={item.quantity}
                 decreaseAriaLabel={t("checkout.aria.decreaseQuantity")}
                 increaseAriaLabel={t("checkout.aria.increaseQuantity")}
-                onCommit={(nextQuantity) => setCartItemQuantity(item.itemNo, nextQuantity)}
+                onCommit={(nextQuantity) =>
+                  setCartItemQuantity(item.itemNo, nextQuantity)
+                }
                 onDecrease={() =>
                   setCartItemQuantity(
                     item.itemNo,
@@ -812,10 +854,16 @@ function CheckoutProductDetails({
                   )
                 }
                 onIncrease={() =>
-                  setCartItemQuantity(item.itemNo, item.quantity + CART_QTY_STEP)
+                  setCartItemQuantity(
+                    item.itemNo,
+                    item.quantity + CART_QTY_STEP,
+                  )
                 }
                 onIncreaseByMin={() =>
-                  setCartItemQuantity(item.itemNo, item.quantity + MIN_ORDER_QTY)
+                  setCartItemQuantity(
+                    item.itemNo,
+                    item.quantity + MIN_ORDER_QTY,
+                  )
                 }
               />
             </div>

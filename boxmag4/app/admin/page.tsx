@@ -96,17 +96,26 @@ export default function AdminPage() {
   const loadBoxTypes = useAdminBoxTypesStore((state) => state.loadBoxTypes);
   const createBoxType = useAdminBoxTypesStore((state) => state.createBoxType);
   const [boxTypeTitle, setBoxTypeTitle] = useState("");
-  const [selectedBoxImageFiles, setSelectedBoxImageFiles] = useState<File[]>([]);
+  const [selectedBoxImageFiles, setSelectedBoxImageFiles] = useState<File[]>(
+    [],
+  );
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
-  const [shippingMethods, setShippingMethods] = useState<AdminShippingMethod[]>([]);
-  const [isLoadingShippingMethods, setIsLoadingShippingMethods] = useState(true);
-  const [shippingMethodsError, setShippingMethodsError] = useState<string | null>(null);
-  const [updatingShippingMethodId, setUpdatingShippingMethodId] = useState<number | null>(null);
+  const [shippingMethods, setShippingMethods] = useState<AdminShippingMethod[]>(
+    [],
+  );
+  const [isLoadingShippingMethods, setIsLoadingShippingMethods] =
+    useState(true);
+  const [shippingMethodsError, setShippingMethodsError] = useState<
+    string | null
+  >(null);
+  const [updatingShippingMethodId, setUpdatingShippingMethodId] = useState<
+    number | null
+  >(null);
   const [newShippingKey, setNewShippingKey] = useState("");
   const [newShippingName, setNewShippingName] = useState("");
   const [newShippingEtaText, setNewShippingEtaText] = useState("");
@@ -225,8 +234,14 @@ export default function AdminPage() {
           data?: AdminOrder[];
           message?: string;
         };
-        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
-          throw new Error(payload.message ?? `Failed with status ${response.status}`);
+        if (
+          !response.ok ||
+          payload.ok !== true ||
+          !Array.isArray(payload.data)
+        ) {
+          throw new Error(
+            payload.message ?? `Failed with status ${response.status}`,
+          );
         }
         setOrders(payload.data);
       } catch (error) {
@@ -245,14 +260,18 @@ export default function AdminPage() {
     setIsLoadingShippingMethods(true);
     setShippingMethodsError(null);
     try {
-      const response = await fetch(`${backendBaseUrl}/api/shipping-methods?includeInactive=true`);
+      const response = await fetch(
+        `${backendBaseUrl}/api/shipping-methods?includeInactive=true`,
+      );
       const payload = (await response.json()) as {
         ok?: boolean;
         data?: AdminShippingMethod[];
         message?: string;
       };
       if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
-        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+        throw new Error(
+          payload.message ?? `Failed with status ${response.status}`,
+        );
       }
       setShippingMethods(
         payload.data.sort((a, b) =>
@@ -261,7 +280,9 @@ export default function AdminPage() {
       );
     } catch (error) {
       setShippingMethodsError(
-        error instanceof Error ? error.message : "Failed to load shipping methods",
+        error instanceof Error
+          ? error.message
+          : "Failed to load shipping methods",
       );
     } finally {
       setIsLoadingShippingMethods(false);
@@ -278,19 +299,24 @@ export default function AdminPage() {
   ) => {
     setUpdatingOrderId(orderId);
     try {
-      const response = await fetch(`${backendBaseUrl}/api/orders/${orderId}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${backendBaseUrl}/api/orders/${orderId}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: nextStatus }),
         },
-        body: JSON.stringify({ status: nextStatus }),
-      });
+      );
       const payload = (await response.json()) as {
         ok?: boolean;
         message?: string;
       };
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+        throw new Error(
+          payload.message ?? `Failed with status ${response.status}`,
+        );
       }
 
       setOrders((prev) =>
@@ -300,7 +326,9 @@ export default function AdminPage() {
       );
     } catch (error) {
       setOrdersError(
-        error instanceof Error ? error.message : "Failed to update order status",
+        error instanceof Error
+          ? error.message
+          : "Failed to update order status",
       );
     } finally {
       setUpdatingOrderId(null);
@@ -318,7 +346,9 @@ export default function AdminPage() {
       priceValue < 0 ||
       !Number.isFinite(sortOrderValue)
     ) {
-      setShippingMethodsError("Please fill all shipping method fields correctly.");
+      setShippingMethodsError(
+        "Please fill all shipping method fields correctly.",
+      );
       return;
     }
 
@@ -337,9 +367,14 @@ export default function AdminPage() {
           isActive: newShippingIsActive,
         }),
       });
-      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+      };
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+        throw new Error(
+          payload.message ?? `Failed with status ${response.status}`,
+        );
       }
       setNewShippingKey("");
       setNewShippingName("");
@@ -350,7 +385,9 @@ export default function AdminPage() {
       await loadShippingMethods();
     } catch (error) {
       setShippingMethodsError(
-        error instanceof Error ? error.message : "Failed to create shipping method",
+        error instanceof Error
+          ? error.message
+          : "Failed to create shipping method",
       );
     }
   };
@@ -358,28 +395,38 @@ export default function AdminPage() {
   const handleUpdateShippingMethod = async (method: AdminShippingMethod) => {
     setUpdatingShippingMethodId(method.id);
     try {
-      const response = await fetch(`${backendBaseUrl}/api/shipping-methods/${method.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${backendBaseUrl}/api/shipping-methods/${method.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            key: method.key,
+            name: method.name,
+            etaText: method.etaText,
+            price: method.price,
+            sortOrder: method.sortOrder,
+            isActive: method.isActive,
+          }),
         },
-        body: JSON.stringify({
-          key: method.key,
-          name: method.name,
-          etaText: method.etaText,
-          price: method.price,
-          sortOrder: method.sortOrder,
-          isActive: method.isActive,
-        }),
-      });
-      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      );
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+      };
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+        throw new Error(
+          payload.message ?? `Failed with status ${response.status}`,
+        );
       }
       await loadShippingMethods();
     } catch (error) {
       setShippingMethodsError(
-        error instanceof Error ? error.message : "Failed to update shipping method",
+        error instanceof Error
+          ? error.message
+          : "Failed to update shipping method",
       );
     } finally {
       setUpdatingShippingMethodId(null);
@@ -389,17 +436,27 @@ export default function AdminPage() {
   const handleDeleteShippingMethod = async (shippingMethodId: number) => {
     setUpdatingShippingMethodId(shippingMethodId);
     try {
-      const response = await fetch(`${backendBaseUrl}/api/shipping-methods/${shippingMethodId}`, {
-        method: "DELETE",
-      });
-      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      const response = await fetch(
+        `${backendBaseUrl}/api/shipping-methods/${shippingMethodId}`,
+        {
+          method: "DELETE",
+        },
+      );
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+      };
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+        throw new Error(
+          payload.message ?? `Failed with status ${response.status}`,
+        );
       }
       await loadShippingMethods();
     } catch (error) {
       setShippingMethodsError(
-        error instanceof Error ? error.message : "Failed to delete shipping method",
+        error instanceof Error
+          ? error.message
+          : "Failed to delete shipping method",
       );
     } finally {
       setUpdatingShippingMethodId(null);
@@ -478,7 +535,10 @@ export default function AdminPage() {
 
       <section className="w-full bg-white px-6 lg:px-20 py-8">
         <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
-          <SectionTitle title="Orders" subtitle="Data loaded from orders + contacts" />
+          <SectionTitle
+            title="Orders"
+            subtitle="Data loaded from orders + contacts"
+          />
 
           <div className="p-6 lg:p-8 space-y-6">
             <div className="rounded-xl border border-gray-200 overflow-hidden">
@@ -521,9 +581,7 @@ export default function AdminPage() {
                         </td>
                       </tr>
                     ) : null}
-                    {!isLoadingOrders &&
-                    !ordersError &&
-                    orders.length === 0 ? (
+                    {!isLoadingOrders && !ordersError && orders.length === 0 ? (
                       <tr className="border-t border-gray-200">
                         <td className="px-4 py-3 text-gray-500" colSpan={6}>
                           No orders found.
@@ -535,7 +593,9 @@ export default function AdminPage() {
                           <tr
                             key={order.id}
                             className="border-t border-gray-200 cursor-pointer transition-colors hover:bg-gray-50"
-                            onClick={() => router.push(`/admin/orders/${order.id}`)}
+                            onClick={() =>
+                              router.push(`/admin/orders/${order.id}`)
+                            }
                           >
                             <td className="px-4 py-3 font-medium text-my-red">
                               {order.orderNumber}
@@ -608,10 +668,14 @@ export default function AdminPage() {
                 <input
                   type="checkbox"
                   checked={newShippingIsActive}
-                  onChange={(event) => setNewShippingIsActive(event.target.checked)}
+                  onChange={(event) =>
+                    setNewShippingIsActive(event.target.checked)
+                  }
                   className="h-4 w-4"
                 />
-                <span className="text-sm font-semibold text-gray-800 pb-2">Active</span>
+                <span className="text-sm font-semibold text-gray-800 pb-2">
+                  Active
+                </span>
               </label>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -629,12 +693,22 @@ export default function AdminPage() {
                   <thead className="bg-my-light-gray2 text-gray-800">
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold">Key</th>
-                      <th className="px-4 py-3 text-left font-semibold">Name</th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Name
+                      </th>
                       <th className="px-4 py-3 text-left font-semibold">ETA</th>
-                      <th className="px-4 py-3 text-left font-semibold">Price</th>
-                      <th className="px-4 py-3 text-left font-semibold">Sort</th>
-                      <th className="px-4 py-3 text-left font-semibold">Active</th>
-                      <th className="px-4 py-3 text-left font-semibold">Actions</th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Price
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Sort
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Active
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -645,7 +719,8 @@ export default function AdminPage() {
                         </td>
                       </tr>
                     ) : null}
-                    {!isLoadingShippingMethods && shippingMethods.length === 0 ? (
+                    {!isLoadingShippingMethods &&
+                    shippingMethods.length === 0 ? (
                       <tr className="border-t border-gray-200">
                         <td className="px-4 py-3 text-gray-500" colSpan={7}>
                           No shipping methods found.
@@ -654,7 +729,10 @@ export default function AdminPage() {
                     ) : null}
                     {!isLoadingShippingMethods
                       ? shippingMethods.map((method) => (
-                          <tr key={method.id} className="border-t border-gray-200">
+                          <tr
+                            key={method.id}
+                            className="border-t border-gray-200"
+                          >
                             <td className="px-4 py-3">
                               <input
                                 value={method.key}
@@ -692,7 +770,10 @@ export default function AdminPage() {
                                   setShippingMethods((prev) =>
                                     prev.map((item) =>
                                       item.id === method.id
-                                        ? { ...item, etaText: event.target.value }
+                                        ? {
+                                            ...item,
+                                            etaText: event.target.value,
+                                          }
                                         : item,
                                     ),
                                   )
@@ -708,7 +789,11 @@ export default function AdminPage() {
                                   setShippingMethods((prev) =>
                                     prev.map((item) =>
                                       item.id === method.id
-                                        ? { ...item, price: Number(event.target.value) || 0 }
+                                        ? {
+                                            ...item,
+                                            price:
+                                              Number(event.target.value) || 0,
+                                          }
                                         : item,
                                     ),
                                   )
@@ -724,7 +809,11 @@ export default function AdminPage() {
                                   setShippingMethods((prev) =>
                                     prev.map((item) =>
                                       item.id === method.id
-                                        ? { ...item, sortOrder: Number(event.target.value) || 0 }
+                                        ? {
+                                            ...item,
+                                            sortOrder:
+                                              Number(event.target.value) || 0,
+                                          }
                                         : item,
                                     ),
                                   )
@@ -740,7 +829,10 @@ export default function AdminPage() {
                                   setShippingMethods((prev) =>
                                     prev.map((item) =>
                                       item.id === method.id
-                                        ? { ...item, isActive: event.target.checked }
+                                        ? {
+                                            ...item,
+                                            isActive: event.target.checked,
+                                          }
                                         : item,
                                     ),
                                   )
@@ -752,16 +844,24 @@ export default function AdminPage() {
                               <div className="flex gap-2">
                                 <button
                                   type="button"
-                                  disabled={updatingShippingMethodId === method.id}
-                                  onClick={() => void handleUpdateShippingMethod(method)}
+                                  disabled={
+                                    updatingShippingMethodId === method.id
+                                  }
+                                  onClick={() =>
+                                    void handleUpdateShippingMethod(method)
+                                  }
                                   className="rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black hover:bg-my-yellow-bright disabled:opacity-60"
                                 >
                                   Save
                                 </button>
                                 <button
                                   type="button"
-                                  disabled={updatingShippingMethodId === method.id}
-                                  onClick={() => void handleDeleteShippingMethod(method.id)}
+                                  disabled={
+                                    updatingShippingMethodId === method.id
+                                  }
+                                  onClick={() =>
+                                    void handleDeleteShippingMethod(method.id)
+                                  }
                                   className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
                                 >
                                   Delete
@@ -896,7 +996,9 @@ const BoxTypeRow = memo(function BoxTypeRow({
   boxType: AdminBoxType;
 }) {
   const primaryImage =
-    boxType.images.find((image) => image.isPrimary) ?? boxType.images[0] ?? null;
+    boxType.images.find((image) => image.isPrimary) ??
+    boxType.images[0] ??
+    null;
 
   return (
     <tr className="border-t border-gray-200">
