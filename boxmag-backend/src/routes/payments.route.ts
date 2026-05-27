@@ -9,6 +9,7 @@ import {
   sendNewOrderNotificationEmail,
 } from "../services/email";
 import { getStripeClient, isStripeConfigured } from "../services/stripe";
+import { parseCartItemsJson } from "../utils/cart-items";
 import { MIN_ORDER_QTY } from "../constants/order";
 
 type CartItemPayload = {
@@ -131,6 +132,12 @@ type OrderRow = RowDataPacket & {
   stripe_session_id: string | null;
   stripe_payment_intent_id: string | null;
   total_amount_cents: number | null;
+  subtotal_cents: number | null;
+  vat_percent: string | number | null;
+  vat_cents: number | null;
+  shipping_cents: number | null;
+  shipping_method: string | null;
+  shipping_eta: string | null;
   currency: string | null;
   box_type_name: string;
   cardboard_type: string;
@@ -141,8 +148,20 @@ type OrderRow = RowDataPacket & {
   quantity: number;
   attachment_name: string | null;
   message: string | null;
+  items_json: string | null;
   created_at: string;
 };
+
+function centsToAmount(value: number | null): number | null {
+  if (value == null) return null;
+  return Math.round(value) / 100;
+}
+
+function vatPercentToNumber(value: string | number | null): number | null {
+  if (value == null) return null;
+  const num = typeof value === "string" ? Number(value) : value;
+  return Number.isFinite(num) ? num : null;
+}
 
 type ContactRow = RowDataPacket & {
   first_name: string;
@@ -543,13 +562,17 @@ async function markOrderPaidBySession(
   try {
     const [orderRows] = await mysqlPool.query<OrderRow[]>(
       `SELECT id, status, payment_status, stripe_session_id, stripe_payment_intent_id,
-              total_amount_cents, currency, box_type_name, cardboard_type, cardboard_colour,
-              box_print, size_type, transport, quantity, attachment_name, message, created_at
+              total_amount_cents, subtotal_cents, vat_percent, vat_cents, shipping_cents,
+              shipping_method, shipping_eta, currency, box_type_name, cardboard_type,
+              cardboard_colour, box_print, size_type, transport, quantity, attachment_name,
+              message, items_json, created_at
        FROM orders WHERE stripe_session_id = ? LIMIT 1`,
       [session.id],
     );
     const order = orderRows[0];
     if (!order) return;
+
+    const cartItems = parseCartItemsJson(order.items_json);
 
     const [contactRows] = await mysqlPool.query<ContactRow[]>(
       `SELECT first_name, surname, company_name, vat_number, email, phone,
@@ -588,6 +611,17 @@ async function markOrderPaidBySession(
       attachmentName: order.attachment_name,
       boxTypeName: order.box_type_name,
       message: order.message ?? "",
+      items: cartItems,
+      priceBreakdown: {
+        subtotal: centsToAmount(order.subtotal_cents),
+        vatPercent: vatPercentToNumber(order.vat_percent),
+        vatAmount: centsToAmount(order.vat_cents),
+        shipping: centsToAmount(order.shipping_cents),
+        total: centsToAmount(order.total_amount_cents),
+        currency: order.currency ?? null,
+        shippingMethod: order.shipping_method ?? null,
+        shippingEta: order.shipping_eta ?? null,
+      },
     });
   } catch (emailError) {
     console.error("Stripe payment confirmed, but order email failed", emailError);

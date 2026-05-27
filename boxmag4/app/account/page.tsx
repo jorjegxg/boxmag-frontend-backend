@@ -22,11 +22,9 @@ type Tab = "account" | "address" | "orders";
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
 
-const sectionTitleClass =
-  "text-lg font-bold text-gray-900 mb-1";
+const sectionTitleClass = "text-lg font-bold text-gray-900 mb-1";
 
-const sectionSubtitleClass =
-  "text-sm text-gray-500 mb-5";
+const sectionSubtitleClass = "text-sm text-gray-500 mb-5";
 
 const saveBtnClass =
   "px-6 py-2.5 rounded-lg bg-my-red text-white font-semibold text-sm hover:bg-my-red/90 transition-colors";
@@ -34,6 +32,7 @@ const saveBtnClass =
 const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const AUTH_CHANGED_EVENT = "boxmag-auth-changed";
+const ACCOUNT_PROFILE_STORAGE_KEY = "boxmag.account.profile.v1";
 const isDevelopment = process.env.NODE_ENV === "development";
 
 type UserProfile = {
@@ -105,7 +104,10 @@ function LoginRequiredView({
           password,
         }),
       });
-      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+      };
       if (!response.ok || payload.ok !== true) {
         throw new Error(payload.message ?? "Invalid email or password");
       }
@@ -133,7 +135,10 @@ function LoginRequiredView({
       </p>
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label htmlFor="account-login-email" className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+          <label
+            htmlFor="account-login-email"
+            className="mb-1 block text-xs font-semibold uppercase text-gray-500"
+          >
             {t("account.emailAddress")}
           </label>
           <input
@@ -147,7 +152,10 @@ function LoginRequiredView({
           />
         </div>
         <div>
-          <label htmlFor="account-login-password" className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+          <label
+            htmlFor="account-login-password"
+            className="mb-1 block text-xs font-semibold uppercase text-gray-500"
+          >
             {t("account.password")}
           </label>
           <div className="relative">
@@ -166,16 +174,29 @@ function LoginRequiredView({
               className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
+              {showPassword ? (
+                <FaEyeSlash className="h-4 w-4" />
+              ) : (
+                <FaEye className="h-4 w-4" />
+              )}
             </button>
           </div>
         </div>
-        {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+        {error ? (
+          <p className="text-sm font-medium text-red-700">{error}</p>
+        ) : null}
         <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
-          <button type="submit" className={saveBtnClass} disabled={isSubmitting}>
+          <button
+            type="submit"
+            className={saveBtnClass}
+            disabled={isSubmitting}
+          >
             {isSubmitting ? "Signing in..." : "Sign in"}
           </button>
-          <Link href="/registration" className="text-sm font-semibold text-my-red hover:underline">
+          <Link
+            href="/registration"
+            className="text-sm font-semibold text-my-red hover:underline"
+          >
             {t("account.newUserRegister")}
           </Link>
         </div>
@@ -188,24 +209,74 @@ function LoginRequiredView({
 function MyAccountTab({
   t,
   profile,
+  storageEmailKey,
+  onProfileSaved,
 }: {
   t: (key: string) => string;
   profile: UserProfile;
+  storageEmailKey: string;
+  onProfileSaved: (next: UserProfile) => void;
 }) {
   const [firstName, setFirstName] = useState(profile.firstName);
   const [lastName, setLastName] = useState(profile.lastName);
   const [phone, setPhone] = useState(profile.phone);
-  const [emailAddress, setEmailAddress] = useState(profile.email);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     setFirstName(profile.firstName);
     setLastName(profile.lastName);
     setPhone(profile.phone);
-    setEmailAddress(profile.email);
   }, [profile]);
+
+  useEffect(() => {
+    if (!saveSuccess) return;
+    const timer = window.setTimeout(() => {
+      setSaveSuccess(null);
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [saveSuccess]);
+
+  const handleSave = async () => {
+    if (!storageEmailKey) {
+      setSaveError("Missing account email.");
+      setSaveSuccess(null);
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+    try {
+      const nextProfile: UserProfile = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone.trim(),
+        email: profile.email,
+      };
+
+      const raw = localStorage.getItem(ACCOUNT_PROFILE_STORAGE_KEY);
+      const parsed = raw ? (JSON.parse(raw) as Record<string, UserProfile>) : {};
+      parsed[storageEmailKey] = nextProfile;
+      localStorage.setItem(ACCOUNT_PROFILE_STORAGE_KEY, JSON.stringify(parsed));
+
+      onProfileSaved(nextProfile);
+      setSaveSuccess("Details saved");
+    } catch {
+      setSaveError("Failed to save profile.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
+      {saveSuccess ? (
+        <div className="fixed right-4 top-4 z-120 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 shadow-lg">
+          {saveSuccess}
+        </div>
+      ) : null}
       {/* Header */}
       <div>
         <h2 className={sectionTitleClass}>{t("account.nav.account")}</h2>
@@ -214,42 +285,103 @@ function MyAccountTab({
 
       {/* Name */}
       <div className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-4">
-        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{t("account.nameSection")}</h3>
+        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+          {t("account.nameSection")}
+        </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="acc-first" className="block text-xs font-semibold text-gray-500 mb-1 uppercase">{t("account.yourName")}</label>
-            <input id="acc-first" type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={t("account.yourName")} className={inputClass} />
+            <label
+              htmlFor="acc-first"
+              className="block text-xs font-semibold text-gray-500 mb-1 uppercase"
+            >
+              First Name
+            </label>
+            <input
+              id="acc-first"
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="First Name"
+              className={inputClass}
+            />
           </div>
           <div>
-            <label htmlFor="acc-last" className="block text-xs font-semibold text-gray-500 mb-1 uppercase">{t("account.yourName")}</label>
-            <input id="acc-last" type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder={t("account.yourName")} className={inputClass} />
+            <label
+              htmlFor="acc-last"
+              className="block text-xs font-semibold text-gray-500 mb-1 uppercase"
+            >
+              Last Name
+            </label>
+            <input
+              id="acc-last"
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Last Name"
+              className={inputClass}
+            />
           </div>
         </div>
-        <button type="button" className={saveBtnClass}>{t("account.save")}</button>
+        <button type="button" className={saveBtnClass} onClick={() => void handleSave()} disabled={isSaving}>
+          {isSaving ? "Saving..." : t("account.save")}
+        </button>
       </div>
 
       {/* Contact */}
       <div className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-4">
-        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{t("account.contactSection")}</h3>
+        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+          {t("account.contactSection")}
+        </h3>
         <div>
-          <label htmlFor="acc-phone" className="block text-xs font-semibold text-gray-500 mb-1 uppercase">{t("account.phone")}</label>
+          <label
+            htmlFor="acc-phone"
+            className="block text-xs font-semibold text-gray-500 mb-1 uppercase"
+          >
+            {t("account.phone")}
+          </label>
           <div className="flex gap-2">
-            <span className="shrink-0 flex items-center px-3 rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-600 font-medium">RO +40</span>
-            <input id="acc-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="123 456 789" className={inputClass} />
+            <span className="shrink-0 flex items-center px-3 rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-600 font-medium">
+              RO +40
+            </span>
+            <input
+              id="acc-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+              placeholder="123 456 789"
+              className={inputClass}
+              inputMode="numeric"
+              pattern="[0-9]*"
+            />
           </div>
         </div>
-        <button type="button" className={saveBtnClass}>{t("account.save")}</button>
+        <button type="button" className={saveBtnClass} onClick={() => void handleSave()} disabled={isSaving}>
+          {isSaving ? "Saving..." : t("account.save")}
+        </button>
       </div>
 
       {/* Email */}
       <div className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-4">
-        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{t("account.emailSection")}</h3>
+        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+          {t("account.emailSection")}
+        </h3>
         <div>
-          <label htmlFor="acc-email" className="block text-xs font-semibold text-gray-500 mb-1 uppercase">{t("account.emailAddress")}</label>
-          <input id="acc-email" type="email" value={emailAddress} onChange={(e) => setEmailAddress(e.target.value)} placeholder="You@yourwebsite.com" className={inputClass} />
+          <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">
+            {t("account.emailAddress")}
+          </label>
+          <div className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700">
+            {profile.email || "-"}
+          </div>
+          <p className="mt-2 text-xs text-gray-500">
+            Email-ul contului nu poate fi modificat.
+          </p>
         </div>
-        <button type="button" className={saveBtnClass}>{t("account.save")}</button>
       </div>
+      {saveError ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700">
+          {saveError}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -314,7 +446,9 @@ function AddressTab({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
-  const [deletingAddressId, setDeletingAddressId] = useState<number | null>(null);
+  const [deletingAddressId, setDeletingAddressId] = useState<number | null>(
+    null,
+  );
   const addressFormRef = useRef<HTMLFormElement | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -350,7 +484,9 @@ function AddressTab({
       setIsDefaultShipping(true);
     } catch (submitError) {
       setError(
-        submitError instanceof Error ? submitError.message : "Failed to save address",
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to save address",
       );
     } finally {
       setIsSubmitting(false);
@@ -373,7 +509,10 @@ function AddressTab({
     setIsDefaultShipping(address.isDefaultShipping);
     setError(null);
     window.setTimeout(() => {
-      addressFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      addressFormRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     }, 0);
   };
 
@@ -417,7 +556,9 @@ function AddressTab({
       cancelEdit();
     } catch (submitError) {
       setError(
-        submitError instanceof Error ? submitError.message : "Failed to update address",
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to update address",
       );
     } finally {
       setIsSubmitting(false);
@@ -434,7 +575,9 @@ function AddressTab({
       }
     } catch (deleteError) {
       setError(
-        deleteError instanceof Error ? deleteError.message : "Failed to delete address",
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Failed to delete address",
       );
     } finally {
       setDeletingAddressId(null);
@@ -445,7 +588,9 @@ function AddressTab({
     <div className="space-y-8">
       <div>
         <h2 className={sectionTitleClass}>{t("account.nav.address")}</h2>
-        <p className={sectionSubtitleClass}>{t("account.manageShippingAddress")}</p>
+        <p className={sectionSubtitleClass}>
+          {t("account.manageShippingAddress")}
+        </p>
       </div>
 
       <div className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-4">
@@ -459,12 +604,17 @@ function AddressTab({
         ) : (
           <div className="space-y-4">
             {addresses.map((address) => (
-              <div key={address.id} className="rounded-lg border border-gray-200 p-4">
+              <div
+                key={address.id}
+                className="rounded-lg border border-gray-200 p-4"
+              >
                 <div className="flex items-start gap-3 text-sm text-gray-600">
                   <FaMapMarkerAlt className="mt-0.5 h-4 w-4 shrink-0 text-my-red" />
                   <div className="space-y-0.5">
                     <p className="font-semibold text-gray-800">
-                      {[address.firstName, address.lastName].filter(Boolean).join(" ")}
+                      {[address.firstName, address.lastName]
+                        .filter(Boolean)
+                        .join(" ")}
                     </p>
                     {address.companyName ? <p>{address.companyName}</p> : null}
                     {address.label ? (
@@ -473,7 +623,9 @@ function AddressTab({
                       </p>
                     ) : null}
                     <p>{address.addressLine1}</p>
-                    {address.addressLine2 ? <p>{address.addressLine2}</p> : null}
+                    {address.addressLine2 ? (
+                      <p>{address.addressLine2}</p>
+                    ) : null}
                     <p>
                       {address.postcode} {address.city}
                     </p>
@@ -481,7 +633,9 @@ function AddressTab({
                     {address.phone ? <p>Tel: {address.phone}</p> : null}
                     <p className="text-xs text-gray-500">
                       {address.isDefaultShipping ? "Default shipping" : ""}
-                      {address.isDefaultShipping && address.isDefaultBilling ? " • " : ""}
+                      {address.isDefaultShipping && address.isDefaultBilling
+                        ? " • "
+                        : ""}
                       {address.isDefaultBilling ? "Default billing" : ""}
                     </p>
                     <div className="pt-2 flex gap-3">
@@ -498,7 +652,9 @@ function AddressTab({
                         onClick={() => void handleDeleteAddress(address.id)}
                         disabled={deletingAddressId === address.id}
                       >
-                        {deletingAddressId === address.id ? "Deleting..." : "Delete"}
+                        {deletingAddressId === address.id
+                          ? "Deleting..."
+                          : "Delete"}
                       </button>
                     </div>
                   </div>
@@ -615,9 +771,15 @@ function AddressTab({
             Default billing
           </label>
         </div>
-        {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+        {error ? (
+          <p className="text-sm font-medium text-red-700">{error}</p>
+        ) : null}
         <div className="flex gap-3">
-          <button type="submit" className={saveBtnClass} disabled={isSubmitting}>
+          <button
+            type="submit"
+            className={saveBtnClass}
+            disabled={isSubmitting}
+          >
             {isSubmitting
               ? "Saving..."
               : editingAddressId
@@ -678,9 +840,11 @@ function OrdersTab({
   };
   const statusLabel = (status: string) => {
     const normalized = status.trim().toLowerCase();
-    if (normalized === "processing" || normalized === "in progress") return t("account.status.processing");
+    if (normalized === "processing" || normalized === "in progress")
+      return t("account.status.processing");
     if (normalized === "shipped") return t("account.status.shipped");
-    if (normalized === "completed" || normalized === "done") return t("account.status.completed");
+    if (normalized === "completed" || normalized === "done")
+      return t("account.status.completed");
     return status.toUpperCase();
   };
 
@@ -692,34 +856,52 @@ function OrdersTab({
       </div>
 
       <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide px-5 pt-5 sm:px-6 sm:pt-6">{t("account.orderDetails")}</h3>
+        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide px-5 pt-5 sm:px-6 sm:pt-6">
+          {t("account.orderDetails")}
+        </h3>
 
         {/* Table header */}
         <div className="grid grid-cols-3 gap-4 px-5 sm:px-6 pt-4 pb-2 border-b border-gray-200">
-          <span className="text-xs font-bold text-gray-500 uppercase">{t("account.date")}</span>
-          <span className="text-xs font-bold text-gray-500 uppercase">{t("account.orderNumber")}</span>
-          <span className="text-xs font-bold text-gray-500 uppercase">{t("account.status")}</span>
+          <span className="text-xs font-bold text-gray-500 uppercase">
+            {t("account.date")}
+          </span>
+          <span className="text-xs font-bold text-gray-500 uppercase">
+            {t("account.orderNumber")}
+          </span>
+          <span className="text-xs font-bold text-gray-500 uppercase">
+            {t("account.status")}
+          </span>
         </div>
 
         {isLoading ? (
-          <p className="px-5 py-4 text-sm text-gray-600 sm:px-6">Loading orders...</p>
+          <p className="px-5 py-4 text-sm text-gray-600 sm:px-6">
+            Loading orders...
+          </p>
         ) : orders.length === 0 ? (
-          <p className="px-5 py-4 text-sm text-gray-600 sm:px-6">No orders found.</p>
+          <p className="px-5 py-4 text-sm text-gray-600 sm:px-6">
+            No orders found.
+          </p>
         ) : (
           orders.map((order) => (
-          <Link
-            key={order.id}
-            href={`/account/orders/${order.id}`}
-            className="grid grid-cols-3 gap-4 px-5 sm:px-6 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
-          >
-            <span className="text-sm text-gray-700">{formatDate(order.createdAt)}</span>
-            <span className="text-sm text-gray-700 font-medium">{order.orderNumber}</span>
-            <span>
-              <span className={`inline-block text-xs font-bold uppercase px-2.5 py-1 rounded-full ${statusColor(order.status)}`}>
-                {statusLabel(order.status)}
+            <Link
+              key={order.id}
+              href={`/account/orders/${order.id}`}
+              className="grid grid-cols-3 gap-4 px-5 sm:px-6 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+            >
+              <span className="text-sm text-gray-700">
+                {formatDate(order.createdAt)}
               </span>
-            </span>
-          </Link>
+              <span className="text-sm text-gray-700 font-medium">
+                {order.orderNumber}
+              </span>
+              <span>
+                <span
+                  className={`inline-block text-xs font-bold uppercase px-2.5 py-1 rounded-full ${statusColor(order.status)}`}
+                >
+                  {statusLabel(order.status)}
+                </span>
+              </span>
+            </Link>
           ))
         )}
       </div>
@@ -793,6 +975,24 @@ export default function AccountPage() {
           phone: payload.data.phone ?? "",
           email: payload.data.email ?? loggedInEmail,
         });
+
+        try {
+          const raw = localStorage.getItem(ACCOUNT_PROFILE_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as Record<string, UserProfile>;
+            const localProfile = parsed[loggedInEmail];
+            if (localProfile) {
+              setAccountProfile({
+                firstName: localProfile.firstName ?? payload.data.firstName ?? "",
+                lastName: localProfile.lastName ?? payload.data.lastName ?? "",
+                phone: localProfile.phone ?? payload.data.phone ?? "",
+                email: payload.data.email ?? loggedInEmail,
+              });
+            }
+          }
+        } catch {
+          // ignore invalid localStorage payload
+        }
       } catch (error) {
         if (controller.signal.aborted) return;
         setAccountProfile({
@@ -834,7 +1034,11 @@ export default function AccountPage() {
           ok?: boolean;
           data?: UserOrder[];
         };
-        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+        if (
+          !response.ok ||
+          payload.ok !== true ||
+          !Array.isArray(payload.data)
+        ) {
           throw new Error("Failed to load orders");
         }
         setOrders(payload.data);
@@ -874,7 +1078,11 @@ export default function AccountPage() {
           ok?: boolean;
           data?: UserAddress[];
         };
-        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+        if (
+          !response.ok ||
+          payload.ok !== true ||
+          !Array.isArray(payload.data)
+        ) {
           throw new Error("Failed to load addresses");
         }
         setAddresses(payload.data);
@@ -931,7 +1139,10 @@ export default function AccountPage() {
     const reload = await fetch(
       `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
     );
-    const reloadJson = (await reload.json()) as { ok?: boolean; data?: UserAddress[] };
+    const reloadJson = (await reload.json()) as {
+      ok?: boolean;
+      data?: UserAddress[];
+    };
     if (reload.ok && reloadJson.ok === true && Array.isArray(reloadJson.data)) {
       setAddresses(reloadJson.data);
     }
@@ -961,16 +1172,19 @@ export default function AccountPage() {
     const backendBaseUrl =
       process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
       "http://localhost:3005";
-    const response = await fetch(`${backendBaseUrl}/api/addresses/${addressId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `${backendBaseUrl}/api/addresses/${addressId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: loggedInEmail,
+          ...payload,
+        }),
       },
-      body: JSON.stringify({
-        email: loggedInEmail,
-        ...payload,
-      }),
-    });
+    );
     const json = (await response.json()) as { ok?: boolean; message?: string };
     if (!response.ok || json.ok !== true) {
       throw new Error(json.message ?? "Failed to update address");
@@ -979,7 +1193,10 @@ export default function AccountPage() {
     const reload = await fetch(
       `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
     );
-    const reloadJson = (await reload.json()) as { ok?: boolean; data?: UserAddress[] };
+    const reloadJson = (await reload.json()) as {
+      ok?: boolean;
+      data?: UserAddress[];
+    };
     if (reload.ok && reloadJson.ok === true && Array.isArray(reloadJson.data)) {
       setAddresses(reloadJson.data);
     }
@@ -1005,17 +1222,31 @@ export default function AccountPage() {
     const reload = await fetch(
       `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
     );
-    const reloadJson = (await reload.json()) as { ok?: boolean; data?: UserAddress[] };
+    const reloadJson = (await reload.json()) as {
+      ok?: boolean;
+      data?: UserAddress[];
+    };
     if (reload.ok && reloadJson.ok === true && Array.isArray(reloadJson.data)) {
       setAddresses(reloadJson.data);
     }
   };
 
-  
   const navItems: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: "account", label: t("account.nav.account"), icon: <FaUser className="w-4 h-4" /> },
-    { key: "address", label: t("account.nav.address"), icon: <FaMapMarkerAlt className="w-4 h-4" /> },
-    { key: "orders", label: t("account.nav.orders"), icon: <FaBoxOpen className="w-4 h-4" /> },
+    {
+      key: "account",
+      label: t("account.nav.account"),
+      icon: <FaUser className="w-4 h-4" />,
+    },
+    {
+      key: "address",
+      label: t("account.nav.address"),
+      icon: <FaMapMarkerAlt className="w-4 h-4" />,
+    },
+    {
+      key: "orders",
+      label: t("account.nav.orders"),
+      icon: <FaBoxOpen className="w-4 h-4" />,
+    },
   ];
 
   const titleMap: Record<Tab, string> = {
@@ -1032,11 +1263,18 @@ export default function AccountPage() {
       <section className="w-full bg-white px-4 sm:px-6 lg:px-20 pt-6">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="text-xs lg:text-sm text-gray-500 uppercase tracking-wide">
-            <Link href="/" className="hover:underline">Home</Link>
+            <Link href="/" className="hover:underline">
+              Home
+            </Link>
             <span className="mx-2">→</span>
-            <span className="text-gray-700 font-semibold">{t("account.breadcrumb.accountManagement")}</span>
+            <span className="text-gray-700 font-semibold">
+              {t("account.breadcrumb.accountManagement")}
+            </span>
           </div>
-          <Link href="/registration" className="text-sm text-my-red font-semibold hover:underline">
+          <Link
+            href="/registration"
+            className="text-sm text-my-red font-semibold hover:underline"
+          >
             {t("account.newUserRegister")}
           </Link>
         </div>
@@ -1064,7 +1302,6 @@ export default function AccountPage() {
           />
         ) : (
           <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-6">
-
             {/* ── Sidebar ── */}
             <aside className="lg:w-64 shrink-0">
               <nav className="rounded-lg border border-gray-200 bg-white overflow-hidden">
@@ -1110,7 +1347,6 @@ export default function AccountPage() {
                   <FaSignOutAlt className="w-4 h-4" />
                   {t("account.signOut")}
                 </button>
-
               </nav>
             </aside>
 
@@ -1122,7 +1358,12 @@ export default function AccountPage() {
                 </div>
               ) : null}
               {activeTab === "account" && !isProfileLoading ? (
-                <MyAccountTab t={t} profile={accountProfile} />
+                <MyAccountTab
+                  t={t}
+                  profile={accountProfile}
+                  storageEmailKey={loggedInEmail}
+                  onProfileSaved={(next) => setAccountProfile(next)}
+                />
               ) : null}
               {activeTab === "address" ? (
                 <AddressTab
