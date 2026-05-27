@@ -2,6 +2,7 @@
 
 import { memo, type ChangeEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   type AdminBoxType,
   useAdminBoxTypesStore,
@@ -79,6 +80,7 @@ const ORDER_STATUS_OPTIONS: OrderStatusValue[] = [
 ];
 
 export default function AdminPage() {
+  const router = useRouter();
   const boxTypes = useAdminBoxTypesStore((state) => state.boxTypes);
   const isLoadingBoxTypes = useAdminBoxTypesStore(
     (state) => state.isLoadingBoxTypes,
@@ -500,9 +502,6 @@ export default function AdminPage() {
                         Quantity
                       </th>
                       <th className="px-4 py-3 text-left font-semibold">
-                        Details
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
                         Status
                       </th>
                     </tr>
@@ -510,14 +509,14 @@ export default function AdminPage() {
                   <tbody>
                     {isLoadingOrders ? (
                       <tr className="border-t border-gray-200">
-                        <td className="px-4 py-3 text-gray-500" colSpan={7}>
+                        <td className="px-4 py-3 text-gray-500" colSpan={6}>
                           Loading orders...
                         </td>
                       </tr>
                     ) : null}
                     {!isLoadingOrders && ordersError ? (
                       <tr className="border-t border-gray-200">
-                        <td className="px-4 py-3 text-red-600" colSpan={7}>
+                        <td className="px-4 py-3 text-red-600" colSpan={6}>
                           Failed to load orders: {ordersError}
                         </td>
                       </tr>
@@ -526,25 +525,29 @@ export default function AdminPage() {
                     !ordersError &&
                     orders.length === 0 ? (
                       <tr className="border-t border-gray-200">
-                        <td className="px-4 py-3 text-gray-500" colSpan={7}>
+                        <td className="px-4 py-3 text-gray-500" colSpan={6}>
                           No orders found.
                         </td>
                       </tr>
                     ) : null}
                     {!isLoadingOrders && !ordersError
                       ? orders.map((order) => (
-                          <tr key={order.id} className="border-t border-gray-200">
-                            <td className="px-4 py-3 font-medium">
+                          <tr
+                            key={order.id}
+                            className="border-t border-gray-200 cursor-pointer transition-colors hover:bg-gray-50"
+                            onClick={() => router.push(`/admin/orders/${order.id}`)}
+                          >
+                            <td className="px-4 py-3 font-medium text-my-red">
                               {order.orderNumber}
                             </td>
                             <td className="px-4 py-3">{order.customerName}</td>
                             <td className="px-4 py-3">{order.companyName}</td>
                             <td className="px-4 py-3">{order.boxTypeName}</td>
                             <td className="px-4 py-3">{order.quantity}</td>
-                            <td className="px-4 py-3 text-xs text-gray-700">
-                              <OrderDetailsCell order={order} />
-                            </td>
-                            <td className="px-4 py-3">
+                            <td
+                              className="px-4 py-3"
+                              onClick={(event) => event.stopPropagation()}
+                            >
                               <OrderStatusControl
                                 orderId={order.id}
                                 status={order.status}
@@ -1092,47 +1095,5 @@ function OrderStatusControl({
         </option>
       ))}
     </select>
-  );
-}
-
-function OrderDetailsCell({ order }: { order: AdminOrder }) {
-  const safeMessage = typeof order.message === "string" ? order.message : "";
-  const shortMessage = safeMessage.slice(0, 60);
-  const hasMoreMessage = safeMessage.length > 60;
-
-  return (
-    <details className="group">
-      <summary className="cursor-pointer list-none text-my-red font-semibold hover:underline">
-        View details
-      </summary>
-      <div className="mt-2 space-y-1.5 rounded-md bg-gray-50 p-2.5 text-[11px] leading-4">
-        <div>
-          <span className="font-semibold">Contact:</span> {order.email} / {order.phone}
-        </div>
-        <div>
-          <span className="font-semibold">Location:</span> {order.city}, {order.country}
-        </div>
-        <div>
-          <span className="font-semibold">Spec:</span> {order.cardboardType}, {order.cardboardColour}, {order.boxPrint}
-        </div>
-        <div>
-          <span className="font-semibold">Size:</span> {order.size}
-        </div>
-        <div>
-          <span className="font-semibold">Transport:</span> {order.transport}
-        </div>
-        <div>
-          <span className="font-semibold">Attachment:</span> {order.attachmentName ?? "No"}
-        </div>
-        <div>
-          <span className="font-semibold">Message:</span> {shortMessage || "No message"}
-          {hasMoreMessage ? "..." : ""}
-        </div>
-        <div>
-          <span className="font-semibold">Created:</span>{" "}
-          {new Date(order.createdAt).toLocaleString()}
-        </div>
-      </div>
-    </details>
   );
 }
