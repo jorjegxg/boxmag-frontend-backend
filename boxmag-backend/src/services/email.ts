@@ -248,7 +248,7 @@ export async function sendVerificationEmail(params: {
   });
 }
 
-export async function sendNewOrderNotificationEmail(params: {
+export type NewOrderEmailParams = {
   orderId: number;
   customerName: string;
   customerEmail: string;
@@ -277,7 +277,9 @@ export async function sendNewOrderNotificationEmail(params: {
   message: string;
   items?: CartLineItem[] | null;
   priceBreakdown?: OrderEmailPriceBreakdown | null;
-}): Promise<void> {
+};
+
+function buildOrderEmailContent(params: NewOrderEmailParams) {
   const orderNumber = `ORD-${String(params.orderId).padStart(4, "0")}`;
   const sizeText =
     params.lengthMm != null && params.widthMm != null && params.heightMm != null
@@ -314,6 +316,35 @@ export async function sendNewOrderNotificationEmail(params: {
     customerMessage.startsWith("Stripe checkout cart order") &&
     (params.items?.length ?? 0) > 0;
   const displayMessage = hideStripeDump ? "" : customerMessage;
+  return {
+    orderNumber,
+    sizeText,
+    yesNo,
+    attachmentText,
+    vatText,
+    productsTableText,
+    productsTableHtml,
+    priceBreakdownText,
+    priceBreakdownHtml,
+    displayMessage,
+  };
+}
+
+export async function sendNewOrderNotificationEmail(
+  params: NewOrderEmailParams,
+): Promise<void> {
+  const {
+    orderNumber,
+    sizeText,
+    yesNo,
+    attachmentText,
+    vatText,
+    productsTableText,
+    productsTableHtml,
+    priceBreakdownText,
+    priceBreakdownHtml,
+    displayMessage,
+  } = buildOrderEmailContent(params);
 
   await transporter.sendMail({
     from: env.emailFrom,
@@ -375,6 +406,59 @@ export async function sendNewOrderNotificationEmail(params: {
         </div>`
             : ""
         }
+      </div>
+    `,
+  });
+}
+
+export async function sendOrderConfirmationEmailToCustomer(
+  params: NewOrderEmailParams,
+): Promise<void> {
+  const {
+    orderNumber,
+    productsTableText,
+    productsTableHtml,
+    priceBreakdownText,
+    priceBreakdownHtml,
+    displayMessage,
+  } = buildOrderEmailContent(params);
+
+  await transporter.sendMail({
+    from: env.emailFrom,
+    to: params.customerEmail,
+    subject: `Confirmare comanda ${orderNumber}`,
+    text: [
+      `Salut ${params.customerName || "client"},`,
+      "",
+      "Iti confirmam ca am primit comanda ta pe Boxmag.",
+      `Numar comanda: ${orderNumber}`,
+      "",
+      "Produse:",
+      productsTableText,
+      priceBreakdownText ? `\n${priceBreakdownText}` : "",
+      displayMessage ? `\nMesajul tau:\n${displayMessage}` : "",
+      "",
+      "Iti multumim pentru comanda!",
+      "Echipa Boxmag",
+    ].join("\n"),
+    html: `
+      <div style="font-family:Arial,Helvetica,sans-serif;color:#111827;line-height:1.5;max-width:720px;">
+        <p style="margin:0 0 12px;">Salut ${escapeHtml(params.customerName || "client")},</p>
+        <p style="margin:0 0 12px;">Iti confirmam ca am primit comanda ta pe <strong>Boxmag</strong>.</p>
+        <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#b91c1c;">${escapeHtml(orderNumber)}</p>
+        <h3 style="margin:16px 0 8px;font-size:15px;color:#111827;">Produse comandate</h3>
+        ${productsTableHtml}
+        ${priceBreakdownHtml}
+        ${
+          displayMessage
+            ? `<div style="margin-top:20px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+          <p style="margin:0 0 8px;font-weight:700;">Mesajul tau</p>
+          <p style="margin:0;white-space:pre-line;">${escapeHtml(displayMessage)}</p>
+        </div>`
+            : ""
+        }
+        <p style="margin:20px 0 0;">Iti multumim pentru comanda!</p>
+        <p style="margin:4px 0 0;">Echipa Boxmag</p>
       </div>
     `,
   });

@@ -4,6 +4,7 @@ import { PoolConnection } from "mysql2/promise";
 import { mysqlPool } from "../db/mysql";
 import {
   isEmailTransportConfigured,
+  sendOrderConfirmationEmailToCustomer,
   sendNewOrderNotificationEmail,
 } from "../services/email";
 import { parseCartItemsJson } from "../utils/cart-items";
@@ -439,8 +440,38 @@ ordersRouter.post("/", async (req, res) => {
           items: null,
           priceBreakdown: null,
         });
+        await sendOrderConfirmationEmailToCustomer({
+          orderId,
+          customerName,
+          customerEmail: email,
+          companyName,
+          vatNumber,
+          customerPhone: phone,
+          customerAddress: address,
+          customerPostcode: postcode,
+          customerCity: city,
+          customerCountry: country,
+          createAccount,
+          consentPhone,
+          consentEmail,
+          cardboardType,
+          cardboardColour,
+          boxPrint,
+          lengthMm,
+          widthMm,
+          heightMm,
+          sizeType,
+          transport,
+          quantity,
+          ftl,
+          attachmentName,
+          boxTypeName,
+          message,
+          items: null,
+          priceBreakdown: null,
+        });
       } catch (emailError) {
-        console.error("Order created, but failed to send internal order email", emailError);
+        console.error("Order created, but failed to send confirmation emails", emailError);
       }
     } else {
       console.warn(

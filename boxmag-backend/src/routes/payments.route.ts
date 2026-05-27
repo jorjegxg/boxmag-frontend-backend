@@ -6,6 +6,7 @@ import { mysqlPool } from "../db/mysql";
 import { env } from "../config/env";
 import {
   isEmailTransportConfigured,
+  sendOrderConfirmationEmailToCustomer,
   sendNewOrderNotificationEmail,
 } from "../services/email";
 import { getStripeClient, isStripeConfigured } from "../services/stripe";
@@ -623,8 +624,47 @@ async function markOrderPaidBySession(
         shippingEta: order.shipping_eta ?? null,
       },
     });
+    await sendOrderConfirmationEmailToCustomer({
+      orderId: order.id,
+      customerName: `${contact.first_name} ${contact.surname}`.trim(),
+      customerEmail: contact.email,
+      companyName: contact.company_name,
+      vatNumber: contact.vat_number,
+      customerPhone: contact.phone,
+      customerAddress: contact.address,
+      customerPostcode: contact.postcode,
+      customerCity: contact.city,
+      customerCountry: contact.country,
+      createAccount: Boolean(contact.create_account),
+      consentPhone: Boolean(contact.consent_phone),
+      consentEmail: Boolean(contact.consent_email),
+      cardboardType: order.cardboard_type,
+      cardboardColour: order.cardboard_colour,
+      boxPrint: order.box_print,
+      lengthMm: null,
+      widthMm: null,
+      heightMm: null,
+      sizeType: order.size_type,
+      transport: order.transport,
+      quantity: order.quantity,
+      ftl: false,
+      attachmentName: order.attachment_name,
+      boxTypeName: order.box_type_name,
+      message: order.message ?? "",
+      items: cartItems,
+      priceBreakdown: {
+        subtotal: centsToAmount(order.subtotal_cents),
+        vatPercent: vatPercentToNumber(order.vat_percent),
+        vatAmount: centsToAmount(order.vat_cents),
+        shipping: centsToAmount(order.shipping_cents),
+        total: centsToAmount(order.total_amount_cents),
+        currency: order.currency ?? null,
+        shippingMethod: order.shipping_method ?? null,
+        shippingEta: order.shipping_eta ?? null,
+      },
+    });
   } catch (emailError) {
-    console.error("Stripe payment confirmed, but order email failed", emailError);
+    console.error("Stripe payment confirmed, but confirmation emails failed", emailError);
   }
 }
 

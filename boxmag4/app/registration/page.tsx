@@ -16,7 +16,7 @@ const isDevelopment = process.env.NODE_ENV === "development";
 
 export default function RegistrationPage() {
   const [email, setEmail] = useState(
-    isDevelopment ? "yotrevorgxg@gmail.com" : "",
+    isDevelopment ? "customer.demo@reko-packaging.ro" : "",
   );
   const [password, setPassword] = useState(isDevelopment ? "dummy123" : "");
   const [confirmPassword, setConfirmPassword] = useState(

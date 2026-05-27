@@ -8,6 +8,8 @@ import { B2b } from "../../../global/components/b2b";
 import { ServicesSection } from "../../../global/components/services-section";
 import { HaveAQuestion } from "../../../global/components/have-a-question";
 import { NewsletterSubscribe } from "../../../global/components/newsletter-subscribe";
+import { useCartStore } from "../../../stores/cart_store";
+import { useNotification } from "../../../global/components/notification-center";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const FALLBACK_PRODUCT_IMAGE = "/b2b/boxes/box.png";
 
@@ -121,6 +123,8 @@ export default function AccountOrderDetailsPage() {
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const addCartItem = useCartStore((s) => s.addItem);
+  const { notify } = useNotification();
 
   useEffect(() => {
     if (!Number.isInteger(orderId) || orderId <= 0) {
@@ -184,6 +188,31 @@ export default function AccountOrderDetailsPage() {
   );
 
   const hasDisplayItems = displayItems.length > 0;
+
+  const handleReorder = () => {
+    if (!hasDisplayItems) {
+      notify({
+        type: "warning",
+        message: "This order has no items to add to cart.",
+      });
+      return;
+    }
+
+    displayItems.forEach((item) => {
+      addCartItem({
+        itemNo: item.itemNo,
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        imageUrl: item.imageUrl ?? FALLBACK_PRODUCT_IMAGE,
+      });
+    });
+
+    notify({
+      type: "success",
+      message: `${displayItems.length} item(s) from this order were added to cart.`,
+    });
+  };
 
   const cleanCustomerMessage = useMemo(() => {
     if (!order?.message) return "";
@@ -249,6 +278,14 @@ export default function AccountOrderDetailsPage() {
                 <p className="mt-1 text-sm text-gray-600">
                   Placed on {new Date(order.createdAt).toLocaleString()}
                 </p>
+                <button
+                  type="button"
+                  onClick={handleReorder}
+                  disabled={!hasDisplayItems}
+                  className="mt-3 inline-flex items-center rounded-md bg-my-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-my-red/90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Add this order to cart
+                </button>
               </div>
 
               <div className="grid grid-cols-1 gap-4 rounded-lg border border-gray-200 p-4 sm:grid-cols-4">
