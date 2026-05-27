@@ -10,7 +10,7 @@ import { ServicesSection } from "../global/components/services-section";
 import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { useLanguage } from "../i18n/language-context";
-import { useCartStore } from "../stores/cart_store";
+import { useCartStore, type CartItem } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
 import { FaTrashAlt } from "react-icons/fa";
 import { CheckoutShippingInformation } from "./components/checkout-shipping-information";
@@ -393,7 +393,12 @@ export default function CheckoutPage() {
         {/* Shopping Cart Header */}
         {CartHeader()}
         <BottomPadding />
-        <ProductDetails />
+        <CheckoutProductDetails
+          cartItems={cartItems}
+          setCartItemQuantity={setCartItemQuantity}
+          removeCartItem={removeCartItem}
+          t={t}
+        />
         <BottomPadding />
         <CheckoutShippingInformation
           addressType={addressType}
@@ -515,114 +520,6 @@ export default function CheckoutPage() {
     );
   }
 
-  function ProductDetails() {
-    if (cartItems.length === 0) {
-      return (
-        <div className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-sm text-gray-600">
-          {t("checkout.cartEmpty")}
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-4">
-        {cartItems.map((item) => (
-          <div
-            key={item.itemNo}
-            className="flex flex-col sm:flex-row flex-wrap gap-6 text-sm justify-between rounded-lg border border-gray-200 p-4"
-          >
-            <Image
-              src={item.imageUrl || "/b2b/boxes/box.png"}
-              alt={item.name}
-              width={100}
-              height={100}
-              className="object-contain shrink-0"
-            />
-            <MyColumn
-              name1={t("checkout.product.itemNo")}
-              value1={item.itemNo}
-              name2={t("checkout.product.productName")}
-              value2={item.name}
-            />
-            <MyColumn
-              name1={t("checkout.product.amountQty")}
-              value1={`${item.quantity} (+ ${MIN_ORDER_QTY})`}
-              name2={t("checkout.product.palletPcs")}
-              value2="-"
-            />
-            <MyColumn
-              name1={t("checkout.product.netWeight")}
-              value1="-"
-              name2={t("checkout.product.priceWithoutTax")}
-              value2={`€ ${(item.unitPrice * item.quantity).toFixed(2)}`}
-            />
-            <div className="flex min-w-[220px] flex-col items-start justify-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="font-bold">{t("checkout.quantity")}</span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setCartItemQuantity(
-                      item.itemNo,
-                      Math.max(MIN_ORDER_QTY, item.quantity - CART_QTY_STEP),
-                    )
-                  }
-                  className="h-8 w-8 rounded border border-gray-300 text-base leading-none hover:bg-gray-50"
-                  aria-label={t("checkout.aria.decreaseQuantity")}
-                >
-                  -
-                </button>
-                <input
-                  type="number"
-                  min={MIN_ORDER_QTY}
-                  step={CART_QTY_STEP}
-                  value={item.quantity}
-                  onChange={(e) => {
-                    const parsed = Number(e.target.value);
-                    if (!Number.isFinite(parsed)) return;
-                    setCartItemQuantity(
-                      item.itemNo,
-                      Math.max(MIN_ORDER_QTY, Math.floor(parsed)),
-                    );
-                  }}
-                  className="w-20 rounded border border-gray-300 px-2 py-1 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setCartItemQuantity(item.itemNo, item.quantity + CART_QTY_STEP)
-                  }
-                  className="h-8 w-8 rounded border border-gray-300 text-base leading-none hover:bg-gray-50"
-                  aria-label={t("checkout.aria.increaseQuantity")}
-                >
-                  +
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setCartItemQuantity(item.itemNo, item.quantity + MIN_ORDER_QTY)
-                  }
-                  className="h-8 rounded border border-gray-300 px-2 text-xs font-semibold leading-none hover:bg-gray-50"
-                  aria-label="Increase quantity by 100"
-                >
-                  + 100
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => removeCartItem(item.itemNo)}
-                className="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
-              >
-                <FaTrashAlt className="h-3.5 w-3.5" />
-                {t("checkout.removeProduct")}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   function CartHeader() {
     return (
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
@@ -737,4 +634,202 @@ export default function CheckoutPage() {
       </div>
     );
   }
+}
+
+function CheckoutCartQuantityInput({
+  quantity,
+  onCommit,
+  decreaseAriaLabel,
+  increaseAriaLabel,
+  onDecrease,
+  onIncrease,
+  onIncreaseByMin,
+}: {
+  quantity: number;
+  onCommit: (quantity: number) => void;
+  decreaseAriaLabel: string;
+  increaseAriaLabel: string;
+  onDecrease: () => void;
+  onIncrease: () => void;
+  onIncreaseByMin: () => void;
+}) {
+  const [draftQuantity, setDraftQuantity] = useState(String(quantity));
+
+  useEffect(() => {
+    setDraftQuantity(String(quantity));
+  }, [quantity]);
+
+  const commitDraftQuantity = () => {
+    const trimmed = draftQuantity.trim();
+    if (!trimmed) {
+      setDraftQuantity(String(quantity));
+      return;
+    }
+
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed)) {
+      setDraftQuantity(String(quantity));
+      return;
+    }
+
+    onCommit(Math.max(MIN_ORDER_QTY, Math.floor(parsed)));
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onDecrease}
+        className="h-8 w-8 rounded border border-gray-300 text-base leading-none hover:bg-gray-50"
+        aria-label={decreaseAriaLabel}
+      >
+        -
+      </button>
+      <input
+        type="number"
+        min={MIN_ORDER_QTY}
+        step={CART_QTY_STEP}
+        value={draftQuantity}
+        onChange={(e) => setDraftQuantity(e.target.value)}
+        onBlur={commitDraftQuantity}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commitDraftQuantity();
+            (e.currentTarget as HTMLInputElement).blur();
+          }
+        }}
+        className="w-20 rounded border border-gray-300 px-2 py-1 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      />
+      <button
+        type="button"
+        onClick={onIncrease}
+        className="h-8 w-8 rounded border border-gray-300 text-base leading-none hover:bg-gray-50"
+        aria-label={increaseAriaLabel}
+      >
+        +
+      </button>
+      <button
+        type="button"
+        onClick={onIncreaseByMin}
+        className="h-8 rounded border border-gray-300 px-2 text-xs font-semibold leading-none hover:bg-gray-50"
+        aria-label="Increase quantity by 100"
+      >
+        + 100
+      </button>
+    </>
+  );
+}
+
+function CheckoutProductColumn({
+  name1,
+  value1,
+  name2,
+  value2,
+}: {
+  name1: string;
+  value1: string;
+  name2: string;
+  value2: string;
+}) {
+  return (
+    <div className="flex flex-col justify-center">
+      <div className="flex gap-2">
+        <span className="font-bold">{name1}</span>
+        <span className="text-my-gray">{value1}</span>
+      </div>
+      <div className="mt-2 flex gap-2">
+        <span className="font-bold">{name2}</span>
+        <span className="text-my-gray">{value2}</span>
+      </div>
+    </div>
+  );
+}
+
+function CheckoutProductDetails({
+  cartItems,
+  setCartItemQuantity,
+  removeCartItem,
+  t,
+}: {
+  cartItems: CartItem[];
+  setCartItemQuantity: (itemNo: string, quantity: number) => void;
+  removeCartItem: (itemNo: string) => void;
+  t: (key: string) => string;
+}) {
+  if (cartItems.length === 0) {
+    return (
+      <div className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-sm text-gray-600">
+        {t("checkout.cartEmpty")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {cartItems.map((item) => (
+        <div
+          key={item.itemNo}
+          className="flex flex-col sm:flex-row flex-wrap gap-6 text-sm justify-between rounded-lg border border-gray-200 p-4"
+        >
+          <Image
+            src={item.imageUrl || "/b2b/boxes/box.png"}
+            alt={item.name}
+            width={100}
+            height={100}
+            className="object-contain shrink-0"
+          />
+          <CheckoutProductColumn
+            name1={t("checkout.product.itemNo")}
+            value1={item.itemNo}
+            name2={t("checkout.product.productName")}
+            value2={item.name}
+          />
+          <CheckoutProductColumn
+            name1={t("checkout.product.amountQty")}
+            value1={String(item.quantity)}
+            name2={t("checkout.product.palletPcs")}
+            value2="-"
+          />
+          <CheckoutProductColumn
+            name1={t("checkout.product.netWeight")}
+            value1="-"
+            name2={t("checkout.product.priceWithoutTax")}
+            value2={`€ ${(item.unitPrice * item.quantity).toFixed(2)}`}
+          />
+          <div className="flex min-w-[220px] flex-col items-start justify-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="font-bold">{t("checkout.quantity")}</span>
+              <CheckoutCartQuantityInput
+                quantity={item.quantity}
+                decreaseAriaLabel={t("checkout.aria.decreaseQuantity")}
+                increaseAriaLabel={t("checkout.aria.increaseQuantity")}
+                onCommit={(nextQuantity) => setCartItemQuantity(item.itemNo, nextQuantity)}
+                onDecrease={() =>
+                  setCartItemQuantity(
+                    item.itemNo,
+                    Math.max(MIN_ORDER_QTY, item.quantity - CART_QTY_STEP),
+                  )
+                }
+                onIncrease={() =>
+                  setCartItemQuantity(item.itemNo, item.quantity + CART_QTY_STEP)
+                }
+                onIncreaseByMin={() =>
+                  setCartItemQuantity(item.itemNo, item.quantity + MIN_ORDER_QTY)
+                }
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => removeCartItem(item.itemNo)}
+              className="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+            >
+              <FaTrashAlt className="h-3.5 w-3.5" />
+              {t("checkout.removeProduct")}
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
