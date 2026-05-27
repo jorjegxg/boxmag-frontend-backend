@@ -11,6 +11,7 @@ import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { useLanguage } from "../i18n/language-context";
 import { useCartStore } from "../stores/cart_store";
+import { MIN_ORDER_QTY } from "../constants/order";
 import { FaTrashAlt } from "react-icons/fa";
 import { CheckoutShippingInformation } from "./components/checkout-shipping-information";
 
@@ -45,6 +46,7 @@ type ManualAddress = {
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const SHIPPING_METHODS_CACHE_KEY = "boxmag.checkout.shippingMethods.v1";
 const SHIPPING_METHODS_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
+const CART_QTY_STEP = 10;
 
 type ShippingMethodOption = {
   id: number;
@@ -234,6 +236,12 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) {
       setSubmitOrderMessage(t("checkout.error.cartEmpty"));
+      return;
+    }
+
+    const belowMinQty = cartItems.find((item) => item.quantity < MIN_ORDER_QTY);
+    if (belowMinQty) {
+      setSubmitOrderMessage(t("checkout.error.minOrderQty"));
       return;
     }
 
@@ -538,7 +546,7 @@ export default function CheckoutPage() {
             />
             <MyColumn
               name1={t("checkout.product.amountQty")}
-              value1={String(item.quantity)}
+              value1={`${item.quantity} (+ ${MIN_ORDER_QTY})`}
               name2={t("checkout.product.palletPcs")}
               value2="-"
             />
@@ -553,7 +561,12 @@ export default function CheckoutPage() {
                 <span className="font-bold">{t("checkout.quantity")}</span>
                 <button
                   type="button"
-                  onClick={() => setCartItemQuantity(item.itemNo, Math.max(1, item.quantity - 1))}
+                  onClick={() =>
+                    setCartItemQuantity(
+                      item.itemNo,
+                      Math.max(MIN_ORDER_QTY, item.quantity - CART_QTY_STEP),
+                    )
+                  }
                   className="h-8 w-8 rounded border border-gray-300 text-base leading-none hover:bg-gray-50"
                   aria-label={t("checkout.aria.decreaseQuantity")}
                 >
@@ -561,22 +574,38 @@ export default function CheckoutPage() {
                 </button>
                 <input
                   type="number"
-                  min={1}
+                  min={MIN_ORDER_QTY}
+                  step={CART_QTY_STEP}
                   value={item.quantity}
                   onChange={(e) => {
                     const parsed = Number(e.target.value);
                     if (!Number.isFinite(parsed)) return;
-                    setCartItemQuantity(item.itemNo, Math.max(1, Math.floor(parsed)));
+                    setCartItemQuantity(
+                      item.itemNo,
+                      Math.max(MIN_ORDER_QTY, Math.floor(parsed)),
+                    );
                   }}
                   className="w-20 rounded border border-gray-300 px-2 py-1 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
                 <button
                   type="button"
-                  onClick={() => setCartItemQuantity(item.itemNo, item.quantity + 1)}
+                  onClick={() =>
+                    setCartItemQuantity(item.itemNo, item.quantity + CART_QTY_STEP)
+                  }
                   className="h-8 w-8 rounded border border-gray-300 text-base leading-none hover:bg-gray-50"
                   aria-label={t("checkout.aria.increaseQuantity")}
                 >
                   +
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCartItemQuantity(item.itemNo, item.quantity + MIN_ORDER_QTY)
+                  }
+                  className="h-8 rounded border border-gray-300 px-2 text-xs font-semibold leading-none hover:bg-gray-50"
+                  aria-label="Increase quantity by 100"
+                >
+                  + 100
                 </button>
               </div>
               <button

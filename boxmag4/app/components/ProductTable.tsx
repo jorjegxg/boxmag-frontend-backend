@@ -5,6 +5,7 @@ import { Product } from "../types/product";
 import { useLanguage } from "../i18n/language-context";
 import { useEffect, useMemo } from "react";
 import { useCartStore } from "../stores/cart_store";
+import { MIN_ORDER_QTY } from "../constants/order";
 import { useNotification } from "../global/components/notification-center";
 
 export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
@@ -62,7 +63,7 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
             */}
             {(() => {
               const qtyToAdd = Number(product.amountQtyInPcs);
-              const canAddToCart = Number.isFinite(qtyToAdd) && qtyToAdd > 0;
+              const canAddToCart = Number.isFinite(qtyToAdd) && qtyToAdd >= MIN_ORDER_QTY;
               const basePrice = product.prices[0]?.withoutTax ?? 0;
               return (
                 <>

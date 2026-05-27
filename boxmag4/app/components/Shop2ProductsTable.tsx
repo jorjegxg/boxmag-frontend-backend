@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaShoppingCart } from "react-icons/fa";
 import { useCartStore } from "../stores/cart_store";
+import { MIN_ORDER_QTY } from "../constants/order";
 
 type Shop2Row = {
   id: number;
@@ -79,8 +80,8 @@ export function Shop2ProductsTable() {
             l: Number(row.internalDimensionsMM?.l ?? 0),
             w: Number(row.internalDimensionsMM?.w ?? 0),
             h: Number(row.internalDimensionsMM?.h ?? 0),
-            bundlePacking: Number(row.amountQtyInPcs ?? 0),
-            qty: Number(row.amountQtyInPcs ?? 0),
+            bundlePacking: Math.max(MIN_ORDER_QTY, Number(row.amountQtyInPcs ?? 0)),
+            qty: Math.max(MIN_ORDER_QTY, Number(row.amountQtyInPcs ?? 0)),
             palletPcs: Number(row.palletPcs ?? 0),
             prices: Array.isArray(row.prices) ? row.prices : [],
           })),
@@ -192,7 +193,7 @@ export function Shop2ProductsTable() {
             <tr key={row.id} className="text-black">
               {(() => {
                 const qtyToAdd = Number(row.qty);
-                const canAddToCart = Number.isFinite(qtyToAdd) && qtyToAdd > 0;
+                const canAddToCart = Number.isFinite(qtyToAdd) && qtyToAdd >= MIN_ORDER_QTY;
                 return (
                   <>
               <td className="border border-[#d9d9d9] px-2 py-3">{row.itemNo}</td>

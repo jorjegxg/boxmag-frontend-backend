@@ -138,6 +138,7 @@
   "checkout.error.cartEmpty": "Der Warenkorb ist leer.",
   "checkout.error.loginRequired": "Bitte melden Sie sich an, bevor Sie bestellen.",
   "checkout.error.addressIncomplete": "Bitte vervollständigen Sie die Lieferadresse.",
+  "checkout.error.minOrderQty": "Jedes Produkt erfordert eine Mindestbestellmenge von 100 Stück.",
   "checkout.error.startCheckout": "Checkout konnte nicht gestartet werden.",
   "account.nav.account": "MEIN KONTO",
   "account.nav.address": "ADRESSE",

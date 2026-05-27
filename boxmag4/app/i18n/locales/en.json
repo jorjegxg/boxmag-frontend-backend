@@ -138,6 +138,7 @@
   "checkout.error.cartEmpty": "Cart is empty.",
   "checkout.error.loginRequired": "Please log in before placing an order.",
   "checkout.error.addressIncomplete": "Please complete shipping address details.",
+  "checkout.error.minOrderQty": "Each product requires a minimum order of 100 pcs.",
   "checkout.error.startCheckout": "Failed to start checkout.",
   "account.nav.account": "MY ACCOUNT",
   "account.nav.address": "ADDRESS",

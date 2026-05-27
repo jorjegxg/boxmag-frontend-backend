@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useLanguage } from "../i18n/language-context";
 import { FaShoppingCart } from "react-icons/fa";
 import { useCartStore } from "../stores/cart_store";
+import { MIN_ORDER_QTY } from "../constants/order";
 
 type BoxType = {
   id: number;
@@ -294,7 +295,7 @@ export default function ShopPage() {
                             itemNo: product.itemNo,
                             name: product.productName,
                             unitPrice: firstPrice?.withoutTax ?? 0,
-                            quantity: 1,
+                            quantity: MIN_ORDER_QTY,
                             imageUrl,
                           });
                         }}

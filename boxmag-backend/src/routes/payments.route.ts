@@ -9,6 +9,7 @@ import {
   sendNewOrderNotificationEmail,
 } from "../services/email";
 import { getStripeClient, isStripeConfigured } from "../services/stripe";
+import { MIN_ORDER_QTY } from "../constants/order";
 
 type CartItemPayload = {
   itemNo: string;
@@ -194,6 +195,15 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
       ok: false,
       message:
         "Invalid checkout payload. Provide email, address, shipping and at least one cart item.",
+    });
+    return;
+  }
+
+  const belowMinQty = cartItems.find((item) => item.quantity < MIN_ORDER_QTY);
+  if (belowMinQty) {
+    res.status(400).json({
+      ok: false,
+      message: `Minimum order quantity is ${MIN_ORDER_QTY} pcs per product. Item ${belowMinQty.itemNo} has quantity ${belowMinQty.quantity}.`,
     });
     return;
   }

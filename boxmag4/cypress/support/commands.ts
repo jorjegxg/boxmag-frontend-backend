@@ -191,7 +191,7 @@ const defaultCartItem = {
   itemNo: "BOX-001",
   name: "Custom Box 300x200",
   unitPrice: 12.5,
-  quantity: 2,
+  quantity: 100,
   imageUrl: "/b2b/boxes/box.png",
 };
 

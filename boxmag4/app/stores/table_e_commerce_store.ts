@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Product } from "../types/product";
+import { MIN_ORDER_QTY } from "../constants/order";
 
 type TableStoreType = {
   products: Product[];
@@ -50,8 +51,8 @@ const useTableEComStore = create<TableStoreType>((set) => ({
           })),
           weightPieceGr: Number(row.weightPieceGr ?? 0),
           weightPalletKg: Number(row.weightPalletKg ?? 0),
-          amountQtyInPcs: Number(row.amountQtyInPcs ?? 0),
-          defaultAmountQtyInPcs: Number(row.amountQtyInPcs ?? 0),
+          amountQtyInPcs: Math.max(MIN_ORDER_QTY, Number(row.amountQtyInPcs ?? 0)),
+          defaultAmountQtyInPcs: Math.max(MIN_ORDER_QTY, Number(row.amountQtyInPcs ?? 0)),
           palletPcs: Number(row.palletPcs ?? 0),
         } satisfies Product;
       });
@@ -81,10 +82,10 @@ const useTableEComStore = create<TableStoreType>((set) => ({
         el.itemNo == itemNo
           ? {
               ...el,
-              amountQtyInPcs:
-                el.amountQtyInPcs - incrementNumber >= 0
-                  ? el.amountQtyInPcs - incrementNumber
-                  : 0,
+              amountQtyInPcs: Math.max(
+                MIN_ORDER_QTY,
+                el.amountQtyInPcs - incrementNumber,
+              ),
             }
           : el
       ),

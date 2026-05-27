@@ -7,8 +7,7 @@ import { useLanguage } from "../../i18n/language-context";
 import { B2b } from "../../global/components/b2b";
 import { NewsletterSubscribe } from "../../global/components/newsletter-subscribe";
 import { useCartStore } from "../../stores/cart_store";
-
-const MIN_ORDER_QTY = 100;
+import { MIN_ORDER_QTY } from "../../constants/order";
 const BOXES_PER_PALLET = 9000;
 const imageRequestCache = new Set<string>();
 

@@ -225,7 +225,7 @@ describe("/shop", () => {
         state?: { items?: Array<{ itemNo: string; name: string; quantity: number }> };
       };
       const items = parsed.state?.items ?? [];
-      expect(items.some((i) => i.itemNo === "STD-001" && i.quantity >= 1)).to.eq(true);
+      expect(items.some((i) => i.itemNo === "STD-001" && i.quantity >= 100)).to.eq(true);
     });
   });
 
@@ -267,7 +267,7 @@ describe("/shop → /checkout (produse în coș)", () => {
     cy.contains("Cart is empty.").should("not.exist");
     cy.contains("STD-001").should("exist");
     cy.contains("Standard Box 300x200").should("exist");
-    cy.contains("€ 10.00").should("exist");
+    cy.contains("€ 1000.00").should("exist");
   });
 
   it("mai multe produse adăugate în shop apar toate în checkout", () => {
@@ -292,8 +292,8 @@ describe("/shop → /checkout (produse în coș)", () => {
     cy.contains("STD-002").should("exist");
     cy.contains("Standard Box 300x200").should("exist");
     cy.contains("Standard Box 400x300").should("exist");
-    // subtotal: 10 + 12 = 22 (fără TVA, cum e în coș)
-    cy.contains("€ 22.00").should("exist");
+    // subtotal: (10 + 12) * 100 = 2200 (fără TVA, cum e în coș)
+    cy.contains("€ 2200.00").should("exist");
   });
 
   it("coșul gol în checkout după ce nu s-a adăugat nimic din shop", () => {

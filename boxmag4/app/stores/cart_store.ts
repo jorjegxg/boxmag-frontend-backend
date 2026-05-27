@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { MIN_ORDER_QTY } from "../constants/order";
 
 export type CartItem = {
   itemNo: string;
@@ -25,9 +26,9 @@ export type CartStoreType = {
   clearCart: () => void;
 };
 
-function toPositiveInt(value: number | undefined, fallback = 1): number {
+function toCartQuantity(value: number | undefined, fallback = MIN_ORDER_QTY): number {
   if (!Number.isFinite(value)) return fallback;
-  return Math.max(1, Math.floor(value as number));
+  return Math.max(MIN_ORDER_QTY, Math.floor(value as number));
 }
 
 function computeTotalItems(items: CartItem[]): number {
@@ -46,13 +47,13 @@ export const useCartStore = create<CartStoreType>()(
       subtotal: 0,
       totalItems: 0,
       addProductToCart: (numberOfProducts: number) => {
-        const increment = toPositiveInt(numberOfProducts, 1);
+        const increment = toCartQuantity(numberOfProducts, MIN_ORDER_QTY);
         set((state) => ({
           newCartItems: state.newCartItems + increment,
         }));
       },
       addItem: (item) => {
-        const quantityToAdd = toPositiveInt(item.quantity, 1);
+        const quantityToAdd = toCartQuantity(item.quantity, MIN_ORDER_QTY);
         set((state) => {
           const existing = state.items.find((entry) => entry.itemNo === item.itemNo);
           const nextItems = existing
@@ -94,18 +95,24 @@ export const useCartStore = create<CartStoreType>()(
       },
       setQuantity: (itemNo, quantity) => {
         const normalizedQty = Math.max(0, Math.floor(quantity));
+        const nextQty =
+          normalizedQty === 0
+            ? 0
+            : normalizedQty < MIN_ORDER_QTY
+              ? MIN_ORDER_QTY
+              : normalizedQty;
         set((state) => {
           const existing = state.items.find((entry) => entry.itemNo === itemNo);
           if (!existing) return state;
 
           const nextItems =
-            normalizedQty === 0
+            nextQty === 0
               ? state.items.filter((entry) => entry.itemNo !== itemNo)
               : state.items.map((entry) =>
-                  entry.itemNo === itemNo ? { ...entry, quantity: normalizedQty } : entry,
+                  entry.itemNo === itemNo ? { ...entry, quantity: nextQty } : entry,
                 );
 
-          const qtyDiff = normalizedQty - existing.quantity;
+          const qtyDiff = nextQty - existing.quantity;
           return {
             items: nextItems,
             newCartItems: Math.max(0, state.newCartItems + qtyDiff),
