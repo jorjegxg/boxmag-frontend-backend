@@ -1,13 +1,14 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useLanguage } from "../../i18n/language-context";
 import { B2b } from "../../global/components/b2b";
 import { NewsletterSubscribe } from "../../global/components/newsletter-subscribe";
 import { useCartStore } from "../../stores/cart_store";
 import { MIN_ORDER_QTY } from "../../constants/order";
+import { FaCheck } from "react-icons/fa";
 const BOXES_PER_PALLET = 9000;
 const imageRequestCache = new Set<string>();
 
@@ -77,6 +78,8 @@ export default function ProductByKeyPage() {
   >([]);
   const [firstWithTax, setFirstWithTax] = useState<number | null>(null);
   const [firstWithoutTax, setFirstWithoutTax] = useState<number | null>(null);
+  const [isAddToCartAnimated, setIsAddToCartAnimated] = useState(false);
+  const addToCartAnimationTimeoutRef = useRef<number | null>(null);
   const addCartItem = useCartStore((s) => s.addItem);
 
   const backendBaseUrl = useMemo(() => {
@@ -243,6 +246,24 @@ export default function ProductByKeyPage() {
     [selectedProductPrices],
   );
   const imageUrlForCurrentBoxType = imageUrls;
+
+  useEffect(() => {
+    return () => {
+      if (addToCartAnimationTimeoutRef.current != null) {
+        window.clearTimeout(addToCartAnimationTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const triggerAddToCartAnimation = () => {
+    if (addToCartAnimationTimeoutRef.current != null) {
+      window.clearTimeout(addToCartAnimationTimeoutRef.current);
+    }
+    setIsAddToCartAnimated(true);
+    addToCartAnimationTimeoutRef.current = window.setTimeout(() => {
+      setIsAddToCartAnimated(false);
+    }, 700);
+  };
 
   if (loadState === "loading" || loadState === "idle") {
     return (
@@ -472,10 +493,18 @@ export default function ProductByKeyPage() {
                     quantity,
                     imageUrl: galleryWithProduct[selectedImage],
                   });
+                  triggerAddToCartAnimation();
                 }}
-                className="mt-4 w-full rounded-xl bg-my-yellow px-5 py-4 text-lg font-bold text-black hover:brightness-95"
+                className={`mt-4 w-full rounded-xl px-5 py-4 text-lg font-bold transition-all duration-300 ${
+                  isAddToCartAnimated
+                    ? "bg-green-600 text-white scale-[1.02]"
+                    : "bg-my-yellow text-black hover:brightness-95"
+                }`}
               >
-                {t("productDemo.addToCart")}
+                <span className="inline-flex items-center justify-center gap-2">
+                  {isAddToCartAnimated ? <FaCheck className="h-4 w-4" /> : null}
+                  {isAddToCartAnimated ? "Added" : t("productDemo.addToCart")}
+                </span>
               </button>
 
               <p className="mt-3 text-sm text-gray-500">

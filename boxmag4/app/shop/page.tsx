@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "../i18n/language-context";
-import { FaShoppingCart } from "react-icons/fa";
+import { FaCheck, FaShoppingCart } from "react-icons/fa";
 import { useCartStore } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
 
@@ -66,6 +66,8 @@ export default function ShopPage() {
   const [products, setProducts] = useState<BoxTypeProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [animatedProductId, setAnimatedProductId] = useState<number | null>(null);
+  const animationTimeoutRef = useRef<number | null>(null);
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
     if (!value) return "http://localhost:3005";
@@ -199,6 +201,24 @@ export default function ShopPage() {
     [boxTypes],
   );
 
+  useEffect(() => {
+    return () => {
+      if (animationTimeoutRef.current != null) {
+        window.clearTimeout(animationTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const triggerAddToCartAnimation = (productId: number) => {
+    if (animationTimeoutRef.current != null) {
+      window.clearTimeout(animationTimeoutRef.current);
+    }
+    setAnimatedProductId(productId);
+    animationTimeoutRef.current = window.setTimeout(() => {
+      setAnimatedProductId((current) => (current === productId ? null : current));
+    }, 700);
+  };
+
   return (
     <section className="w-full bg-white px-6 py-8 lg:px-20">
       <div className="mx-auto max-w-7xl">
@@ -298,11 +318,20 @@ export default function ShopPage() {
                             quantity: MIN_ORDER_QTY,
                             imageUrl,
                           });
+                          triggerAddToCartAnimation(product.id);
                         }}
-                        className="mt-3 inline-flex items-center gap-2 rounded-lg border border-my-red px-3 py-2 text-xs font-semibold text-my-red hover:bg-my-red hover:text-white transition-colors"
+                        className={`mt-3 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all duration-300 ${
+                          animatedProductId === product.id
+                            ? "border-green-600 bg-green-600 text-white scale-105"
+                            : "border-my-red text-my-red hover:bg-my-red hover:text-white"
+                        }`}
                       >
-                        <FaShoppingCart className="h-3.5 w-3.5" />
-                        Add to cart
+                        {animatedProductId === product.id ? (
+                          <FaCheck className="h-3.5 w-3.5" />
+                        ) : (
+                          <FaShoppingCart className="h-3.5 w-3.5" />
+                        )}
+                        {animatedProductId === product.id ? "Added" : "Add to cart"}
                       </button>
                     </article>
                   );

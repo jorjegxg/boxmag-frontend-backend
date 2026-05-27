@@ -1,9 +1,9 @@
 "use client";
-import { FaShoppingCart } from "react-icons/fa";
+import { FaCheck, FaShoppingCart } from "react-icons/fa";
 import useTableEComStore from "../stores/table_e_commerce_store";
 import { Product } from "../types/product";
 import { useLanguage } from "../i18n/language-context";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCartStore } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
 import { useNotification } from "../global/components/notification-center";
@@ -19,6 +19,8 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
   const resetAmountQty = useTableEComStore((s) => s.resetAmountQty);
   const addCartItem = useCartStore((s) => s.addItem);
   const { notify } = useNotification();
+  const [animatedItemNo, setAnimatedItemNo] = useState<string | null>(null);
+  const animationTimeoutRef = useRef<number | null>(null);
 
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -29,6 +31,24 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
   useEffect(() => {
     void loadProducts({ backendBaseUrl, boxTypeId });
   }, [backendBaseUrl, boxTypeId, loadProducts]);
+
+  useEffect(() => {
+    return () => {
+      if (animationTimeoutRef.current != null) {
+        window.clearTimeout(animationTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const triggerAddToCartAnimation = (itemNo: string) => {
+    if (animationTimeoutRef.current != null) {
+      window.clearTimeout(animationTimeoutRef.current);
+    }
+    setAnimatedItemNo(itemNo);
+    animationTimeoutRef.current = window.setTimeout(() => {
+      setAnimatedItemNo((current) => (current === itemNo ? null : current));
+    }, 700);
+  };
 
   return (
     <div className="overflow-x-auto rounded-xl border border-my-light-gray">
@@ -141,11 +161,18 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                         type: "success",
                         message: `Added ${qtyToAdd} pcs to cart.`,
                       });
+                      triggerAddToCartAnimation(product.itemNo);
                       resetAmountQty(product.itemNo);
                     }}
-                    className={canAddToCart ? "" : "opacity-50 cursor-not-allowed"}
+                    className={`inline-flex items-center justify-center transition-all duration-300 ${
+                      canAddToCart ? "" : "opacity-50 cursor-not-allowed"
+                    } ${
+                      animatedItemNo === product.itemNo
+                        ? "scale-110 text-green-600"
+                        : "scale-100 text-inherit"
+                    }`}
                   >
-                    <FaShoppingCart />
+                    {animatedItemNo === product.itemNo ? <FaCheck /> : <FaShoppingCart />}
                   </button>
                 </span>
               </div>
