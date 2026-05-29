@@ -881,10 +881,7 @@ export default function AdminPage() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
-          <SectionTitle
-            title="Box Types Management"
-            subtitle="Data loaded from database"
-          />
+          <SectionTitle title="Box Types Management" />
 
           <div className="p-6 lg:p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

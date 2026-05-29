@@ -107,6 +107,7 @@
   "checkout.useSavedAddress": "Gespeicherte Adresse verwenden",
   "checkout.manageAccount": "KONTO VERWALTEN",
   "checkout.shippingMethod": "Versandart",
+  "checkout.shippingCarrierDpd": "Versand erfolgt per DPD.",
   "checkout.standardDelivery": "STANDARDVERSAND",
   "checkout.standardEta": "VORAUSSICHTLICH 7-10 TAGE",
   "checkout.expressDelivery": "EXPRESSVERSAND",

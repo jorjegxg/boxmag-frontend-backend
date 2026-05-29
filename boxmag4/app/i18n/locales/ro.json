@@ -107,6 +107,7 @@
   "checkout.useSavedAddress": "Folosește adresa salvată",
   "checkout.manageAccount": "GESTIONEAZĂ CONTUL",
   "checkout.shippingMethod": "Metodă de livrare",
+  "checkout.shippingCarrierDpd": "Livrarea se face prin DPD.",
   "checkout.standardDelivery": "LIVRARE STANDARD",
   "checkout.standardEta": "ESTIMAT 7-10 ZILE",
   "checkout.expressDelivery": "LIVRARE EXPRESS",

@@ -630,6 +630,18 @@ export default function CheckoutPage() {
         <h2 className="font-bold text-black text-base sm:text-lg mb-4 uppercase tracking-wide">
           {t("checkout.shippingMethod")}
         </h2>
+        <div className="-mt-2 mb-4 flex items-center gap-3">
+          <p className="text-sm text-gray-600">
+            {t("checkout.shippingCarrierDpd")}
+          </p>
+          <Image
+            src="/logos/DPD_logo_redgrad_rgb.png"
+            alt="DPD"
+            width={88}
+            height={28}
+            className="h-6 w-auto object-contain"
+          />
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {shippingMethods.map((method) => (
             <button
