@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { ResultSetHeader } from "mysql2";
 import { mysqlPool } from "../db/mysql";
+import { sendNewsletterWelcomeEmail } from "../services/email";
 
 type SubscribeNewsletterPayload = {
   email?: unknown;
@@ -58,6 +59,15 @@ newsletterRouter.post("/subscribe", async (req, res) => {
          updated_at = CURRENT_TIMESTAMP`,
       [normalizedEmail, 1, locale, source]
     );
+
+    try {
+      await sendNewsletterWelcomeEmail({
+        to: normalizedEmail,
+        locale,
+      });
+    } catch (emailError) {
+      console.error("Failed to send newsletter welcome email", emailError);
+    }
 
     res.status(201).json({
       ok: true,

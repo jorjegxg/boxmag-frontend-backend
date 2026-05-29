@@ -29,6 +29,7 @@ export const env = {
   smtpUser: process.env.SMTP_USER ?? "",
   smtpPass: process.env.SMTP_PASS ?? "",
   emailFrom: process.env.EMAIL_FROM ?? process.env.SMTP_USER ?? "",
+  contactTo: process.env.CONTACT_TO ?? "",
   emailOrdersFrom: process.env.EMAIL_ORDERS_FROM ?? "",
   ordersNotificationTo:
     process.env.ORDERS_NOTIFICATION_TO ?? "comenzi@reko-packaging.ro",

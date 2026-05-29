@@ -226,6 +226,152 @@ export function isOrderEmailTransportConfigured(): boolean {
   return Boolean(env.smtpUser && env.smtpPass && env.emailOrdersFrom);
 }
 
+type NewsletterLocale = "ro" | "en" | "de";
+
+function resolveNewsletterLocale(locale: string | null | undefined): NewsletterLocale {
+  const normalized = (locale ?? "ro").toLowerCase().slice(0, 2);
+  if (normalized === "en" || normalized === "de") return normalized;
+  return "ro";
+}
+
+function newsletterFromAddress(): string {
+  return env.contactTo || env.emailFrom;
+}
+
+const newsletterWelcomeCopy: Record<
+  NewsletterLocale,
+  {
+    subject: string;
+    greeting: string;
+    intro: string;
+    highlight: string;
+    ctaLabel: string;
+    footer: string;
+    team: string;
+  }
+> = {
+  ro: {
+    subject: "Bine ai venit la newsletter-ul Boxmag",
+    greeting: "Salut,",
+    intro:
+      "Iti multumim ca te-ai abonat la newsletter-ul Boxmag. De acum vei primi noutati despre produse, oferte si solutii de ambalare personalizate.",
+    highlight:
+      "Urmatoarele editii iti vor aduce inspiratie pentru cutii personalizate, tips-uri utile si promotii dedicate abonatilor.",
+    ctaLabel: "Exploreaza produsele",
+    footer:
+      "Daca nu ai solicitat aceasta abonare, ignora acest email sau contacteaza-ne.",
+    team: "Echipa Boxmag",
+  },
+  en: {
+    subject: "Welcome to the Boxmag newsletter",
+    greeting: "Hello,",
+    intro:
+      "Thank you for subscribing to the Boxmag newsletter. You will now receive updates about products, offers, and custom packaging solutions.",
+    highlight:
+      "Upcoming editions will bring inspiration for custom boxes, useful tips, and subscriber-only promotions.",
+    ctaLabel: "Explore products",
+    footer:
+      "If you did not request this subscription, you can ignore this email or contact us.",
+    team: "The Boxmag Team",
+  },
+  de: {
+    subject: "Willkommen beim Boxmag Newsletter",
+    greeting: "Hallo,",
+    intro:
+      "Vielen Dank fur Ihr Abonnement des Boxmag Newsletters. Sie erhalten ab sofort Neuigkeiten zu Produkten, Angeboten und individuellen Verpackungslosungen.",
+    highlight:
+      "In den nachsten Ausgaben erwarten Sie Inspiration fur individuelle Kartons, praktische Tipps und Aktionen nur fur Abonnenten.",
+    ctaLabel: "Produkte entdecken",
+    footer:
+      "Wenn Sie dieses Abonnement nicht angefordert haben, ignorieren Sie diese E-Mail oder kontaktieren Sie uns.",
+    team: "Ihr Boxmag Team",
+  },
+};
+
+export async function sendNewsletterWelcomeEmail(params: {
+  to: string;
+  locale?: string | null;
+}): Promise<void> {
+  if (!env.smtpUser || !env.smtpPass) return;
+
+  const from = newsletterFromAddress();
+  if (!from) return;
+
+  const locale = resolveNewsletterLocale(params.locale);
+  const copy = newsletterWelcomeCopy[locale];
+  const shopUrl = env.frontendBaseUrl.replace(/\/$/, "");
+  const privacyUrl = `${shopUrl}/privacy-policy`;
+
+  await transporter.sendMail({
+    from: `"Boxmag Newsletter" <${from}>`,
+    to: params.to,
+    subject: copy.subject,
+    text: [
+      copy.greeting,
+      "",
+      copy.intro,
+      "",
+      copy.highlight,
+      "",
+      `${copy.ctaLabel}: ${shopUrl}`,
+      "",
+      copy.footer,
+      "",
+      copy.team,
+    ].join("\n"),
+    html: `
+      <div style="margin:0;background:#f5f7fb;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px;margin:0 auto;border-collapse:separate;border-spacing:0;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+          <tr>
+            <td style="background:#facc15;padding:18px 24px;">
+              <h1 style="margin:0;font-size:20px;line-height:1.3;color:#111827;font-weight:700;">${escapeHtml(copy.subject)}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px;">
+              <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#374151;">
+                ${escapeHtml(copy.greeting)}
+              </p>
+              <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#374151;">
+                ${escapeHtml(copy.intro)}
+              </p>
+
+              <div style="margin:0 0 18px;padding:14px 16px;background:#fef9c3;border:1px solid #fde047;border-radius:10px;">
+                <p style="margin:0;font-size:15px;line-height:1.6;color:#713f12;font-weight:600;">
+                  ${escapeHtml(copy.highlight)}
+                </p>
+              </div>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+                <tr>
+                  <td style="border-radius:10px;background:#ef6b56;">
+                    <a
+                      href="${shopUrl}"
+                      style="display:inline-block;padding:12px 20px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;"
+                    >
+                      ${escapeHtml(copy.ctaLabel)}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#6b7280;">
+                ${escapeHtml(copy.footer)}
+              </p>
+              <p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#374151;">
+                ${escapeHtml(copy.team)}
+              </p>
+              <p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#9ca3af;">
+                <a href="${privacyUrl}" style="color:#ef6b56;text-decoration:underline;">Privacy policy</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `,
+  });
+}
+
 export async function sendVerificationEmail(params: {
   to: string;
   verifyUrl: string;

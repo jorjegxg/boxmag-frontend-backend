@@ -416,11 +416,11 @@ const BussinessPage = () => {
             </p>
             <div className="space-y-1.5 text-white text-sm">
               <a
-                href="mailto:B2B@boxmag.eu"
+                href="mailto:b2b@boxmag.eu"
                 className="flex items-center justify-center lg:justify-start gap-3 hover:text-my-yellow transition-colors"
               >
                 <FaEnvelope className="w-4 h-4 text-my-yellow shrink-0" />
-                <span>B2B@boxmag.eu</span>
+                <span>b2b@boxmag.eu</span>
               </a>
               <a
                 href="tel:+40799553345"
