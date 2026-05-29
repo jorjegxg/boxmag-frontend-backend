@@ -215,6 +215,7 @@
   "orderSummary.companyName": "Company Name",
   "orderSummary.vatNumber": "VAT Number",
   "orderSummary.email": "Email",
+  "orderSummary.emailLockedHint": "Your account email — this order will appear in your account.",
   "orderSummary.phone": "Phone",
   "orderSummary.address": "Address",
   "orderSummary.postcode": "Postcode",

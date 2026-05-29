@@ -18,6 +18,8 @@ import europeanCountries from "./european-countries.json";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
+const lockedInputClass =
+  "w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-3 text-gray-600 cursor-not-allowed focus:outline-none";
 const invalidInputClass =
   "w-full rounded-lg border border-red-500 bg-red-50 px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500";
 const VAT_NUMBER_REGEX = /^([A-Z]{2})?[A-Z0-9]{2,12}$/i;
@@ -100,6 +102,7 @@ export default function OrderSummaryPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasLoadedAccountDefaults, setHasLoadedAccountDefaults] = useState(false);
+  const [lockedAccountEmail, setLockedAccountEmail] = useState<string | null>(null);
 
   const boxes = useBusinessStore((s) => s.boxes);
   const carboardTypes = useBusinessStore((s) => s.carboarbonTypeOptions);
@@ -136,6 +139,16 @@ export default function OrderSummaryPage() {
   })();
 
   useEffect(() => {
+    const isLoggedIn = localStorage.getItem(AUTH_STORAGE_KEY) === "true";
+    const loggedInEmail = localStorage.getItem(AUTH_EMAIL_STORAGE_KEY)?.trim() ?? "";
+    if (isLoggedIn && loggedInEmail) {
+      setLockedAccountEmail(loggedInEmail);
+      setEmail(loggedInEmail);
+      setCreateAccount(false);
+    }
+  }, []);
+
+  useEffect(() => {
     if (hasLoadedAccountDefaults) return;
 
     const isLoggedIn = localStorage.getItem(AUTH_STORAGE_KEY) === "true";
@@ -144,6 +157,10 @@ export default function OrderSummaryPage() {
       setHasLoadedAccountDefaults(true);
       return;
     }
+
+    setLockedAccountEmail(loggedInEmail);
+    setEmail(loggedInEmail);
+    setCreateAccount(false);
 
     let isCancelled = false;
     const loadAccountDefaults = async () => {
@@ -204,10 +221,10 @@ export default function OrderSummaryPage() {
           setFirstName((prev) => prev || String(profilePayload.data?.firstName ?? ""));
           setSurname((prev) => prev || String(profilePayload.data?.lastName ?? ""));
           setPhone((prev) => prev || String(profilePayload.data?.phone ?? ""));
-          setEmail((prev) => prev || String(profilePayload.data?.email ?? loggedInEmail));
+          setEmail(loggedInEmail);
           setVatNumber((prev) => prev || String(profilePayload.data?.vatNumber ?? ""));
         } else {
-          setEmail((prev) => prev || loggedInEmail);
+          setEmail(loggedInEmail);
         }
 
         if (defaultAddress) {
@@ -224,7 +241,7 @@ export default function OrderSummaryPage() {
         }
       } catch (_error) {
         if (!isCancelled) {
-          setEmail((prev) => prev || loggedInEmail);
+          setEmail(loggedInEmail);
         }
       } finally {
         if (!isCancelled) {
@@ -358,16 +375,7 @@ export default function OrderSummaryPage() {
 
     setIsSubmitting(true);
     try {
-      const isLoggedIn = localStorage.getItem(AUTH_STORAGE_KEY) === "true";
-      const loggedInEmail =
-        localStorage.getItem(AUTH_EMAIL_STORAGE_KEY)?.trim() ?? "";
-      const normalizedOrderEmail = email.trim().toLowerCase();
-      const accountEmail =
-        isLoggedIn &&
-        loggedInEmail &&
-        loggedInEmail.toLowerCase() === normalizedOrderEmail
-          ? loggedInEmail
-          : undefined;
+      const orderEmail = lockedAccountEmail ?? email.trim();
 
       const response = await fetch(`${backendBaseUrl}/api/orders`, {
         method: "POST",
@@ -375,7 +383,7 @@ export default function OrderSummaryPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...(accountEmail ? { accountEmail } : {}),
+          ...(lockedAccountEmail ? { accountEmail: lockedAccountEmail } : {}),
           boxTypeId: selectedBox.id,
           boxTypeName: selectedBox.name,
           cardboardType: selectedType.name,
@@ -395,7 +403,7 @@ export default function OrderSummaryPage() {
           surname,
           companyName,
           vatNumber: vatNumber || null,
-          email,
+          email: orderEmail,
           phone,
           address,
           postcode,
@@ -530,12 +538,31 @@ export default function OrderSummaryPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="os-email" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.email")}</label>
-                <input id="os-email" type="email" value={email} onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (e.target.value.trim().length > 0 && requiredFieldErrors.email) {
-                    setRequiredFieldErrors((prev) => ({ ...prev, email: false }));
+                <input
+                  id="os-email"
+                  type="email"
+                  value={email}
+                  readOnly={lockedAccountEmail != null}
+                  disabled={lockedAccountEmail != null}
+                  onChange={(e) => {
+                    if (lockedAccountEmail != null) return;
+                    setEmail(e.target.value);
+                    if (e.target.value.trim().length > 0 && requiredFieldErrors.email) {
+                      setRequiredFieldErrors((prev) => ({ ...prev, email: false }));
+                    }
+                  }}
+                  placeholder="you@yourwebsite.com"
+                  className={
+                    lockedAccountEmail != null
+                      ? lockedInputClass
+                      : requiredFieldErrors.email
+                        ? invalidInputClass
+                        : inputClass
                   }
-                }} placeholder="you@yourwebsite.com" className={requiredFieldErrors.email ? invalidInputClass : inputClass} />
+                />
+                {lockedAccountEmail != null ? (
+                  <p className="mt-1 text-sm text-gray-600">{t("orderSummary.emailLockedHint")}</p>
+                ) : null}
                 {requiredFieldErrors.email ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.emailRequired")}</p> : null}
               </div>
               <div>
@@ -607,10 +634,12 @@ export default function OrderSummaryPage() {
 
         {/* Picture 2: Checkboxes and PREV/NEXT */}
         <div className="w-full space-y-4">
-          <label className="flex gap-3 items-start cursor-pointer">
-            <input type="checkbox" checked={createAccount} onChange={(e) => setCreateAccount(e.target.checked)} className="mt-1 h-5 w-5 rounded border-2 border-gray-300 bg-white accent-my-red focus:ring-my-red" />
-            <span className="text-sm text-gray-700">{t("orderSummary.createAccount")}</span>
-          </label>
+          {lockedAccountEmail == null ? (
+            <label className="flex gap-3 items-start cursor-pointer">
+              <input type="checkbox" checked={createAccount} onChange={(e) => setCreateAccount(e.target.checked)} className="mt-1 h-5 w-5 rounded border-2 border-gray-300 bg-white accent-my-red focus:ring-my-red" />
+              <span className="text-sm text-gray-700">{t("orderSummary.createAccount")}</span>
+            </label>
+          ) : null}
           <label className="flex gap-3 items-start cursor-pointer">
             <input
               type="checkbox"

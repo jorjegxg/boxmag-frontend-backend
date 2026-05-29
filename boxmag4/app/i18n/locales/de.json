@@ -215,6 +215,7 @@
   "orderSummary.companyName": "Firmenname",
   "orderSummary.vatNumber": "USt-Nummer",
   "orderSummary.email": "E-Mail",
+  "orderSummary.emailLockedHint": "Ihre Konto-E-Mail — diese Bestellung erscheint in Ihrem Konto.",
   "orderSummary.phone": "Telefon",
   "orderSummary.address": "Adresse",
   "orderSummary.postcode": "Postleitzahl",

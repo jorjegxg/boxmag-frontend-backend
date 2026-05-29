@@ -215,6 +215,7 @@
   "orderSummary.companyName": "Nume companie",
   "orderSummary.vatNumber": "Cod TVA",
   "orderSummary.email": "Email",
+  "orderSummary.emailLockedHint": "Emailul contului tău — comanda va apărea în cont.",
   "orderSummary.phone": "Telefon",
   "orderSummary.address": "Adresă",
   "orderSummary.postcode": "Cod poștal",
