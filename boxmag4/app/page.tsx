@@ -16,6 +16,7 @@ import { WhyChooseBoxfixSection } from "./global/components/why-choose-boxfix-se
 import { ServicesSection } from "./global/components/services-section";
 import { FeaturesSection } from "./global/components/features-section";
 import { useLanguage } from "./i18n/language-context";
+import { PartnerLogosStrip } from "./global/components/partner-logos-strip";
 
 export default function Home() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function Home() {
       <ServicesSection />
       <HaveAQuestion />
       <NewsletterSubscribe />
+      <PartnerLogosStrip />
     </div>
   );
 }

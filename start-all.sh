@@ -5,11 +5,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$ROOT_DIR/boxmag-backend"
 FRONTEND_DIR="$ROOT_DIR/boxmag4"
-
-if ! command -v docker >/dev/null 2>&1; then
-  echo "Eroare: docker nu este instalat sau nu este in PATH."
-  exit 1
-fi
+ENSURE_DOCKER_SCRIPT="$ROOT_DIR/scripts/ensure-docker.sh"
 
 if ! command -v npm >/dev/null 2>&1; then
   echo "Eroare: npm nu este instalat sau nu este in PATH."
@@ -21,16 +17,11 @@ if [[ ! -d "$BACKEND_DIR" || ! -d "$FRONTEND_DIR" ]]; then
   exit 1
 fi
 
-if [[ ! -f "$ROOT_DIR/.env" ]]; then
-  echo "Atentie: fisierul .env lipseste in radacina. Docker Compose va folosi valorile default."
+if [[ ! -x "$ENSURE_DOCKER_SCRIPT" ]]; then
+  chmod +x "$ENSURE_DOCKER_SCRIPT" 2>/dev/null || true
 fi
 
-echo "-> Pornesc containerele DB existente (MySQL + MinIO)..."
-if ! docker compose -f "$ROOT_DIR/docker-compose.yml" start mysql minio; then
-  echo "Eroare: containerele mysql/minio nu exista inca."
-  echo "Ruleaza o singura data: docker compose -f \"$ROOT_DIR/docker-compose.yml\" up -d"
-  exit 1
-fi
+bash "$ENSURE_DOCKER_SCRIPT"
 
 is_windows_shell=false
 case "$(uname -s)" in
@@ -39,25 +30,14 @@ case "$(uname -s)" in
     ;;
 esac
 
-if [[ "$is_windows_shell" == true ]]; then
-  ROOT_WIN_PATH="$(cd "$ROOT_DIR" && pwd -W)"
-  BACKEND_WIN_PATH="${ROOT_WIN_PATH}\\boxmag-backend"
-  FRONTEND_WIN_PATH="${ROOT_WIN_PATH}\\boxmag4"
+is_cursor_terminal() {
+  [[ "${TERM_PROGRAM:-}" == "vscode" ]] \
+    || [[ -n "${CURSOR_TRACE_ID:-}" ]] \
+    || [[ -n "${VSCODE_IPC_HOOK:-}" ]] \
+    || [[ -n "${VSCODE_GIT_IPC_HANDLE:-}" ]]
+}
 
-  echo "-> Pornesc backend in terminal separat..."
-  powershell.exe -NoProfile -Command "Start-Process cmd.exe -ArgumentList '/k','cd /d ""$BACKEND_WIN_PATH"" && npm run dev'"
-
-  echo "-> Pornesc frontend in terminal separat..."
-  powershell.exe -NoProfile -Command "Start-Process cmd.exe -ArgumentList '/k','cd /d ""$FRONTEND_WIN_PATH"" && npm run dev'"
-
-  echo ""
-  echo "Servicii pornite:"
-  echo "- DB: docker compose (MySQL + MinIO)"
-  echo "- Backend: terminal separat (boxmag-backend)"
-  echo "- Frontend: terminal separat (boxmag-frontend)"
-  echo ""
-  echo "Scriptul se inchide aici. Procesele raman in ferestrele lor."
-else
+run_dev_servers_in_current_terminal() {
   echo "-> Pornesc backend..."
   (
     cd "$BACKEND_DIR"
@@ -83,7 +63,7 @@ else
   trap cleanup INT TERM EXIT
 
   echo ""
-  echo "Servicii pornite:"
+  echo "Servicii pornite in acest terminal Cursor:"
   echo "- DB: docker compose (MySQL + MinIO)"
   echo "- Backend: http://localhost:3001 (sau portul configurat)"
   echo "- Frontend: http://localhost:3006"
@@ -91,4 +71,30 @@ else
   echo "Apasa Ctrl+C pentru a opri backend/frontend."
 
   wait "$BACKEND_PID" "$FRONTEND_PID"
+}
+
+if is_cursor_terminal; then
+  run_dev_servers_in_current_terminal
+elif [[ "$is_windows_shell" == true ]]; then
+  ROOT_WIN_PATH="$(cd "$ROOT_DIR" && pwd -W)"
+  BACKEND_WIN_PATH="${ROOT_WIN_PATH}\\boxmag-backend"
+  FRONTEND_WIN_PATH="${ROOT_WIN_PATH}\\boxmag4"
+
+  echo "-> Pornesc backend in terminal separat..."
+  powershell.exe -NoProfile -Command "Start-Process cmd.exe -ArgumentList '/k','cd /d ""$BACKEND_WIN_PATH"" && npm run dev'"
+
+  echo "-> Pornesc frontend in terminal separat..."
+  powershell.exe -NoProfile -Command "Start-Process cmd.exe -ArgumentList '/k','cd /d ""$FRONTEND_WIN_PATH"" && npm run dev'"
+
+  echo ""
+  echo "Servicii pornite:"
+  echo "- DB: docker compose (MySQL + MinIO) — Docker Desktop pornit daca era oprit"
+  echo "- Backend: terminal separat (boxmag-backend)"
+  echo "- Frontend: terminal separat (boxmag4)"
+  echo ""
+  echo "Pentru terminale integrate Cursor: ruleaza din terminalul Cursor"
+  echo "  ./start-all.sh"
+  echo "sau Tasks: Run Task -> Start All (Ctrl+Shift+B)."
+else
+  run_dev_servers_in_current_terminal
 fi

@@ -461,6 +461,120 @@ export async function sendNewOrderNotificationEmail(
   });
 }
 
+export async function sendBusinessOrderConfirmationEmailToCustomer(
+  params: NewOrderEmailParams,
+): Promise<void> {
+  const {
+    orderNumber,
+    sizeText,
+    productsTableText,
+    productsTableHtml,
+    displayMessage,
+  } = buildOrderEmailContent(params);
+
+  await transporter.sendMail({
+    from: env.emailFrom,
+    to: params.customerEmail,
+    subject: `Confirmare cerere oferta ${orderNumber}`,
+    text: [
+      `Salut ${params.customerName || "client"},`,
+      "",
+      "Iti multumim pentru cererea de oferta trimisa pe Boxmag.",
+      `Numar cerere: ${orderNumber}`,
+      "",
+      "Am primit configuratia cutiilor tale si o analizam. Vei primi o oferta personalizata in cel mai scurt timp posibil, de obicei in maxim 1-2 zile lucratoare.",
+      "",
+      "Rezumat cerere:",
+      `Tip cutie: ${params.boxTypeName}`,
+      `Tip carton: ${params.cardboardType}`,
+      `Culoare carton: ${params.cardboardColour}`,
+      `Tipar cutie: ${params.boxPrint}`,
+      `Dimensiune: ${sizeText}`,
+      `Transport: ${params.transport}`,
+      `Cantitate: ${params.quantity}`,
+      params.attachmentName ? `Atasament: ${params.attachmentName}` : "",
+      "",
+      "Produse:",
+      productsTableText,
+      displayMessage ? `\nMesajul tau:\n${displayMessage}` : "",
+      "",
+      "Daca ai intrebari suplimentare, raspunde la acest email sau contacteaza-ne.",
+      "",
+      "Cu respect,",
+      "Echipa Boxmag",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    html: `
+      <div style="margin:0;background:#f5f7fb;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:720px;margin:0 auto;border-collapse:separate;border-spacing:0;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+          <tr>
+            <td style="background:#ef6b56;padding:18px 24px;">
+              <h1 style="margin:0;font-size:20px;line-height:1.3;color:#ffffff;font-weight:700;">Cererea ta a fost primita</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px;">
+              <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#374151;">
+                Salut ${escapeHtml(params.customerName || "client")},
+              </p>
+              <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#374151;">
+                Iti multumim pentru cererea de oferta trimisa pe <strong>Boxmag</strong>.
+                Am primit configuratia cutiilor tale si o analizam.
+              </p>
+
+              <div style="margin:0 0 18px;padding:14px 16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;">
+                <p style="margin:0;font-size:15px;line-height:1.6;color:#9a3412;font-weight:600;">
+                  Vei primi o oferta personalizata in cel mai scurt timp posibil, de obicei in maxim 1-2 zile lucratoare.
+                </p>
+              </div>
+
+              <p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#6b7280;">
+                Numar cerere
+              </p>
+              <p style="margin:0 0 18px;font-size:18px;font-weight:700;color:#b91c1c;">${escapeHtml(orderNumber)}</p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;">
+                <tr><td style="padding:4px 0;color:#6b7280;width:160px;">Tip cutie</td><td style="padding:4px 0;font-weight:600;">${escapeHtml(params.boxTypeName)}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Tip carton</td><td style="padding:4px 0;">${escapeHtml(params.cardboardType)}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Culoare carton</td><td style="padding:4px 0;">${escapeHtml(params.cardboardColour)}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Tipar cutie</td><td style="padding:4px 0;">${escapeHtml(params.boxPrint)}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Dimensiune</td><td style="padding:4px 0;">${escapeHtml(sizeText)}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Transport</td><td style="padding:4px 0;">${escapeHtml(params.transport)}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Cantitate</td><td style="padding:4px 0;font-weight:600;">${params.quantity}</td></tr>
+                ${
+                  params.attachmentName
+                    ? `<tr><td style="padding:4px 0;color:#6b7280;">Atasament</td><td style="padding:4px 0;">${escapeHtml(params.attachmentName)}</td></tr>`
+                    : ""
+                }
+              </table>
+
+              <h3 style="margin:0 0 8px;font-size:15px;color:#111827;">Rezumat produse</h3>
+              ${productsTableHtml}
+              ${
+                displayMessage
+                  ? `<div style="margin-top:20px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+                <p style="margin:0 0 8px;font-weight:700;">Mesajul tau</p>
+                <p style="margin:0;white-space:pre-line;">${escapeHtml(displayMessage)}</p>
+              </div>`
+                  : ""
+              }
+
+              <p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#374151;">
+                Daca ai intrebari suplimentare, raspunde la acest email sau contacteaza-ne.
+              </p>
+              <p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#374151;">
+                Cu respect,<br />
+                <strong>Echipa Boxmag</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `,
+  });
+}
+
 export async function sendOrderConfirmationEmailToCustomer(
   params: NewOrderEmailParams,
 ): Promise<void> {

@@ -358,12 +358,24 @@ export default function OrderSummaryPage() {
 
     setIsSubmitting(true);
     try {
+      const isLoggedIn = localStorage.getItem(AUTH_STORAGE_KEY) === "true";
+      const loggedInEmail =
+        localStorage.getItem(AUTH_EMAIL_STORAGE_KEY)?.trim() ?? "";
+      const normalizedOrderEmail = email.trim().toLowerCase();
+      const accountEmail =
+        isLoggedIn &&
+        loggedInEmail &&
+        loggedInEmail.toLowerCase() === normalizedOrderEmail
+          ? loggedInEmail
+          : undefined;
+
       const response = await fetch(`${backendBaseUrl}/api/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          ...(accountEmail ? { accountEmail } : {}),
           boxTypeId: selectedBox.id,
           boxTypeName: selectedBox.name,
           cardboardType: selectedType.name,

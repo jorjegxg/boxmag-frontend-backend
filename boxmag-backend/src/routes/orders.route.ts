@@ -4,7 +4,7 @@ import { PoolConnection } from "mysql2/promise";
 import { mysqlPool } from "../db/mysql";
 import {
   isEmailTransportConfigured,
-  sendOrderConfirmationEmailToCustomer,
+  sendBusinessOrderConfirmationEmailToCustomer,
   sendNewOrderNotificationEmail,
 } from "../services/email";
 import { parseCartItemsJson } from "../utils/cart-items";
@@ -38,6 +38,11 @@ type CreateOrderPayload = {
   createAccount?: unknown;
   consentPhone?: unknown;
   consentEmail?: unknown;
+  accountEmail?: unknown;
+};
+
+type UserIdRow = RowDataPacket & {
+  id: number;
 };
 
 function toOptionalString(value: unknown): string | null {
@@ -63,6 +68,30 @@ function toOptionalNumber(value: unknown): number | null {
 function toRequiredNumber(value: unknown): number | null {
   const parsed = toOptionalNumber(value);
   return parsed != null ? parsed : null;
+}
+
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+async function resolveUserIdForAccount(
+  accountEmailRaw: unknown,
+  orderEmail: string,
+): Promise<number | null> {
+  const accountEmail = toOptionalString(accountEmailRaw);
+  if (!accountEmail) return null;
+
+  if (normalizeEmail(accountEmail) !== normalizeEmail(orderEmail)) {
+    return null;
+  }
+
+  const [rows] = await mysqlPool.execute<UserIdRow[]>(
+    `SELECT id FROM users WHERE LOWER(email) = ? AND is_active = 1 LIMIT 1`,
+    [normalizeEmail(accountEmail)],
+  );
+
+  const userId = rows[0]?.id;
+  return typeof userId === "number" && userId > 0 ? userId : null;
 }
 
 export const ordersRouter = Router();
@@ -160,10 +189,15 @@ ordersRouter.get("/", async (req, res) => {
               c.first_name, c.surname, c.company_name, c.email, c.phone, c.city, c.country
        FROM orders o
        LEFT JOIN contacts c ON c.order_id = o.id
-       ${emailFilter ? "WHERE LOWER(c.email) = ?" : ""}
+       ${
+         emailFilter
+           ? `WHERE LOWER(c.email) = ?
+              OR o.user_id = (SELECT id FROM users WHERE LOWER(email) = ? AND is_active = 1 LIMIT 1)`
+           : ""
+       }
        ORDER BY o.created_at DESC, o.id DESC`;
     const [rows] = emailFilter
-      ? await mysqlPool.query<OrderListRow[]>(sql, [emailFilter])
+      ? await mysqlPool.query<OrderListRow[]>(sql, [emailFilter, emailFilter])
       : await mysqlPool.query<OrderListRow[]>(sql);
 
     res.json({
@@ -234,10 +268,21 @@ ordersRouter.get("/:orderId", async (req, res) => {
        FROM orders o
        LEFT JOIN contacts c ON c.order_id = o.id
        WHERE o.id = ?
-       ${emailFilter ? "AND LOWER(c.email) = ?" : ""}
+       ${
+         emailFilter
+           ? `AND (
+                LOWER(c.email) = ?
+                OR o.user_id = (SELECT id FROM users WHERE LOWER(email) = ? AND is_active = 1 LIMIT 1)
+              )`
+           : ""
+       }
        LIMIT 1`;
     const [rows] = emailFilter
-      ? await mysqlPool.query<OrderListRow[]>(sql, [orderId, emailFilter])
+      ? await mysqlPool.query<OrderListRow[]>(sql, [
+          orderId,
+          emailFilter,
+          emailFilter,
+        ])
       : await mysqlPool.query<OrderListRow[]>(sql, [orderId]);
 
     if (rows.length === 0) {
@@ -349,6 +394,7 @@ ordersRouter.post("/", async (req, res) => {
   const createAccount = payload.createAccount === true;
   const consentPhone = payload.consentPhone === true;
   const consentEmail = payload.consentEmail === true;
+  const userId = await resolveUserIdForAccount(payload.accountEmail, email);
 
   let connection: PoolConnection | undefined;
   try {
@@ -358,10 +404,11 @@ ordersRouter.post("/", async (req, res) => {
 
     const [orderInsertResult] = await conn.execute<ResultSetHeader>(
       `INSERT INTO orders
-        (box_type_id, box_type_name, cardboard_type, cardboard_colour, box_print,
+        (user_id, box_type_id, box_type_name, cardboard_type, cardboard_colour, box_print,
          length_mm, width_mm, height_mm, size_type, transport, quantity, ftl, attachment_name, message, accepted_terms)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        userId,
         boxTypeId,
         boxTypeName,
         cardboardType,
@@ -440,7 +487,7 @@ ordersRouter.post("/", async (req, res) => {
           items: null,
           priceBreakdown: null,
         });
-        await sendOrderConfirmationEmailToCustomer({
+        await sendBusinessOrderConfirmationEmailToCustomer({
           orderId,
           customerName,
           customerEmail: email,
