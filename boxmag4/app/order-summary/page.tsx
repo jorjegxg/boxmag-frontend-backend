@@ -82,7 +82,6 @@ export default function OrderSummaryPage() {
   const [postcode, setPostcode] = useState(shouldAutofillOrderSummary ? "725400" : "");
   const [city, setCity] = useState(shouldAutofillOrderSummary ? "Radauti" : "");
   const [country, setCountry] = useState(shouldAutofillOrderSummary ? "RO" : "");
-  const [createAccount, setCreateAccount] = useState(shouldAutofillOrderSummary);
   const [consentPhone, setConsentPhone] = useState(true);
   const [consentEmail, setConsentEmail] = useState(true);
   const [consentPhoneError, setConsentPhoneError] = useState("");
@@ -144,7 +143,6 @@ export default function OrderSummaryPage() {
     if (isLoggedIn && loggedInEmail) {
       setLockedAccountEmail(loggedInEmail);
       setEmail(loggedInEmail);
-      setCreateAccount(false);
     }
   }, []);
 
@@ -160,7 +158,6 @@ export default function OrderSummaryPage() {
 
     setLockedAccountEmail(loggedInEmail);
     setEmail(loggedInEmail);
-    setCreateAccount(false);
 
     let isCancelled = false;
     const loadAccountDefaults = async () => {
@@ -409,7 +406,6 @@ export default function OrderSummaryPage() {
           postcode,
           city,
           country,
-          createAccount,
           consentPhone,
           consentEmail,
         }),
@@ -634,12 +630,6 @@ export default function OrderSummaryPage() {
 
         {/* Picture 2: Checkboxes and PREV/NEXT */}
         <div className="w-full space-y-4">
-          {lockedAccountEmail == null ? (
-            <label className="flex gap-3 items-start cursor-pointer">
-              <input type="checkbox" checked={createAccount} onChange={(e) => setCreateAccount(e.target.checked)} className="mt-1 h-5 w-5 rounded border-2 border-gray-300 bg-white accent-my-red focus:ring-my-red" />
-              <span className="text-sm text-gray-700">{t("orderSummary.createAccount")}</span>
-            </label>
-          ) : null}
           <label className="flex gap-3 items-start cursor-pointer">
             <input
               type="checkbox"
