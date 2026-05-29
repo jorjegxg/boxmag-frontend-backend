@@ -222,6 +222,10 @@ export function isEmailTransportConfigured(): boolean {
   return Boolean(env.smtpUser && env.smtpPass && env.emailFrom);
 }
 
+export function isOrderEmailTransportConfigured(): boolean {
+  return Boolean(env.smtpUser && env.smtpPass && env.emailOrdersFrom);
+}
+
 export async function sendVerificationEmail(params: {
   to: string;
   verifyUrl: string;
@@ -397,8 +401,8 @@ export async function sendNewOrderNotificationEmail(
   } = buildOrderEmailContent(params);
 
   await transporter.sendMail({
-    from: env.emailFrom,
-    to: "comenzi@reko-packaging.ro",
+    from: env.emailOrdersFrom,
+    to: env.ordersNotificationTo,
     subject: `Comanda noua ${orderNumber}`,
     text: [
       "A fost creata o comanda noua in platforma Boxmag.",
@@ -473,7 +477,7 @@ export async function sendBusinessOrderConfirmationEmailToCustomer(
   } = buildOrderEmailContent(params);
 
   await transporter.sendMail({
-    from: env.emailFrom,
+    from: env.emailOrdersFrom,
     to: params.customerEmail,
     subject: `Confirmare cerere oferta ${orderNumber}`,
     text: [
@@ -588,7 +592,7 @@ export async function sendOrderConfirmationEmailToCustomer(
   } = buildOrderEmailContent(params);
 
   await transporter.sendMail({
-    from: env.emailFrom,
+    from: env.emailOrdersFrom,
     to: params.customerEmail,
     subject: `Confirmare comanda ${orderNumber}`,
     text: [

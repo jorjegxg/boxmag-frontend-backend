@@ -37,36 +37,9 @@ const rootEnv =
       )
     : {};
 
-// #region agent log
-console.log("[dbg-bd7f7f] module_loaded", {
-  cwd: process.cwd(),
-  rootEnvPath,
-  rootEnvKeys: Object.keys(rootEnv).length,
-});
-fetch("http://127.0.0.1:7362/ingest/001632f5-f360-4660-a740-ac305c61ac19", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "X-Debug-Session-Id": "bd7f7f",
-  },
-  body: JSON.stringify({
-    sessionId: "bd7f7f",
-    runId: "initial",
-    hypothesisId: "H0",
-    location: "app/api/contact/route.ts:module",
-    message: "Module loaded for contact route",
-    data: {
-      cwd: process.cwd(),
-      rootEnvPath,
-      rootEnvKeys: Object.keys(rootEnv).length,
-    },
-    timestamp: Date.now(),
-  }),
-}).catch(() => {});
-// #endregion
-
 function envValue(key: string): string | undefined {
-  return process.env[key] ?? rootEnv[key];
+  const value = process.env[key] ?? rootEnv[key];
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
 function isNonEmpty(value: string): boolean {
@@ -75,40 +48,6 @@ function isNonEmpty(value: string): boolean {
 
 export async function POST(req: Request): Promise<Response> {
   try {
-    // #region agent log
-    console.log("[dbg-bd7f7f] post_entered", {
-      cwd: process.cwd(),
-      rootEnvPath,
-      rootEnvKeys: Object.keys(rootEnv).length,
-      hasProcessSmtpUser: Boolean(process.env.SMTP_USER),
-      hasProcessSmtpPass: Boolean(process.env.SMTP_PASS),
-      hasProcessContactTo: Boolean(process.env.CONTACT_TO),
-    });
-    fetch("http://127.0.0.1:7362/ingest/001632f5-f360-4660-a740-ac305c61ac19", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "bd7f7f",
-      },
-      body: JSON.stringify({
-        sessionId: "bd7f7f",
-        runId: "initial",
-        hypothesisId: "H1",
-        location: "app/api/contact/route.ts:POST:start",
-        message: "POST entered and env sources available",
-        data: {
-          cwd: process.cwd(),
-          rootEnvPath,
-          rootEnvKeys: Object.keys(rootEnv).length,
-          hasProcessSmtpUser: Boolean(process.env.SMTP_USER),
-          hasProcessSmtpPass: Boolean(process.env.SMTP_PASS),
-          hasProcessContactTo: Boolean(process.env.CONTACT_TO),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
     const contentType = req.headers.get("content-type") ?? "";
     let body: ContactPayload;
     let attachmentFiles: File[] = [];
@@ -193,68 +132,9 @@ export async function POST(req: Request): Promise<Response> {
     const smtpPort = Number(envValue("SMTP_PORT") ?? 587);
     const smtpUser = envValue("SMTP_USER");
     const smtpPass = envValue("SMTP_PASS");
-    const contactTo = envValue("CONTACT_TO") ?? smtpUser;
-
-    // #region agent log
-    console.log("[dbg-bd7f7f] smtp_resolution", {
-      smtpHost,
-      smtpPort,
-      hasSmtpUser: Boolean(smtpUser),
-      hasSmtpPass: Boolean(smtpPass),
-      hasContactTo: Boolean(contactTo),
-    });
-    fetch("http://127.0.0.1:7362/ingest/001632f5-f360-4660-a740-ac305c61ac19", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "bd7f7f",
-      },
-      body: JSON.stringify({
-        sessionId: "bd7f7f",
-        runId: "initial",
-        hypothesisId: "H2",
-        location: "app/api/contact/route.ts:POST:smtp-resolution",
-        message: "Resolved SMTP values presence",
-        data: {
-          smtpHost,
-          smtpPort,
-          hasSmtpUser: Boolean(smtpUser),
-          hasSmtpPass: Boolean(smtpPass),
-          hasContactTo: Boolean(contactTo),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
+    const contactTo = envValue("CONTACT_TO");
 
     if (!smtpUser || !smtpPass || !contactTo) {
-      // #region agent log
-      console.log("[dbg-bd7f7f] smtp_missing_branch", {
-        hasSmtpUser: Boolean(smtpUser),
-        hasSmtpPass: Boolean(smtpPass),
-        hasContactTo: Boolean(contactTo),
-      });
-      fetch("http://127.0.0.1:7362/ingest/001632f5-f360-4660-a740-ac305c61ac19", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "bd7f7f",
-        },
-        body: JSON.stringify({
-          sessionId: "bd7f7f",
-          runId: "initial",
-          hypothesisId: "H3",
-          location: "app/api/contact/route.ts:POST:smtp-missing-branch",
-          message: "SMTP missing branch executed",
-          data: {
-            hasSmtpUser: Boolean(smtpUser),
-            hasSmtpPass: Boolean(smtpPass),
-            hasContactTo: Boolean(contactTo),
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       return Response.json(
         { message: "SMTP is not configured. Set SMTP_USER, SMTP_PASS, CONTACT_TO." },
         { status: 500 },
@@ -282,7 +162,7 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     await transporter.sendMail({
-      from: `"Boxmag Contact Form" <${smtpUser}>`,
+      from: `"Boxmag Contact Form" <${contactTo}>`,
       to: contactTo,
       replyTo: body.email,
       subject: `New contact request from ${body.firstName} ${body.surname}`,

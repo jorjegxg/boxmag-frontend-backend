@@ -52,6 +52,15 @@ const nextConfig: NextConfig = {
       readRootEnvValue("GOOGLE_MAPS_API_KEY") ??
       readRootEnvValue("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY") ??
       "",
+    SMTP_HOST:
+      process.env.SMTP_HOST ?? readRootEnvValue("SMTP_HOST") ?? "smtp.gmail.com",
+    SMTP_PORT: process.env.SMTP_PORT ?? readRootEnvValue("SMTP_PORT") ?? "587",
+    SMTP_USER: process.env.SMTP_USER ?? readRootEnvValue("SMTP_USER") ?? "",
+    SMTP_PASS: process.env.SMTP_PASS ?? readRootEnvValue("SMTP_PASS") ?? "",
+    EMAIL_FROM:
+      process.env.EMAIL_FROM ?? readRootEnvValue("EMAIL_FROM") ?? "",
+    CONTACT_TO:
+      process.env.CONTACT_TO ?? readRootEnvValue("CONTACT_TO") ?? "",
   },
 
   turbopack: {

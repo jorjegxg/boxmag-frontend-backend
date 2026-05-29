@@ -19,7 +19,7 @@ vi.mock("../db/mysql", () => ({
 }));
 
 vi.mock("../services/email", () => ({
-  isEmailTransportConfigured: vi.fn(() => false),
+  isOrderEmailTransportConfigured: vi.fn(() => false),
   sendOrderConfirmationEmailToCustomer: vi.fn(async () => undefined),
   sendNewOrderNotificationEmail: vi.fn(async () => undefined),
 }));

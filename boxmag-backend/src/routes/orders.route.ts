@@ -3,7 +3,7 @@ import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { PoolConnection } from "mysql2/promise";
 import { mysqlPool } from "../db/mysql";
 import {
-  isEmailTransportConfigured,
+  isOrderEmailTransportConfigured,
   sendBusinessOrderConfirmationEmailToCustomer,
   sendNewOrderNotificationEmail,
 } from "../services/email";
@@ -454,7 +454,7 @@ ordersRouter.post("/", async (req, res) => {
 
     await conn.commit();
 
-    if (isEmailTransportConfigured()) {
+    if (isOrderEmailTransportConfigured()) {
       try {
         const customerName = `${firstName} ${surname}`.trim();
         await sendNewOrderNotificationEmail({

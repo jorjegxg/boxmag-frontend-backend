@@ -5,7 +5,7 @@ import { PoolConnection } from "mysql2/promise";
 import { mysqlPool } from "../db/mysql";
 import { env } from "../config/env";
 import {
-  isEmailTransportConfigured,
+  isOrderEmailTransportConfigured,
   sendOrderConfirmationEmailToCustomer,
   sendNewOrderNotificationEmail,
 } from "../services/email";
@@ -558,7 +558,7 @@ async function markOrderPaidBySession(
   }
 
   // Send the internal "new order" notification email now that payment is confirmed.
-  if (!isEmailTransportConfigured()) return;
+  if (!isOrderEmailTransportConfigured()) return;
 
   try {
     const [orderRows] = await mysqlPool.query<OrderRow[]>(
