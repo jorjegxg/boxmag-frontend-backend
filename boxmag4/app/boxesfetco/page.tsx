@@ -100,9 +100,12 @@ export default function ShopPage() {
       {/* BoxFix Products section */}
       <section className="w-full px-4 py-10 sm:px-6 lg:px-20">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-xl font-bold text-black sm:text-2xl mb-6 pb-3 border-b border-black/10">
+          <h1 className="text-xl font-bold text-black sm:text-2xl mb-3 pb-3 border-b border-black/10">
             {t("shop.products")}
           </h1>
+          <p className="mb-6 text-sm text-gray-600 w-full">
+            {t("shop.productsHint")}
+          </p>
           <div className="-mx-4 sm:mx-0 min-w-0">
             <ProductsTable />
           </div>

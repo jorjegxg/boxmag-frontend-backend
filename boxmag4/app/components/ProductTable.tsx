@@ -16,11 +16,34 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
   const loadProducts = useTableEComStore((s) => s.loadProducts);
   const incrementProducts = useTableEComStore((s) => s.increment);
   const decrementProducts = useTableEComStore((s) => s.decrement);
+  const setAmountQty = useTableEComStore((s) => s.setAmountQty);
   const resetAmountQty = useTableEComStore((s) => s.resetAmountQty);
   const addCartItem = useCartStore((s) => s.addItem);
   const { notify } = useNotification();
   const [animatedItemNo, setAnimatedItemNo] = useState<string | null>(null);
   const animationTimeoutRef = useRef<number | null>(null);
+  const holdTimeoutRef = useRef<number | null>(null);
+  const holdIntervalRef = useRef<number | null>(null);
+
+  const stopHold = () => {
+    if (holdTimeoutRef.current != null) {
+      window.clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+    if (holdIntervalRef.current != null) {
+      window.clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+  };
+
+  const startHold = (action: () => void) => {
+    stopHold();
+    action();
+    // After an initial delay, repeat continuously while the button stays pressed.
+    holdTimeoutRef.current = window.setTimeout(() => {
+      holdIntervalRef.current = window.setInterval(action, 80);
+    }, 350);
+  };
 
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -37,6 +60,7 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
       if (animationTimeoutRef.current != null) {
         window.clearTimeout(animationTimeoutRef.current);
       }
+      stopHold();
     };
   }, []);
 
@@ -127,18 +151,29 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                 <span className="flex flex-col gap-1 ">
                   <div>
                     <button
-                      onClick={() => {
-                        incrementProducts(product.itemNo);
+                      type="button"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        startHold(() => incrementProducts(product.itemNo));
                       }}
-                      className="btn btn-"
+                      onPointerUp={stopHold}
+                      onPointerLeave={stopHold}
+                      onPointerCancel={stopHold}
+                      className="btn btn- select-none touch-none"
                     >
                       ▲
                     </button>
                   </div>
                   <button
-                    onClick={() => {
-                      decrementProducts(product.itemNo);
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      startHold(() => decrementProducts(product.itemNo));
                     }}
+                    onPointerUp={stopHold}
+                    onPointerLeave={stopHold}
+                    onPointerCancel={stopHold}
+                    className="select-none touch-none"
                   >
                     ▼
                   </button>
@@ -180,9 +215,14 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
 
             {/* Pallet/pcs */}
             <td className="px-3 py-2 text-center ">
-              <div className="bg-my-red rounded-md text-my-white py-1 px-2">
+              <button
+                type="button"
+                onClick={() => setAmountQty(product.itemNo, product.palletPcs)}
+                className="bg-my-red rounded-md text-my-white py-1 px-2 cursor-pointer transition-transform hover:scale-105"
+                title={`Set quantity to ${product.palletPcs}`}
+              >
                 +{product.palletPcs}
-              </div>
+              </button>
             </td>
                 </>
               );

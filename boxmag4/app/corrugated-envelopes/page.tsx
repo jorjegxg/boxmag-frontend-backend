@@ -132,6 +132,9 @@ export default function CorrugatedEnvelopesPage() {
             <br />
             BUSSINES TO SEND PRODUCTS WITH POST VIA COURIER.
           </h1>
+          <p className="mb-6 text-sm text-gray-600 w-full">
+            {t("shop.productsHint")}
+          </p>
           <div className="-mx-4 sm:mx-0 min-w-0">
             <ProductsTable boxTypeId={9} />
             <p className="mt-5 text-sm text-gray-500">

@@ -26,7 +26,9 @@ export default function Home() {
       <HeroSizeSection />
       <ProducersBanner />
       <BoxfixSection onSeeNow={() => router.push("/boxesfetco")} />
-      <CorrugatedEnvelopesSection onSeeNow={() => router.push("/corrugated-envelopes")} />
+      <CorrugatedEnvelopesSection
+        onSeeNow={() => router.push("/corrugated-envelopes")}
+      />
       <WhyChooseBoxfixSection />
       <TestimonialSection />
       <FeaturesSection />
@@ -40,8 +42,22 @@ export default function Home() {
 
 function HeroSizeSection() {
   const { t } = useLanguage();
-  const labels = [t("home.hero.length"), t("home.hero.width"), t("home.hero.height")];
-  const sizeOptions = ["200", "300", "400", "500", "600", "700", "800", "900", "1000"];
+  const labels = [
+    t("home.hero.length"),
+    t("home.hero.width"),
+    t("home.hero.height"),
+  ];
+  const sizeOptions = [
+    "200",
+    "300",
+    "400",
+    "500",
+    "600",
+    "700",
+    "800",
+    "900",
+    "1000",
+  ];
   const [selectedLength, setSelectedLength] = useState("400");
   const [selectedWidth, setSelectedWidth] = useState("400");
   const [selectedHeight, setSelectedHeight] = useState("400");
@@ -68,7 +84,13 @@ function HeroSizeSection() {
                       {label}
                     </span>
                     <select
-                      value={idx === 0 ? selectedLength : idx === 1 ? selectedWidth : selectedHeight}
+                      value={
+                        idx === 0
+                          ? selectedLength
+                          : idx === 1
+                            ? selectedWidth
+                            : selectedHeight
+                      }
                       onChange={(e) => {
                         if (idx === 0) setSelectedLength(e.target.value);
                         else if (idx === 1) setSelectedWidth(e.target.value);
@@ -194,11 +216,7 @@ function TestimonialSection() {
   );
 }
 
-function CorrugatedEnvelopesSection({
-  onSeeNow,
-}: {
-  onSeeNow: () => void;
-}) {
+function CorrugatedEnvelopesSection({ onSeeNow }: { onSeeNow: () => void }) {
   const { t } = useLanguage();
 
   return (
@@ -241,11 +259,7 @@ function CorrugatedEnvelopesSection({
   );
 }
 
-function BoxfixSection({
-  onSeeNow,
-}: {
-  onSeeNow: () => void;
-}) {
+function BoxfixSection({ onSeeNow }: { onSeeNow: () => void }) {
   const { t } = useLanguage();
 
   return (
@@ -253,7 +267,9 @@ function BoxfixSection({
       <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
         {/* LEFT CONTENT */}
         <div>
-          <p className="text-my-red text-2xl font-semibold  mb-4">{t("home.weOffer")}</p>
+          <p className="text-my-red text-2xl font-semibold  mb-4">
+            {t("home.weOffer")}
+          </p>
 
           <h1 className="text-5xl lg:text-6xl font-bold text-black mb-6">
             Box
@@ -262,8 +278,10 @@ function BoxfixSection({
           </h1>
 
           <p className="text-lg mb-4">
-            <span className="font-semibold">{t("home.boxfix.stopSendingAir")}</span> -{" "}
-            {t("home.boxfix.costsLine")}
+            <span className="font-semibold">
+              {t("home.boxfix.stopSendingAir")}
+            </span>{" "}
+            - {t("home.boxfix.costsLine")}
           </p>
 
           <p className="text-xl mb-8">{t("home.boxfix.offerLine")}</p>
@@ -304,6 +322,18 @@ function ProducersBanner() {
       <div className="max-w-7xl mx-auto flex items-center gap-4 w-full px-4">
         <div className="flex-1 min-w-0 pr-4 text-white text-xl font-semibold">
           {t("home.producersBanner")}
+          <span className="block text-sm font-normal mt-1">
+            BOXMAG is{" "}
+            <a
+              href="https://rekopackaging.com"
+              className="underline hover:no-underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              rekopackaging.com
+            </a>{" "}
+            · Since 1993
+          </span>
         </div>
         <div className="shrink-0 w-28 md:w-36">
           <Image

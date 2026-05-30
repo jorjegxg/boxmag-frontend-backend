@@ -9,6 +9,7 @@ type TableStoreType = {
   loadProducts: (args: { backendBaseUrl: string; boxTypeId: number }) => Promise<void>;
   increment: (itemNo: string) => void;
   decrement: (itemNo: string) => void;
+  setAmountQty: (itemNo: string, value: number) => void;
   resetAmountQty: (itemNo: string) => void;
 };
 const incrementNumber = 20;
@@ -86,6 +87,17 @@ const useTableEComStore = create<TableStoreType>((set) => ({
                 MIN_ORDER_QTY,
                 el.amountQtyInPcs - incrementNumber,
               ),
+            }
+          : el
+      ),
+    })),
+  setAmountQty: (itemNo: string, value: number) =>
+    set((state) => ({
+      products: state.products.map((el) =>
+        el.itemNo == itemNo
+          ? {
+              ...el,
+              amountQtyInPcs: Math.max(MIN_ORDER_QTY, Math.round(value)),
             }
           : el
       ),
