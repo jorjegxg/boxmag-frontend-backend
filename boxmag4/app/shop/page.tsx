@@ -270,7 +270,7 @@ export default function ShopPage() {
             ) : products.length === 0 ? (
               <p className="text-sm text-gray-500">Nu exista produse pentru filtrul selectat.</p>
             ) : (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 items-stretch gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {products.map((product) => {
                   const boxType = activeBoxTypeById.get(product.boxTypeId);
                   const imageUrl = boxType
@@ -289,58 +289,72 @@ export default function ShopPage() {
                       ? `/products/${encodeURIComponent(boxTypeKey)}?itemNo=${encodeURIComponent(product.itemNo)}`
                       : null;
                   const card = (
-                    <article className="rounded-xl border border-my-light-gray bg-white p-4 shadow-sm transition hover:border-my-yellow hover:shadow-md">
-                      <div className="mb-4 h-44 w-full overflow-hidden rounded-lg bg-my-light-gray2">
+                    <article className="flex h-full flex-col rounded-xl border border-my-light-gray bg-white p-4 shadow-sm transition hover:border-my-yellow hover:shadow-md">
+                      <div className="mb-4 h-44 w-full shrink-0 overflow-hidden rounded-lg bg-my-light-gray2">
                         <img
                           src={imageUrl}
                           alt={boxType?.title ?? product.productName}
                           className="h-full w-full object-contain"
                         />
                       </div>
-                      <p className="text-xs uppercase tracking-wide text-gray-500">
+                      <p
+                        className="line-clamp-2 min-h-8 text-xs uppercase leading-snug tracking-wide text-gray-500"
+                        title={boxType?.title ?? "Box Type"}
+                      >
                         {boxType?.title ?? "Box Type"}
                       </p>
-                      <h2 className="mt-1 text-base font-semibold text-black">{product.productName}</h2>
-                      <p className="mt-1 text-sm text-gray-600">Cod: {product.itemNo}</p>
-                      {size ? <p className="mt-1 text-sm text-gray-600">Size: {size}</p> : null}
-                      <p className="mt-3 text-sm font-semibold text-black">
-                        {firstPrice ? `de la € ${firstPrice.withTax.toFixed(2)}` : "Pret la cerere"}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          addCartItem({
-                            itemNo: product.itemNo,
-                            name: product.productName,
-                            unitPrice: firstPrice?.withoutTax ?? 0,
-                            quantity: MIN_ORDER_QTY,
-                            imageUrl,
-                          });
-                          triggerAddToCartAnimation(product.id);
-                        }}
-                        className={`mt-3 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all duration-300 ${
-                          animatedProductId === product.id
-                            ? "border-green-600 bg-green-600 text-white scale-105"
-                            : "border-my-red text-my-red hover:bg-my-red hover:text-white"
-                        }`}
+                      <h2
+                        className="mt-1 line-clamp-2 min-h-12 text-base font-semibold leading-snug text-black"
+                        title={product.productName}
                       >
-                        {animatedProductId === product.id ? (
-                          <FaCheck className="h-3.5 w-3.5" />
-                        ) : (
-                          <FaShoppingCart className="h-3.5 w-3.5" />
-                        )}
-                        {animatedProductId === product.id ? "Added" : "Add to cart"}
-                      </button>
+                        {product.productName}
+                      </h2>
+                      <p className="mt-1 text-sm text-gray-600">Cod: {product.itemNo}</p>
+                      <p className="mt-1 min-h-5 text-sm text-gray-600">
+                        {size ? `Size: ${size}` : "\u00a0"}
+                      </p>
+                      <div className="mt-auto pt-3">
+                        <p className="text-sm font-semibold text-black">
+                          {firstPrice ? `de la € ${firstPrice.withTax.toFixed(2)}` : "Pret la cerere"}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            addCartItem({
+                              itemNo: product.itemNo,
+                              name: product.productName,
+                              unitPrice: firstPrice?.withoutTax ?? 0,
+                              quantity: MIN_ORDER_QTY,
+                              imageUrl,
+                            });
+                            triggerAddToCartAnimation(product.id);
+                          }}
+                          className={`mt-3 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all duration-300 ${
+                            animatedProductId === product.id
+                              ? "border-green-600 bg-green-600 text-white scale-105"
+                              : "border-my-red text-my-red hover:bg-my-red hover:text-white"
+                          }`}
+                        >
+                          {animatedProductId === product.id ? (
+                            <FaCheck className="h-3.5 w-3.5" />
+                          ) : (
+                            <FaShoppingCart className="h-3.5 w-3.5" />
+                          )}
+                          {animatedProductId === product.id ? "Added" : "Add to cart"}
+                        </button>
+                      </div>
                     </article>
                   );
                   return detailsHref ? (
-                    <Link key={product.id} href={detailsHref} className="block">
+                    <Link key={product.id} href={detailsHref} className="block h-full">
                       {card}
                     </Link>
                   ) : (
-                    <div key={product.id}>{card}</div>
+                    <div key={product.id} className="h-full">
+                      {card}
+                    </div>
                   );
                 })}
               </div>

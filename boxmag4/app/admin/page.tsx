@@ -686,10 +686,7 @@ export default function AdminPage() {
                   </span>
                   {"–"}
                   <span className="font-semibold">
-                    {Math.min(
-                      safeOrdersPage * ORDERS_PAGE_SIZE,
-                      orders.length,
-                    )}
+                    {Math.min(safeOrdersPage * ORDERS_PAGE_SIZE, orders.length)}
                   </span>{" "}
                   of <span className="font-semibold">{orders.length}</span>{" "}
                   orders
@@ -697,16 +694,17 @@ export default function AdminPage() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setOrdersPage((prev) => Math.max(1, prev - 1))}
+                    onClick={() =>
+                      setOrdersPage((prev) => Math.max(1, prev - 1))
+                    }
                     disabled={safeOrdersPage <= 1}
                     className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Previous
                   </button>
                   <span className="text-sm text-gray-600">
-                    Page{" "}
-                    <span className="font-semibold">{safeOrdersPage}</span> of{" "}
-                    <span className="font-semibold">{totalOrdersPages}</span>
+                    Page <span className="font-semibold">{safeOrdersPage}</span>{" "}
+                    of <span className="font-semibold">{totalOrdersPages}</span>
                   </span>
                   <button
                     type="button"
@@ -737,256 +735,263 @@ export default function AdminPage() {
             onToggle={handleToggleShipping}
           />
           {isShippingExpanded ? (
-          <div className="p-6 lg:p-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-              <Field
-                label="Key"
-                placeholder="standard"
-                value={newShippingKey}
-                onChange={setNewShippingKey}
-              />
-              <Field
-                label="Name"
-                placeholder="Standard Delivery"
-                value={newShippingName}
-                onChange={setNewShippingName}
-              />
-              <Field
-                label="ETA Text"
-                placeholder="Estimated 7-10 days"
-                value={newShippingEtaText}
-                onChange={setNewShippingEtaText}
-              />
-              <Field
-                label="Price"
-                placeholder="25"
-                value={newShippingPrice}
-                onChange={setNewShippingPrice}
-              />
-              <Field
-                label="Sort Order"
-                placeholder="1"
-                value={newShippingSortOrder}
-                onChange={setNewShippingSortOrder}
-              />
-              <label className="flex items-end gap-2">
-                <input
-                  type="checkbox"
-                  checked={newShippingIsActive}
-                  onChange={(event) =>
-                    setNewShippingIsActive(event.target.checked)
-                  }
-                  className="h-4 w-4"
+            <div className="p-6 lg:p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                <Field
+                  label="Key"
+                  placeholder="standard"
+                  value={newShippingKey}
+                  onChange={setNewShippingKey}
                 />
-                <span className="text-sm font-semibold text-gray-800 pb-2">
-                  Active
-                </span>
-              </label>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => void handleAddShippingMethod()}
-                className="bg-my-yellow hover:bg-my-yellow-bright text-black font-semibold px-5 py-2.5 rounded-lg transition-colors"
-              >
-                Add shipping method
-              </button>
-            </div>
-            <div className="rounded-xl border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-my-light-gray2 text-gray-800">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold">Key</th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Name
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">ETA</th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Price
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Sort
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Active
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {isLoadingShippingMethods ? (
-                      <tr className="border-t border-gray-200">
-                        <td className="px-4 py-3 text-gray-500" colSpan={7}>
-                          Loading shipping methods...
-                        </td>
+                <Field
+                  label="Name"
+                  placeholder="Standard Delivery"
+                  value={newShippingName}
+                  onChange={setNewShippingName}
+                />
+                <Field
+                  label="ETA Text"
+                  placeholder="Estimated 7-10 days"
+                  value={newShippingEtaText}
+                  onChange={setNewShippingEtaText}
+                />
+                <Field
+                  label="Price"
+                  placeholder="25"
+                  value={newShippingPrice}
+                  onChange={setNewShippingPrice}
+                />
+                <Field
+                  label="Sort Order"
+                  placeholder="1"
+                  value={newShippingSortOrder}
+                  onChange={setNewShippingSortOrder}
+                />
+                <label className="flex items-end gap-2">
+                  <input
+                    type="checkbox"
+                    checked={newShippingIsActive}
+                    onChange={(event) =>
+                      setNewShippingIsActive(event.target.checked)
+                    }
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm font-semibold text-gray-800 pb-2">
+                    Active
+                  </span>
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleAddShippingMethod()}
+                  className="bg-my-yellow hover:bg-my-yellow-bright text-black font-semibold px-5 py-2.5 rounded-lg transition-colors"
+                >
+                  Add shipping method
+                </button>
+              </div>
+              <div className="rounded-xl border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-my-light-gray2 text-gray-800">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          Key
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          Name
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          ETA
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          Price
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          Sort
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          Active
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          Actions
+                        </th>
                       </tr>
-                    ) : null}
-                    {!isLoadingShippingMethods &&
-                    shippingMethods.length === 0 ? (
-                      <tr className="border-t border-gray-200">
-                        <td className="px-4 py-3 text-gray-500" colSpan={7}>
-                          No shipping methods found.
-                        </td>
-                      </tr>
-                    ) : null}
-                    {!isLoadingShippingMethods
-                      ? shippingMethods.map((method) => (
-                          <tr
-                            key={method.id}
-                            className="border-t border-gray-200"
-                          >
-                            <td className="px-4 py-3">
-                              <input
-                                value={method.key}
-                                onChange={(event) =>
-                                  setShippingMethods((prev) =>
-                                    prev.map((item) =>
-                                      item.id === method.id
-                                        ? { ...item, key: event.target.value }
-                                        : item,
-                                    ),
-                                  )
-                                }
-                                className="h-9 rounded-md border border-gray-300 bg-white px-2 text-xs"
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <input
-                                value={method.name}
-                                onChange={(event) =>
-                                  setShippingMethods((prev) =>
-                                    prev.map((item) =>
-                                      item.id === method.id
-                                        ? { ...item, name: event.target.value }
-                                        : item,
-                                    ),
-                                  )
-                                }
-                                className="h-9 rounded-md border border-gray-300 bg-white px-2 text-xs"
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <input
-                                value={method.etaText}
-                                onChange={(event) =>
-                                  setShippingMethods((prev) =>
-                                    prev.map((item) =>
-                                      item.id === method.id
-                                        ? {
-                                            ...item,
-                                            etaText: event.target.value,
-                                          }
-                                        : item,
-                                    ),
-                                  )
-                                }
-                                className="h-9 rounded-md border border-gray-300 bg-white px-2 text-xs"
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <input
-                                type="number"
-                                value={String(method.price)}
-                                onChange={(event) =>
-                                  setShippingMethods((prev) =>
-                                    prev.map((item) =>
-                                      item.id === method.id
-                                        ? {
-                                            ...item,
-                                            price:
-                                              Number(event.target.value) || 0,
-                                          }
-                                        : item,
-                                    ),
-                                  )
-                                }
-                                className="h-9 w-24 rounded-md border border-gray-300 bg-white px-2 text-xs"
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <input
-                                type="number"
-                                value={String(method.sortOrder)}
-                                onChange={(event) =>
-                                  setShippingMethods((prev) =>
-                                    prev.map((item) =>
-                                      item.id === method.id
-                                        ? {
-                                            ...item,
-                                            sortOrder:
-                                              Number(event.target.value) || 0,
-                                          }
-                                        : item,
-                                    ),
-                                  )
-                                }
-                                className="h-9 w-20 rounded-md border border-gray-300 bg-white px-2 text-xs"
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <input
-                                type="checkbox"
-                                checked={method.isActive}
-                                onChange={(event) =>
-                                  setShippingMethods((prev) =>
-                                    prev.map((item) =>
-                                      item.id === method.id
-                                        ? {
-                                            ...item,
-                                            isActive: event.target.checked,
-                                          }
-                                        : item,
-                                    ),
-                                  )
-                                }
-                                className="h-4 w-4"
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  disabled={
-                                    updatingShippingMethodId === method.id
-                                  }
-                                  onClick={() =>
-                                    void handleUpdateShippingMethod(method)
-                                  }
-                                  className="rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black hover:bg-my-yellow-bright disabled:opacity-60"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={
-                                    updatingShippingMethodId === method.id
-                                  }
-                                  onClick={() =>
-                                    void handleDeleteShippingMethod(
-                                      method.id,
-                                      method.name,
+                    </thead>
+                    <tbody>
+                      {isLoadingShippingMethods ? (
+                        <tr className="border-t border-gray-200">
+                          <td className="px-4 py-3 text-gray-500" colSpan={7}>
+                            Loading shipping methods...
+                          </td>
+                        </tr>
+                      ) : null}
+                      {!isLoadingShippingMethods &&
+                      shippingMethods.length === 0 ? (
+                        <tr className="border-t border-gray-200">
+                          <td className="px-4 py-3 text-gray-500" colSpan={7}>
+                            No shipping methods found.
+                          </td>
+                        </tr>
+                      ) : null}
+                      {!isLoadingShippingMethods
+                        ? shippingMethods.map((method) => (
+                            <tr
+                              key={method.id}
+                              className="border-t border-gray-200"
+                            >
+                              <td className="px-4 py-3">
+                                <input
+                                  value={method.key}
+                                  onChange={(event) =>
+                                    setShippingMethods((prev) =>
+                                      prev.map((item) =>
+                                        item.id === method.id
+                                          ? { ...item, key: event.target.value }
+                                          : item,
+                                      ),
                                     )
                                   }
-                                  className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      : null}
-                  </tbody>
-                </table>
+                                  className="h-9 rounded-md border border-gray-300 bg-white px-2 text-xs"
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <input
+                                  value={method.name}
+                                  onChange={(event) =>
+                                    setShippingMethods((prev) =>
+                                      prev.map((item) =>
+                                        item.id === method.id
+                                          ? {
+                                              ...item,
+                                              name: event.target.value,
+                                            }
+                                          : item,
+                                      ),
+                                    )
+                                  }
+                                  className="h-9 rounded-md border border-gray-300 bg-white px-2 text-xs"
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <input
+                                  value={method.etaText}
+                                  onChange={(event) =>
+                                    setShippingMethods((prev) =>
+                                      prev.map((item) =>
+                                        item.id === method.id
+                                          ? {
+                                              ...item,
+                                              etaText: event.target.value,
+                                            }
+                                          : item,
+                                      ),
+                                    )
+                                  }
+                                  className="h-9 rounded-md border border-gray-300 bg-white px-2 text-xs"
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <input
+                                  type="number"
+                                  value={String(method.price)}
+                                  onChange={(event) =>
+                                    setShippingMethods((prev) =>
+                                      prev.map((item) =>
+                                        item.id === method.id
+                                          ? {
+                                              ...item,
+                                              price:
+                                                Number(event.target.value) || 0,
+                                            }
+                                          : item,
+                                      ),
+                                    )
+                                  }
+                                  className="h-9 w-24 rounded-md border border-gray-300 bg-white px-2 text-xs"
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <input
+                                  type="number"
+                                  value={String(method.sortOrder)}
+                                  onChange={(event) =>
+                                    setShippingMethods((prev) =>
+                                      prev.map((item) =>
+                                        item.id === method.id
+                                          ? {
+                                              ...item,
+                                              sortOrder:
+                                                Number(event.target.value) || 0,
+                                            }
+                                          : item,
+                                      ),
+                                    )
+                                  }
+                                  className="h-9 w-20 rounded-md border border-gray-300 bg-white px-2 text-xs"
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <input
+                                  type="checkbox"
+                                  checked={method.isActive}
+                                  onChange={(event) =>
+                                    setShippingMethods((prev) =>
+                                      prev.map((item) =>
+                                        item.id === method.id
+                                          ? {
+                                              ...item,
+                                              isActive: event.target.checked,
+                                            }
+                                          : item,
+                                      ),
+                                    )
+                                  }
+                                  className="h-4 w-4"
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      updatingShippingMethodId === method.id
+                                    }
+                                    onClick={() =>
+                                      void handleUpdateShippingMethod(method)
+                                    }
+                                    className="rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black hover:bg-my-yellow-bright disabled:opacity-60"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      updatingShippingMethodId === method.id
+                                    }
+                                    onClick={() =>
+                                      void handleDeleteShippingMethod(
+                                        method.id,
+                                        method.name,
+                                      )
+                                    }
+                                    className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        : null}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+              {shippingMethodsError ? (
+                <p className="text-sm text-red-600">{shippingMethodsError}</p>
+              ) : null}
             </div>
-            {shippingMethodsError ? (
-              <p className="text-sm text-red-600">{shippingMethodsError}</p>
-            ) : null}
-          </div>
           ) : null}
         </div>
         <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
@@ -998,104 +1003,106 @@ export default function AdminPage() {
           />
 
           {isBoxTypesExpanded ? (
-          <div className="p-6 lg:p-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Field
-                label="Title"
-                placeholder="e.g. Boxfix Premium 500"
-                value={boxTypeTitle}
-                onChange={setBoxTypeTitle}
-              />
-              <ImagePickerField
-                label="Box Images"
-                selectedFiles={selectedBoxImageFiles}
-                onFileChange={setSelectedBoxImageFiles}
-              />
-            </div>
+            <div className="p-6 lg:p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Field
+                  label="Title"
+                  placeholder="e.g. Boxfix Premium 500"
+                  value={boxTypeTitle}
+                  onChange={setBoxTypeTitle}
+                />
+                <ImagePickerField
+                  label="Box Images"
+                  selectedFiles={selectedBoxImageFiles}
+                  onFileChange={setSelectedBoxImageFiles}
+                />
+              </div>
 
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => void handleAddBoxType()}
-                disabled={
-                  isSavingBoxType ||
-                  isUploadingImage ||
-                  selectedBoxImageFiles.length === 0
-                }
-                className="bg-my-yellow hover:bg-my-yellow-bright text-black font-semibold px-5 py-2.5 rounded-lg transition-colors"
-              >
-                {isUploadingImage
-                  ? "Uploading image..."
-                  : isSavingBoxType
-                    ? "Adding..."
-                    : "Add Box Type"}
-              </button>
-            </div>
-            {formError ? (
-              <p className="text-sm text-red-600">{formError}</p>
-            ) : null}
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleAddBoxType()}
+                  disabled={
+                    isSavingBoxType ||
+                    isUploadingImage ||
+                    selectedBoxImageFiles.length === 0
+                  }
+                  className="bg-my-yellow hover:bg-my-yellow-bright text-black font-semibold px-5 py-2.5 rounded-lg transition-colors"
+                >
+                  {isUploadingImage
+                    ? "Uploading image..."
+                    : isSavingBoxType
+                      ? "Adding..."
+                      : "Add Box Type"}
+                </button>
+              </div>
+              {formError ? (
+                <p className="text-sm text-red-600">{formError}</p>
+              ) : null}
 
-            <div className="rounded-xl border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-my-light-gray2 text-gray-800">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold">ID</th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Title
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Photo
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Status
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {isLoadingBoxTypes ? (
-                      <tr className="border-t border-gray-200">
-                        <td className="px-4 py-3 text-gray-500" colSpan={5}>
-                          Loading box types...
-                        </td>
+              <div className="rounded-xl border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-my-light-gray2 text-gray-800">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          ID
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          Title
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          Photo
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          Actions
+                        </th>
                       </tr>
-                    ) : null}
-                    {!isLoadingBoxTypes && boxTypesError ? (
-                      <tr className="border-t border-gray-200">
-                        <td className="px-4 py-3 text-red-600" colSpan={5}>
-                          Failed to load box types: {boxTypesError}
-                        </td>
-                      </tr>
-                    ) : null}
-                    {!isLoadingBoxTypes &&
-                    !boxTypesError &&
-                    boxTypes.length === 0 ? (
-                      <tr className="border-t border-gray-200">
-                        <td className="px-4 py-3 text-gray-500" colSpan={5}>
-                          No box types found.
-                        </td>
-                      </tr>
-                    ) : null}
-                    {!isLoadingBoxTypes && !boxTypesError
-                      ? boxTypes.map((boxType) => (
-                          <BoxTypeRow key={boxType.id} boxType={boxType} />
-                        ))
-                      : null}
-                    {saveError ? (
-                      <tr className="border-t border-gray-200">
-                        <td className="px-4 py-3 text-red-600" colSpan={5}>
-                          Failed to save box type: {saveError}
-                        </td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {isLoadingBoxTypes ? (
+                        <tr className="border-t border-gray-200">
+                          <td className="px-4 py-3 text-gray-500" colSpan={5}>
+                            Loading box types...
+                          </td>
+                        </tr>
+                      ) : null}
+                      {!isLoadingBoxTypes && boxTypesError ? (
+                        <tr className="border-t border-gray-200">
+                          <td className="px-4 py-3 text-red-600" colSpan={5}>
+                            Failed to load box types: {boxTypesError}
+                          </td>
+                        </tr>
+                      ) : null}
+                      {!isLoadingBoxTypes &&
+                      !boxTypesError &&
+                      boxTypes.length === 0 ? (
+                        <tr className="border-t border-gray-200">
+                          <td className="px-4 py-3 text-gray-500" colSpan={5}>
+                            No box types found.
+                          </td>
+                        </tr>
+                      ) : null}
+                      {!isLoadingBoxTypes && !boxTypesError
+                        ? boxTypes.map((boxType) => (
+                            <BoxTypeRow key={boxType.id} boxType={boxType} />
+                          ))
+                        : null}
+                      {saveError ? (
+                        <tr className="border-t border-gray-200">
+                          <td className="px-4 py-3 text-red-600" colSpan={5}>
+                            Failed to save box type: {saveError}
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
           ) : null}
         </div>
       </section>
@@ -1109,9 +1116,15 @@ const BoxTypeRow = memo(function BoxTypeRow({
   boxType: AdminBoxType;
 }) {
   const { notify } = useNotification();
-  const deactivateBoxType = useAdminBoxTypesStore((state) => state.deactivateBoxType);
-  const activateBoxType = useAdminBoxTypesStore((state) => state.activateBoxType);
-  const statusUpdatingBoxId = useAdminBoxTypesStore((state) => state.statusUpdatingBoxId);
+  const deactivateBoxType = useAdminBoxTypesStore(
+    (state) => state.deactivateBoxType,
+  );
+  const activateBoxType = useAdminBoxTypesStore(
+    (state) => state.activateBoxType,
+  );
+  const statusUpdatingBoxId = useAdminBoxTypesStore(
+    (state) => state.statusUpdatingBoxId,
+  );
   const isUpdatingStatus = statusUpdatingBoxId === boxType.id;
 
   const handleDelete = async () => {
@@ -1146,7 +1159,9 @@ const BoxTypeRow = memo(function BoxTypeRow({
       notify({
         type: "error",
         message:
-          error instanceof Error ? error.message : "Failed to activate box type",
+          error instanceof Error
+            ? error.message
+            : "Failed to activate box type",
       });
     }
   };
