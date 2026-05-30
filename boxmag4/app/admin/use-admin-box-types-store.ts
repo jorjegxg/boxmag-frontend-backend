@@ -15,6 +15,15 @@ export type AdminBoxType = {
   isActive: boolean;
 };
 
+function sortBoxTypesActiveFirst(boxTypes: AdminBoxType[]): AdminBoxType[] {
+  return [...boxTypes].sort((a, b) => {
+    if (a.isActive !== b.isActive) {
+      return Number(b.isActive) - Number(a.isActive);
+    }
+    return a.id - b.id;
+  });
+}
+
 type EditableBoxType = Pick<AdminBoxType, "title" | "images" | "isActive">;
 
 type AdminBoxTypesState = {
@@ -26,6 +35,7 @@ type AdminBoxTypesState = {
   editingData: EditableBoxType | null;
   isSavingBoxType: boolean;
   saveError: string | null;
+  statusUpdatingBoxId: number | null;
   setBackendBaseUrl: (value: string) => void;
   loadBoxTypes: () => Promise<void>;
   createBoxType: (payload: {
@@ -38,6 +48,8 @@ type AdminBoxTypesState = {
   updateEditingTitle: (value: string) => void;
   updateEditingStatus: (isActive: boolean) => void;
   saveEditedBoxType: () => Promise<void>;
+  deactivateBoxType: (boxTypeId: number) => Promise<void>;
+  activateBoxType: (boxTypeId: number) => Promise<void>;
 };
 
 export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
@@ -49,6 +61,7 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
   editingData: null,
   isSavingBoxType: false,
   saveError: null,
+  statusUpdatingBoxId: null,
 
   setBackendBaseUrl: (value) => {
     set({ backendBaseUrl: value });
@@ -71,7 +84,7 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
       }
 
       set({
-        boxTypes: payload.data,
+        boxTypes: sortBoxTypesActiveFirst(payload.data),
         isLoadingBoxTypes: false,
       });
     } catch (error) {
@@ -107,7 +120,10 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
       }
 
       set((state) => ({
-        boxTypes: [...state.boxTypes, body.data as AdminBoxType],
+        boxTypes: sortBoxTypesActiveFirst([
+          ...state.boxTypes,
+          body.data as AdminBoxType,
+        ]),
         isSavingBoxType: false,
         saveError: null,
       }));
@@ -182,15 +198,17 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
       }
 
       set((state) => ({
-        boxTypes: state.boxTypes.map((boxType) =>
-          boxType.id === editingBoxId
-            ? {
-                ...boxType,
-                title: editingData.title,
-                images: editingData.images,
-                isActive: editingData.isActive,
-              }
-            : boxType
+        boxTypes: sortBoxTypesActiveFirst(
+          state.boxTypes.map((boxType) =>
+            boxType.id === editingBoxId
+              ? {
+                  ...boxType,
+                  title: editingData.title,
+                  images: editingData.images,
+                  isActive: editingData.isActive,
+                }
+              : boxType
+          ),
         ),
         isSavingBoxType: false,
         editingBoxId: null,
@@ -203,6 +221,69 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
         saveError: error instanceof Error ? error.message : "Failed to update box type",
         isSavingBoxType: false,
       });
+    }
+  },
+
+  deactivateBoxType: async (boxTypeId) => {
+    const backendBaseUrl = get().backendBaseUrl;
+    set({ statusUpdatingBoxId: boxTypeId, saveError: null });
+    try {
+      const response = await fetch(`${backendBaseUrl}/api/box-types/${boxTypeId}`, {
+        method: "DELETE",
+      });
+      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+      }
+
+      set((state) => ({
+        boxTypes: sortBoxTypesActiveFirst(
+          state.boxTypes.map((boxType) =>
+            boxType.id === boxTypeId ? { ...boxType, isActive: false } : boxType
+          ),
+        ),
+        statusUpdatingBoxId: null,
+        saveError: null,
+      }));
+    } catch (error) {
+      set({
+        saveError:
+          error instanceof Error ? error.message : "Failed to deactivate box type",
+        statusUpdatingBoxId: null,
+      });
+      throw error;
+    }
+  },
+
+  activateBoxType: async (boxTypeId) => {
+    const backendBaseUrl = get().backendBaseUrl;
+    set({ statusUpdatingBoxId: boxTypeId, saveError: null });
+    try {
+      const response = await fetch(
+        `${backendBaseUrl}/api/box-types/${boxTypeId}/activate`,
+        { method: "POST" },
+      );
+      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+      }
+
+      set((state) => ({
+        boxTypes: sortBoxTypesActiveFirst(
+          state.boxTypes.map((boxType) =>
+            boxType.id === boxTypeId ? { ...boxType, isActive: true } : boxType
+          ),
+        ),
+        statusUpdatingBoxId: null,
+        saveError: null,
+      }));
+    } catch (error) {
+      set({
+        saveError:
+          error instanceof Error ? error.message : "Failed to activate box type",
+        statusUpdatingBoxId: null,
+      });
+      throw error;
     }
   },
 }));

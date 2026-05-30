@@ -1108,6 +1108,49 @@ const BoxTypeRow = memo(function BoxTypeRow({
 }: {
   boxType: AdminBoxType;
 }) {
+  const { notify } = useNotification();
+  const deactivateBoxType = useAdminBoxTypesStore((state) => state.deactivateBoxType);
+  const activateBoxType = useAdminBoxTypesStore((state) => state.activateBoxType);
+  const statusUpdatingBoxId = useAdminBoxTypesStore((state) => state.statusUpdatingBoxId);
+  const isUpdatingStatus = statusUpdatingBoxId === boxType.id;
+
+  const handleDelete = async () => {
+    const confirmed = window.confirm(
+      `Hide "${boxType.title}" from the shop? The box type will be kept in the database but marked inactive.`,
+    );
+    if (!confirmed) return;
+
+    try {
+      await deactivateBoxType(boxType.id);
+      notify({
+        type: "success",
+        message: `"${boxType.title}" was hidden from the shop.`,
+      });
+    } catch (error) {
+      notify({
+        type: "error",
+        message:
+          error instanceof Error ? error.message : "Failed to hide box type",
+      });
+    }
+  };
+
+  const handleActivate = async () => {
+    try {
+      await activateBoxType(boxType.id);
+      notify({
+        type: "success",
+        message: `"${boxType.title}" is active again in the shop.`,
+      });
+    } catch (error) {
+      notify({
+        type: "error",
+        message:
+          error instanceof Error ? error.message : "Failed to activate box type",
+      });
+    }
+  };
+
   const primaryImage =
     boxType.images.find((image) => image.isPrimary) ??
     boxType.images[0] ??
@@ -1132,19 +1175,40 @@ const BoxTypeRow = memo(function BoxTypeRow({
               : "bg-yellow-100 text-yellow-700"
           }`}
         >
-          {boxType.isActive ? "Active" : "Draft"}
+          {boxType.isActive ? "Active" : "Inactive"}
         </span>
       </td>
       <td className="px-4 py-3">
-        <Link
-          href={`/admin/box-types/${boxType.id}/edit`}
-          onClick={() => {
-            lastEditClickAt = performance.now();
-          }}
-          className="inline-flex rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-my-yellow-bright"
-        >
-          Edit
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/admin/box-types/${boxType.id}/edit`}
+            onClick={() => {
+              lastEditClickAt = performance.now();
+            }}
+            className="inline-flex rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-my-yellow-bright"
+          >
+            Edit
+          </Link>
+          {boxType.isActive ? (
+            <button
+              type="button"
+              disabled={isUpdatingStatus}
+              onClick={() => void handleDelete()}
+              className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
+            >
+              {isUpdatingStatus ? "Deleting..." : "Delete"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={isUpdatingStatus}
+              onClick={() => void handleActivate()}
+              className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-60"
+            >
+              {isUpdatingStatus ? "Activating..." : "Activate"}
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   );

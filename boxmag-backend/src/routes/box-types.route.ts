@@ -193,7 +193,7 @@ boxTypesRouter.get("/", async (_req, res) => {
               bti.alt_text AS image_alt_text, bti.is_primary AS image_is_primary
        FROM box_types bt
        LEFT JOIN box_type_images bti ON bti.box_type_id = bt.id
-       ORDER BY bt.id ASC, bti.sort_order ASC, bti.id ASC`
+       ORDER BY bt.is_active DESC, bt.id ASC, bti.sort_order ASC, bti.id ASC`
     );
 
     const grouped = new Map<
@@ -714,6 +714,90 @@ boxTypesRouter.put("/:id", async (req, res) => {
     res.status(500).json({
       ok: false,
       message: "Failed to update box type",
+    });
+  }
+});
+
+boxTypesRouter.delete("/:id", async (req, res) => {
+  const boxTypeId = Number(req.params.id);
+
+  if (!Number.isInteger(boxTypeId) || boxTypeId <= 0) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid box type id",
+    });
+    return;
+  }
+
+  try {
+    const [result] = await mysqlPool.execute(
+      `UPDATE box_types SET is_active = 0 WHERE id = ?`,
+      [boxTypeId]
+    );
+
+    const updateResult = result as { affectedRows?: number };
+    if (!updateResult.affectedRows) {
+      res.status(404).json({
+        ok: false,
+        message: "Box type not found",
+      });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      data: {
+        id: boxTypeId,
+        isActive: false,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to deactivate box type", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to deactivate box type",
+    });
+  }
+});
+
+boxTypesRouter.post("/:id/activate", async (req, res) => {
+  const boxTypeId = Number(req.params.id);
+
+  if (!Number.isInteger(boxTypeId) || boxTypeId <= 0) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid box type id",
+    });
+    return;
+  }
+
+  try {
+    const [result] = await mysqlPool.execute(
+      `UPDATE box_types SET is_active = 1 WHERE id = ?`,
+      [boxTypeId]
+    );
+
+    const updateResult = result as { affectedRows?: number };
+    if (!updateResult.affectedRows) {
+      res.status(404).json({
+        ok: false,
+        message: "Box type not found",
+      });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      data: {
+        id: boxTypeId,
+        isActive: true,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to activate box type", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to activate box type",
     });
   }
 });
