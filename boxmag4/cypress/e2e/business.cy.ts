@@ -149,8 +149,8 @@ describe("Business page – încărcare", () => {
   it("afișează secțiunea de contact B2B", () => {
     visitBusiness();
 
-    cy.contains("b2b@boxmag.eu").should("exist");
-    cy.get('a[href="mailto:b2b@boxmag.eu"]').should("exist");
+    cy.contains("b2b@reko-packaging.ro").should("exist");
+    cy.get('a[href="mailto:b2b@reko-packaging.ro"]').should("exist");
     cy.contains("+40 799 553 345").should("exist");
   });
 
