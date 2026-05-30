@@ -78,6 +78,7 @@ const ORDER_STATUS_OPTIONS: OrderStatusValue[] = [
   "completed",
   "done",
 ];
+const ORDERS_PAGE_SIZE = 10;
 
 export default function AdminPage() {
   const router = useRouter();
@@ -105,14 +106,20 @@ export default function AdminPage() {
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
+  const [ordersPage, setOrdersPage] = useState(1);
   const [shippingMethods, setShippingMethods] = useState<AdminShippingMethod[]>(
     [],
   );
+  const [isShippingExpanded, setIsShippingExpanded] = useState(false);
+  const [hasLoadedShippingMethods, setHasLoadedShippingMethods] =
+    useState(false);
   const [isLoadingShippingMethods, setIsLoadingShippingMethods] =
-    useState(true);
+    useState(false);
   const [shippingMethodsError, setShippingMethodsError] = useState<
     string | null
   >(null);
+  const [isBoxTypesExpanded, setIsBoxTypesExpanded] = useState(false);
+  const [hasLoadedBoxTypes, setHasLoadedBoxTypes] = useState(false);
   const [updatingShippingMethodId, setUpdatingShippingMethodId] = useState<
     number | null
   >(null);
@@ -220,8 +227,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     setBackendBaseUrl(backendBaseUrl);
-    void loadBoxTypes();
-  }, [backendBaseUrl, loadBoxTypes, setBackendBaseUrl]);
+  }, [backendBaseUrl, setBackendBaseUrl]);
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -244,6 +250,7 @@ export default function AdminPage() {
           );
         }
         setOrders(payload.data);
+        setOrdersPage(1);
       } catch (error) {
         setOrdersError(
           error instanceof Error ? error.message : "Failed to load orders",
@@ -289,9 +296,27 @@ export default function AdminPage() {
     }
   };
 
-  useEffect(() => {
-    void loadShippingMethods();
-  }, [backendBaseUrl]);
+  const handleToggleShipping = () => {
+    setIsShippingExpanded((prev) => {
+      const next = !prev;
+      if (next && !hasLoadedShippingMethods) {
+        setHasLoadedShippingMethods(true);
+        void loadShippingMethods();
+      }
+      return next;
+    });
+  };
+
+  const handleToggleBoxTypes = () => {
+    setIsBoxTypesExpanded((prev) => {
+      const next = !prev;
+      if (next && !hasLoadedBoxTypes) {
+        setHasLoadedBoxTypes(true);
+        void loadBoxTypes();
+      }
+      return next;
+    });
+  };
 
   const handleOrderStatusChange = async (
     orderId: number,
@@ -521,6 +546,16 @@ export default function AdminPage() {
     };
   }, []);
 
+  const totalOrdersPages = Math.max(
+    1,
+    Math.ceil(orders.length / ORDERS_PAGE_SIZE),
+  );
+  const safeOrdersPage = Math.min(ordersPage, totalOrdersPages);
+  const paginatedOrders = orders.slice(
+    (safeOrdersPage - 1) * ORDERS_PAGE_SIZE,
+    safeOrdersPage * ORDERS_PAGE_SIZE,
+  );
+
   return (
     <div>
       <section className="w-full bg-white px-6 lg:px-20 pt-6">
@@ -589,7 +624,7 @@ export default function AdminPage() {
                       </tr>
                     ) : null}
                     {!isLoadingOrders && !ordersError
-                      ? orders.map((order) => (
+                      ? paginatedOrders.map((order) => (
                           <tr
                             key={order.id}
                             className="border-t border-gray-200 cursor-pointer transition-colors hover:bg-gray-50"
@@ -622,6 +657,52 @@ export default function AdminPage() {
                 </table>
               </div>
             </div>
+            {!isLoadingOrders && !ordersError && orders.length > 0 ? (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <span className="text-sm text-gray-600">
+                  Showing{" "}
+                  <span className="font-semibold">
+                    {(safeOrdersPage - 1) * ORDERS_PAGE_SIZE + 1}
+                  </span>
+                  {"–"}
+                  <span className="font-semibold">
+                    {Math.min(
+                      safeOrdersPage * ORDERS_PAGE_SIZE,
+                      orders.length,
+                    )}
+                  </span>{" "}
+                  of <span className="font-semibold">{orders.length}</span>{" "}
+                  orders
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOrdersPage((prev) => Math.max(1, prev - 1))}
+                    disabled={safeOrdersPage <= 1}
+                    className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    Page{" "}
+                    <span className="font-semibold">{safeOrdersPage}</span> of{" "}
+                    <span className="font-semibold">{totalOrdersPages}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOrdersPage((prev) =>
+                        Math.min(totalOrdersPages, prev + 1),
+                      )
+                    }
+                    disabled={safeOrdersPage >= totalOrdersPages}
+                    className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
@@ -631,7 +712,11 @@ export default function AdminPage() {
           <SectionTitle
             title="Shipping Methods"
             subtitle="Checkout methods managed from admin"
+            collapsible
+            isExpanded={isShippingExpanded}
+            onToggle={handleToggleShipping}
           />
+          {isShippingExpanded ? (
           <div className="p-6 lg:p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               <Field
@@ -879,10 +964,17 @@ export default function AdminPage() {
               <p className="text-sm text-red-600">{shippingMethodsError}</p>
             ) : null}
           </div>
+          ) : null}
         </div>
         <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
-          <SectionTitle title="Box Types Management" />
+          <SectionTitle
+            title="Box Types Management"
+            collapsible
+            isExpanded={isBoxTypesExpanded}
+            onToggle={handleToggleBoxTypes}
+          />
 
+          {isBoxTypesExpanded ? (
           <div className="p-6 lg:p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Field
@@ -981,6 +1073,7 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
+          ) : null}
         </div>
       </section>
     </div>
@@ -1037,18 +1130,58 @@ const BoxTypeRow = memo(function BoxTypeRow({
 function SectionTitle({
   title,
   subtitle,
+  collapsible = false,
+  isExpanded = false,
+  onToggle,
 }: {
   title: string;
   subtitle?: string;
+  collapsible?: boolean;
+  isExpanded?: boolean;
+  onToggle?: () => void;
 }) {
-  return (
-    <div className="bg-my-red w-full flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 px-4 py-3 sm:pl-8 sm:pr-4 sm:py-4 text-my-white">
-      <span className="font-bold text-base sm:text-lg">{title}</span>
+  const content = (
+    <>
+      <span className="font-bold text-base sm:text-lg flex items-center gap-2">
+        {collapsible ? (
+          <span
+            aria-hidden
+            className={`inline-block transition-transform duration-200 ${
+              isExpanded ? "rotate-90" : ""
+            }`}
+          >
+            ▶
+          </span>
+        ) : null}
+        {title}
+      </span>
       {subtitle ? (
         <span className="text-sm sm:text-base">{subtitle}</span>
+      ) : collapsible ? (
+        <span className="text-sm sm:text-base opacity-90">
+          {isExpanded ? "Click to hide" : "Click to load"}
+        </span>
       ) : null}
-    </div>
+    </>
   );
+
+  const baseClassName =
+    "bg-my-red w-full flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 px-4 py-3 sm:pl-8 sm:pr-4 sm:py-4 text-my-white";
+
+  if (collapsible) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isExpanded}
+        className={`${baseClassName} text-left transition-colors hover:bg-my-red/90 focus:outline-none`}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={baseClassName}>{content}</div>;
 }
 
 function Field({
