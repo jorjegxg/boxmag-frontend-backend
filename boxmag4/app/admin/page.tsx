@@ -7,6 +7,7 @@ import {
   type AdminBoxType,
   useAdminBoxTypesStore,
 } from "./use-admin-box-types-store";
+import { useNotification } from "../global/components/notification-center";
 
 function sendDebugLog({
   hypothesisId,
@@ -82,6 +83,7 @@ const ORDERS_PAGE_SIZE = 10;
 
 export default function AdminPage() {
   const router = useRouter();
+  const { notify } = useNotification();
   const boxTypes = useAdminBoxTypesStore((state) => state.boxTypes);
   const isLoadingBoxTypes = useAdminBoxTypesStore(
     (state) => state.isLoadingBoxTypes,
@@ -447,18 +449,31 @@ export default function AdminPage() {
         );
       }
       await loadShippingMethods();
+      notify({
+        type: "success",
+        message: `Shipping method "${method.name}" saved.`,
+      });
     } catch (error) {
-      setShippingMethodsError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Failed to update shipping method",
-      );
+          : "Failed to update shipping method";
+      setShippingMethodsError(message);
+      notify({ type: "error", message });
     } finally {
       setUpdatingShippingMethodId(null);
     }
   };
 
-  const handleDeleteShippingMethod = async (shippingMethodId: number) => {
+  const handleDeleteShippingMethod = async (
+    shippingMethodId: number,
+    shippingMethodName: string,
+  ) => {
+    const confirmed = window.confirm(
+      `Delete shipping method "${shippingMethodName}"? This action cannot be undone.`,
+    );
+    if (!confirmed) return;
+
     setUpdatingShippingMethodId(shippingMethodId);
     try {
       const response = await fetch(
@@ -477,12 +492,17 @@ export default function AdminPage() {
         );
       }
       await loadShippingMethods();
+      notify({
+        type: "success",
+        message: `Shipping method "${shippingMethodName}" deleted.`,
+      });
     } catch (error) {
-      setShippingMethodsError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Failed to delete shipping method",
-      );
+          : "Failed to delete shipping method";
+      setShippingMethodsError(message);
+      notify({ type: "error", message });
     } finally {
       setUpdatingShippingMethodId(null);
     }
@@ -945,7 +965,10 @@ export default function AdminPage() {
                                     updatingShippingMethodId === method.id
                                   }
                                   onClick={() =>
-                                    void handleDeleteShippingMethod(method.id)
+                                    void handleDeleteShippingMethod(
+                                      method.id,
+                                      method.name,
+                                    )
                                   }
                                   className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
                                 >
