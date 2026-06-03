@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { IoIosArrowForward } from "react-icons/io";
 import Link from "next/link";
 import ResponsiveLayoutWithPadding from "../ResponsiveLayoutWithPadding";
@@ -474,4 +474,10 @@ const BussinessPage = () => {
   }
 };
 
-export default BussinessPage;
+export default function BusinessPage() {
+  return (
+    <Suspense fallback={null}>
+      <BussinessPage />
+    </Suspense>
+  );
+}

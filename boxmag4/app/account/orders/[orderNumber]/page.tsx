@@ -88,33 +88,33 @@ function parseStripeMessageItems(message: string): OrderItem[] {
     .map((line) => line.trim())
     .filter((line) => line.startsWith("- "));
 
-  return itemLines
-    .map((line) => {
-      const raw = line.slice(2).trim();
-      const parts = raw.split("|").map((part) => part.trim());
-      if (parts.length < 5) return null;
+  const items: OrderItem[] = [];
+  for (const line of itemLines) {
+    const raw = line.slice(2).trim();
+    const parts = raw.split("|").map((part) => part.trim());
+    if (parts.length < 5) continue;
 
-      const itemNo = parts[0] ?? "";
-      const name = parts[1] ?? itemNo;
-      const qtyMatch = (parts[2] ?? "").match(/qty\s+([0-9]+(?:\.[0-9]+)?)/i);
-      const unitMatch = (parts[3] ?? "").match(/unit\s+([0-9]+(?:\.[0-9]+)?)/i);
-      const lineMatch = (parts[4] ?? "").match(/line\s+([0-9]+(?:\.[0-9]+)?)/i);
+    const itemNo = parts[0] ?? "";
+    const name = parts[1] ?? itemNo;
+    const qtyMatch = (parts[2] ?? "").match(/qty\s+([0-9]+(?:\.[0-9]+)?)/i);
+    const unitMatch = (parts[3] ?? "").match(/unit\s+([0-9]+(?:\.[0-9]+)?)/i);
+    const lineMatch = (parts[4] ?? "").match(/line\s+([0-9]+(?:\.[0-9]+)?)/i);
 
-      const quantity = qtyMatch ? Number(qtyMatch[1]) : 0;
-      const unitPrice = unitMatch ? Number(unitMatch[1]) : 0;
-      const lineTotal = lineMatch ? Number(lineMatch[1]) : +(quantity * unitPrice).toFixed(2);
+    const quantity = qtyMatch ? Number(qtyMatch[1]) : 0;
+    const unitPrice = unitMatch ? Number(unitMatch[1]) : 0;
+    const lineTotal = lineMatch ? Number(lineMatch[1]) : +(quantity * unitPrice).toFixed(2);
 
-      if (!itemNo && !name) return null;
-      return {
-        itemNo,
-        name,
-        quantity: Number.isFinite(quantity) ? quantity : 0,
-        unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
-        lineTotal: Number.isFinite(lineTotal) ? lineTotal : 0,
-        imageUrl: null,
-      } satisfies OrderItem;
-    })
-    .filter((entry): entry is OrderItem => entry !== null);
+    if (!itemNo && !name) continue;
+    items.push({
+      itemNo,
+      name,
+      quantity: Number.isFinite(quantity) ? quantity : 0,
+      unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
+      lineTotal: Number.isFinite(lineTotal) ? lineTotal : 0,
+      imageUrl: null,
+    });
+  }
+  return items;
 }
 
 export default function AccountOrderDetailsPage() {
@@ -192,7 +192,7 @@ export default function AccountOrderDetailsPage() {
   const handleReorder = () => {
     if (!hasDisplayItems) {
       notify({
-        type: "warning",
+        type: "info",
         message: "This order has no items to add to cart.",
       });
       return;

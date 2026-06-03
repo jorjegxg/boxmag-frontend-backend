@@ -19,7 +19,8 @@ La nivel de infrastructura locala, proiectul foloseste:
 
 - `boxmag4/` - aplicatia web (B2C + B2B + admin).
 - `boxmag-backend/` - API-ul principal pentru box types, produse, preturi, comenzi.
-- `docker-compose.yml` - MySQL + MinIO.
+- `docker-compose.yml` - MySQL + MinIO (+ backend/frontend cu profilul `app`).
+- `boxmag-backend/Dockerfile`, `boxmag4/Dockerfile` - imagini production pentru API si Next.js.
 - `.env.example` - variabile de mediu pentru frontend, backend, DB, SMTP, MinIO.
 - `README.md` (root) - momentan minimal.
 
@@ -69,7 +70,8 @@ Variabilele principale sunt in `.env.example`:
 1. Copiaza `.env.example` in `.env` si completeaza valorile.
 2. Porneste dependintele:
    - `docker compose up -d` (MySQL + MinIO)
-3. Porneste backend:
+   - optional, tot stack-ul in containere: `docker compose --profile app up -d --build`
+3. Porneste backend (daca nu folosesti profilul `app`):
    - in `boxmag-backend`: `npm install` si `npm run dev`
 4. Porneste frontend:
    - in `boxmag4`: `npm install` si `npm run dev`

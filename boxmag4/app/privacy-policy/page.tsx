@@ -42,7 +42,9 @@ export default function PrivacyPolicyPage() {
             {t("common.home")}
           </Link>{" "}
           <span className="mx-2">→</span>
-          <span className="text-gray-700 font-semibold">{t("privacyPolicy.title")}</span>
+          <span className="text-gray-700 font-semibold">
+            {t("privacyPolicy.title")}
+          </span>
         </div>
       </section>
 
@@ -61,22 +63,18 @@ export default function PrivacyPolicyPage() {
         <div className="max-w-4xl mx-auto">
           <PolicySection title={t("privacyPolicy.basic.title")}>
             <ol className="list-decimal list-inside space-y-3">
-              <li>
-                {t("privacyPolicy.basic.item1")}
-              </li>
+              <li>{t("privacyPolicy.basic.item1")}</li>
               <li>
                 {t("privacyPolicy.basic.item2.beforeEmail")}{" "}
                 <a
-                  href="mailto:info@boxmag.eu"
+                  href="mailto:info@reko-packaging.ro"
                   className="text-my-red underline hover:no-underline"
                 >
-                  info@boxmag.eu
+                  info@reko-packaging.ro
                 </a>
                 {t("privacyPolicy.basic.item2.afterEmail")}
               </li>
-              <li>
-                {t("privacyPolicy.basic.item3")}
-              </li>
+              <li>{t("privacyPolicy.basic.item3")}</li>
             </ol>
           </PolicySection>
 
@@ -163,10 +161,10 @@ export default function PrivacyPolicyPage() {
               <li>
                 {t("privacyPolicy.recipients.item2.beforeEmail")}{" "}
                 <a
-                  href="mailto:info@boxmag.eu"
+                  href="mailto:info@reko-packaging.ro"
                   className="text-my-red underline hover:no-underline"
                 >
-                  info@boxmag.eu
+                  info@reko-packaging.ro
                 </a>
                 {t("privacyPolicy.recipients.item2.afterEmail")}
               </li>
@@ -179,11 +177,13 @@ export default function PrivacyPolicyPage() {
                 {t("privacyPolicy.rights.item1.intro")}
                 <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
                   <li>
-                    <strong>{t("privacyPolicy.rights.access.label")}</strong>{" "}
-                    - {t("privacyPolicy.rights.access.desc")}
+                    <strong>{t("privacyPolicy.rights.access.label")}</strong> -{" "}
+                    {t("privacyPolicy.rights.access.desc")}
                   </li>
                   <li>
-                    <strong>{t("privacyPolicy.rights.rectification.label")}</strong>{" "}
+                    <strong>
+                      {t("privacyPolicy.rights.rectification.label")}
+                    </strong>{" "}
                     - {t("privacyPolicy.rights.rectification.desc")}
                   </li>
                   <li>
@@ -192,24 +192,22 @@ export default function PrivacyPolicyPage() {
                     {t("privacyPolicy.rights.erasure.desc")}
                   </li>
                   <li>
-                    <strong>{t("privacyPolicy.rights.restriction.label")}</strong>{" "}
+                    <strong>
+                      {t("privacyPolicy.rights.restriction.label")}
+                    </strong>{" "}
                     - {t("privacyPolicy.rights.restriction.desc")}
                   </li>
                   <li>
-                    <strong>{t("privacyPolicy.rights.portability.label")}</strong>{" "}
+                    <strong>
+                      {t("privacyPolicy.rights.portability.label")}
+                    </strong>{" "}
                     - {t("privacyPolicy.rights.portability.desc")}
                   </li>
                 </ul>
               </li>
-              <li>
-                {t("privacyPolicy.rights.item2")}
-              </li>
-              <li>
-                {t("privacyPolicy.rights.item3")}
-              </li>
-              <li>
-                {t("privacyPolicy.rights.item4")}
-              </li>
+              <li>{t("privacyPolicy.rights.item2")}</li>
+              <li>{t("privacyPolicy.rights.item3")}</li>
+              <li>{t("privacyPolicy.rights.item4")}</li>
             </ol>
           </PolicySection>
 
@@ -253,19 +251,27 @@ export default function PrivacyPolicyPage() {
           <PolicySection title={t("privacyPolicy.cookies.types.title")}>
             <ol className="list-decimal list-inside space-y-3">
               <li>
-                <strong>{t("privacyPolicy.cookies.types.essential.label")}</strong>{" "}
+                <strong>
+                  {t("privacyPolicy.cookies.types.essential.label")}
+                </strong>{" "}
                 – {t("privacyPolicy.cookies.types.essential.desc")}
               </li>
               <li>
-                <strong>{t("privacyPolicy.cookies.types.statistical.label")}</strong>{" "}
+                <strong>
+                  {t("privacyPolicy.cookies.types.statistical.label")}
+                </strong>{" "}
                 – {t("privacyPolicy.cookies.types.statistical.desc")}
               </li>
               <li>
-                <strong>{t("privacyPolicy.cookies.types.preference.label")}</strong>{" "}
+                <strong>
+                  {t("privacyPolicy.cookies.types.preference.label")}
+                </strong>{" "}
                 – {t("privacyPolicy.cookies.types.preference.desc")}
               </li>
               <li>
-                <strong>{t("privacyPolicy.cookies.types.marketing.label")}</strong>{" "}
+                <strong>
+                  {t("privacyPolicy.cookies.types.marketing.label")}
+                </strong>{" "}
                 – {t("privacyPolicy.cookies.types.marketing.desc")}
               </li>
             </ol>

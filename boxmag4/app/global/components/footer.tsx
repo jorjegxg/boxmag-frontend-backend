@@ -52,11 +52,11 @@ export function Footer() {
               <span>+40 230 565 997</span>
             </Link>
             <Link
-              href="mailto:info@boxmag.eu"
+              href="mailto:info@reko-packaging.ro"
               className="flex items-center gap-2 hover:underline"
             >
               <FaEnvelope />
-              <span>info@boxmag.eu</span>
+              <span>info@reko-packaging.ro</span>
             </Link>
           </div>
 

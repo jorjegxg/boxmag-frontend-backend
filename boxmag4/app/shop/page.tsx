@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "../i18n/language-context";
 import { FaCheck, FaShoppingCart } from "react-icons/fa";
@@ -58,7 +58,7 @@ function resolvePrimaryImageUrl(
   return normalizeImageUrl(baseUrl, primary?.url ?? "");
 }
 
-export default function ShopPage() {
+function ShopPageContent() {
   const { t } = useLanguage();
   const addCartItem = useCartStore((s) => s.addItem);
   const searchParams = useSearchParams();
@@ -363,5 +363,13 @@ export default function ShopPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense fallback={null}>
+      <ShopPageContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { B2b } from "../../global/components/b2b";
@@ -35,7 +35,7 @@ type SessionResponse = {
   };
 };
 
-export default function CheckoutSuccessPage() {
+function CheckoutSuccessPageContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
   const clearCart = useCartStore((s) => s.clearCart);
@@ -248,5 +248,13 @@ export default function CheckoutSuccessPage() {
       <HaveAQuestion />
       <NewsletterSubscribe />
     </div>
+  );
+}
+
+export default function CheckoutSuccessPage() {
+  return (
+    <Suspense fallback={null}>
+      <CheckoutSuccessPageContent />
+    </Suspense>
   );
 }

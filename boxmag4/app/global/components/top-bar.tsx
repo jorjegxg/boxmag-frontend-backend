@@ -33,11 +33,11 @@ export function TopBar() {
         {/* Left: contact info */}
         <div className="flex flex-nowrap text-xs gap-x-4 max-lg:w-full ">
           <a
-            href="mailto:info@boxmag.eu"
+            href="mailto:info@reko-packaging.ro"
             className="flex shrink-0 items-center gap-1 whitespace-nowrap hover:underline"
           >
             <FaEnvelope className="text-my-red shrink-0" />
-            <span>Info@boxmag.eu</span>
+            <span>info@reko-packaging.ro</span>
           </a>
           <a
             href="tel:+40799553345"

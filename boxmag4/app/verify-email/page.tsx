@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { FaCheckCircle, FaExclamationTriangle, FaSpinner } from "react-icons/fa";
 import { B2b } from "../global/components/b2b";
@@ -11,7 +11,7 @@ import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 
 type VerifyState = "loading" | "success" | "error";
 
-export default function VerifyEmailPage() {
+function VerifyEmailPageContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
   const [state, setState] = useState<VerifyState>("loading");
@@ -126,5 +126,13 @@ export default function VerifyEmailPage() {
       <HaveAQuestion />
       <NewsletterSubscribe />
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyEmailPageContent />
+    </Suspense>
   );
 }

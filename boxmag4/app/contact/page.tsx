@@ -28,8 +28,12 @@ const shouldAutofillContactForm = ["dev", "development"].includes(
 export default function ContactUsPage() {
   const { t } = useLanguage();
   const { notify } = useNotification();
-  const [firstName, setFirstName] = useState(shouldAutofillContactForm ? "John" : "");
-  const [surname, setSurname] = useState(shouldAutofillContactForm ? "Doe" : "");
+  const [firstName, setFirstName] = useState(
+    shouldAutofillContactForm ? "John" : "",
+  );
+  const [surname, setSurname] = useState(
+    shouldAutofillContactForm ? "Doe" : "",
+  );
   const [companyName, setCompanyName] = useState(
     shouldAutofillContactForm ? "Boxmag Test SRL" : "",
   );
@@ -64,13 +68,16 @@ export default function ContactUsPage() {
       if (!firstMissingFieldId) firstMissingFieldId = fieldId;
     };
 
-    if (!firstName.trim()) registerMissingField("firstName", t("contact.firstName"));
+    if (!firstName.trim())
+      registerMissingField("firstName", t("contact.firstName"));
     if (!surname.trim()) registerMissingField("surname", t("contact.surname"));
-    if (!companyName.trim()) registerMissingField("companyName", t("contact.companyName"));
+    if (!companyName.trim())
+      registerMissingField("companyName", t("contact.companyName"));
     if (!email.trim()) registerMissingField("email", t("contact.email"));
     if (!phone.trim()) registerMissingField("phone", t("contact.phone"));
     if (!country.trim()) registerMissingField("country", t("contact.country"));
-    if (!vatNumber.trim()) registerMissingField("vatNumber", t("contact.vatNumber"));
+    if (!vatNumber.trim())
+      registerMissingField("vatNumber", t("contact.vatNumber"));
     if (!message.trim()) registerMissingField("message", t("contact.message"));
 
     if (missingFields.length > 0) {
@@ -85,7 +92,10 @@ export default function ContactUsPage() {
     }
 
     if (!acceptTerms) {
-      notify({ type: "error", message: "Please accept terms and privacy policy." });
+      notify({
+        type: "error",
+        message: "Please accept terms and privacy policy.",
+      });
       return;
     }
 
@@ -107,7 +117,9 @@ export default function ContactUsPage() {
       return;
     }
 
-    const oversizedFile = attachments.find((file) => file.size > MAX_ATTACHMENT_BYTES);
+    const oversizedFile = attachments.find(
+      (file) => file.size > MAX_ATTACHMENT_BYTES,
+    );
     if (oversizedFile) {
       notify({
         type: "error",
@@ -137,11 +149,17 @@ export default function ContactUsPage() {
 
       const data = (await response.json()) as { message?: string };
       if (!response.ok) {
-        notify({ type: "error", message: data.message ?? "Unable to send your message." });
+        notify({
+          type: "error",
+          message: data.message ?? "Unable to send your message.",
+        });
         return;
       }
 
-      notify({ type: "success", message: data.message ?? "Message sent successfully." });
+      notify({
+        type: "success",
+        message: data.message ?? "Message sent successfully.",
+      });
       setFirstName("");
       setSurname("");
       setCompanyName("");
@@ -156,7 +174,10 @@ export default function ContactUsPage() {
         fileInputRef.current.value = "";
       }
     } catch {
-      notify({ type: "error", message: "Unable to send your message right now." });
+      notify({
+        type: "error",
+        message: "Unable to send your message right now.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -173,7 +194,9 @@ export default function ContactUsPage() {
             {t("common.home")}
           </Link>{" "}
           <span className="mx-2">→</span>
-          <span className="text-gray-700 font-semibold">{t("contact.contactUs")}</span>
+          <span className="text-gray-700 font-semibold">
+            {t("contact.contactUs")}
+          </span>
         </div>
       </section>
 
@@ -340,7 +363,9 @@ export default function ContactUsPage() {
                   multiple
                   className="hidden"
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  onChange={(e) => setAttachments(Array.from(e.target.files ?? []))}
+                  onChange={(e) =>
+                    setAttachments(Array.from(e.target.files ?? []))
+                  }
                 />
                 <span className="flex-1 rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-gray-500 text-sm truncate">
                   {attachments.length === 0
@@ -358,7 +383,8 @@ export default function ContactUsPage() {
                 </button>
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                Max file size: {MAX_ATTACHMENT_MB} MB per file (up to {MAX_ATTACHMENTS} files)
+                Max file size: {MAX_ATTACHMENT_MB} MB per file (up to{" "}
+                {MAX_ATTACHMENTS} files)
               </p>
             </div>
             <div>
@@ -444,7 +470,7 @@ export default function ContactUsPage() {
                 <FaEnvelope className="w-5 h-5 text-gray-800 shrink-0" />
                 <p>
                   <span className="font-bold text-gray-900">Mail:</span>{" "}
-                  info@boxmag.eu
+                  info@reko-packaging.ro
                 </p>
               </div>
             </div>

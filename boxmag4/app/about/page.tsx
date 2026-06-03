@@ -23,7 +23,9 @@ export default function AboutPage() {
             {t("common.home")}
           </Link>{" "}
           <span className="mx-2">→</span>
-          <span className="text-gray-700 font-semibold">{t("about.aboutUs")}</span>
+          <span className="text-gray-700 font-semibold">
+            {t("about.aboutUs")}
+          </span>
         </div>
       </section>
 
@@ -35,9 +37,7 @@ export default function AboutPage() {
           </h1>
           <div className="max-w-3xl mx-auto space-y-6 text-gray-800 text-base lg:text-lg leading-relaxed text-justify">
             <p>{t("about.aboutP1")}</p>
-            <p>
-              {t("about.aboutP2")}
-            </p>
+            <p>{t("about.aboutP2")}</p>
           </div>
           <div className="relative w-full aspect-16/10 lg:aspect-21/9 rounded-2xl overflow-hidden bg-gray-100 mt-10">
             <Image
@@ -156,11 +156,13 @@ export default function AboutPage() {
                 <p className="mt-3 font-bold text-black">Tel:</p>
                 <p className="text-gray-800">+40 799 553 345</p>
                 <p className="mt-2 font-bold text-black">Mail:</p>
-                <p className="text-gray-800">info@boxmag.eu</p>
+                <p className="text-gray-800">info@reko-packaging.ro</p>
               </div>
               <div className="rounded-2xl border-2 border-my-red p-6 lg:p-8 bg-white w-full max-w-[560px] mx-auto text-center">
                 <p className="font-bold text-black mb-2">Boxmag.eu</p>
-                <p className="font-bold text-black mb-2">{t("about.officeTitle")}</p>
+                <p className="font-bold text-black mb-2">
+                  {t("about.officeTitle")}
+                </p>
                 <p className="text-gray-800">Reko Packaging s.r.l.</p>
                 <p className="text-gray-800">Stefan cel Mare 131 street</p>
                 <p className="text-gray-800">RO-725400 Radauti, Suceava</p>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useLanguage } from "../../i18n/language-context";
 import { B2b } from "../../global/components/b2b";
@@ -54,7 +54,7 @@ type BoxTypeProductApi = {
   }>;
 };
 
-export default function ProductByKeyPage() {
+function ProductByKeyPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const { t } = useLanguage();
@@ -543,5 +543,13 @@ export default function ProductByKeyPage() {
       </main>
       <NewsletterSubscribe />
     </div>
+  );
+}
+
+export default function ProductByKeyPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProductByKeyPageContent />
+    </Suspense>
   );
 }
