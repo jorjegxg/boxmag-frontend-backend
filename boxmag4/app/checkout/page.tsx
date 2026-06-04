@@ -44,6 +44,7 @@ type ManualAddress = {
 };
 
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
+const GUEST_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SHIPPING_METHODS_CACHE_KEY = "boxmag.checkout.shippingMethods.v1";
 const SHIPPING_METHODS_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 const CART_QTY_STEP = 10;
@@ -93,6 +94,8 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
     null,
   );
+  const [accountEmail, setAccountEmail] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
   const [manualAddress, setManualAddress] = useState<ManualAddress>({
     firstName: "",
     lastName: "",
@@ -191,6 +194,10 @@ export default function CheckoutPage() {
   }, [backendBaseUrl, shippingMethod]);
 
   useEffect(() => {
+    setAccountEmail((localStorage.getItem(AUTH_EMAIL_STORAGE_KEY) ?? "").trim());
+  }, []);
+
+  useEffect(() => {
     const loggedInEmail = localStorage.getItem(AUTH_EMAIL_STORAGE_KEY) ?? "";
     if (!loggedInEmail) {
       setAddresses([]);
@@ -266,9 +273,17 @@ export default function CheckoutPage() {
     const loggedInEmail = (
       localStorage.getItem(AUTH_EMAIL_STORAGE_KEY) ?? ""
     ).trim();
-    if (!loggedInEmail) {
-      setSubmitOrderMessage(t("checkout.error.loginRequired"));
-      return;
+    let checkoutEmail = loggedInEmail;
+    if (!checkoutEmail) {
+      checkoutEmail = guestEmail.trim().toLowerCase();
+      if (!checkoutEmail) {
+        setSubmitOrderMessage(t("checkout.error.emailRequired"));
+        return;
+      }
+      if (!GUEST_EMAIL_PATTERN.test(checkoutEmail)) {
+        setSubmitOrderMessage(t("checkout.error.emailInvalid"));
+        return;
+      }
     }
 
     const activeAddress =
@@ -317,7 +332,7 @@ export default function CheckoutPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email: loggedInEmail,
+            email: checkoutEmail,
             cartItems: cartItems.map((item) => ({
               itemNo: item.itemNo,
               name: item.name,
@@ -437,6 +452,9 @@ export default function CheckoutPage() {
           manualAddress={manualAddress}
           setManualAddress={setManualAddress}
           defaultShippingAddress={defaultShippingAddress}
+          isLoggedIn={accountEmail.length > 0}
+          guestEmail={guestEmail}
+          setGuestEmail={setGuestEmail}
         />
         <BottomPadding />
         <ShippingMethod

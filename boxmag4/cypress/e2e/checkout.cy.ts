@@ -1,7 +1,7 @@
 /**
  * E2E tests – /checkout
  *
- * Focus: coș gol, login required, adresă incompletă, adresă manuală, erori API.
+ * Focus: coș gol, guest checkout, adresă incompletă, adresă manuală, erori API.
  */
 
 import { TEST_EMAIL, sampleWarehouseAddress } from "../support/commands";
@@ -33,16 +33,41 @@ const fillManualAddress = (overrides: Partial<Record<string, string>> = {}) => {
   cy.get('input[placeholder="Phone"]').clear().type(data.phone);
 };
 
+const fillGuestEmail = (email = "guest.buyer@example.com") => {
+  cy.get('input[placeholder="Email address"]').clear().type(email);
+};
+
 describe("/checkout", () => {
   it("afișează mesajul de coș gol când nu există produse", () => {
     cy.visitCheckoutLoggedOut({ cartItems: [] });
     cy.contains("Cart is empty.").should("exist");
   });
 
-  it("nu permite Place order când nu ești logat (login required)", () => {
+  it("cere email obligatoriu la guest checkout", () => {
     cy.visitCheckoutLoggedOut();
+    fillManualAddress();
     cy.contains("button", "Place order").click();
-    cy.contains("Please log in before placing an order.").should("exist");
+    cy.contains("Please enter your email address.").should("exist");
+  });
+
+  it("permite guest checkout când nu ești logat și ai introdus email", () => {
+    cy.visitCheckoutLoggedOut();
+    fillGuestEmail("guest.buyer@example.com");
+    fillManualAddress();
+
+    cy.intercept("POST", "**/api/payments/create-checkout-session", (req) => {
+      expect(req.body.email).to.eq("guest.buyer@example.com");
+      expect(req.body.address.firstName).to.eq("Elena");
+      expect(req.body.address.lastName).to.eq("Marin");
+      req.reply({
+        statusCode: 200,
+        body: { ok: true, data: { url: "/checkout#payment-redirect", orderId: 6 } },
+      });
+    }).as("createCheckoutGuest");
+
+    cy.contains("button", "Place order").click();
+    cy.wait("@createCheckoutGuest");
+    cy.location("hash").should("eq", "#payment-redirect");
   });
 
   it("când ești logat dar fără adrese, cere adresă manuală și validează incomplete address", () => {

@@ -47,6 +47,9 @@ type CheckoutShippingInformationProps = {
   manualAddress: CheckoutManualAddress;
   setManualAddress: Dispatch<SetStateAction<CheckoutManualAddress>>;
   defaultShippingAddress: CheckoutUserAddress | null;
+  isLoggedIn: boolean;
+  guestEmail: string;
+  setGuestEmail: Dispatch<SetStateAction<string>>;
 };
 
 export function CheckoutShippingInformation({
@@ -60,6 +63,9 @@ export function CheckoutShippingInformation({
   manualAddress,
   setManualAddress,
   defaultShippingAddress,
+  isLoggedIn,
+  guestEmail,
+  setGuestEmail,
 }: CheckoutShippingInformationProps) {
   const { t } = useLanguage();
   const hasSavedAddresses = addresses.length > 0;
@@ -177,6 +183,20 @@ export function CheckoutShippingInformation({
         </div>
       </div>
       <div className="mt-4 space-y-2">
+        {!isLoggedIn ? (
+          <div>
+            <input
+              type="email"
+              value={guestEmail}
+              onChange={(e) => setGuestEmail(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+              placeholder={t("checkout.placeholder.email")}
+              autoComplete="email"
+              required
+            />
+            <p className="mt-1 text-xs text-gray-600">{t("checkout.guestEmailHint")}</p>
+          </div>
+        ) : null}
         {hasSavedAddresses ? (
           <p className="text-my-red font-semibold text-sm flex items-center gap-2">
             <span>•</span> {t("checkout.selectAddress")}

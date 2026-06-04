@@ -87,4 +87,5 @@ describe("payments routes", () => {
     expect(response.body.ok).toBe(false);
     expect(response.body.message).toContain("Invalid checkout payload");
   });
+
 });

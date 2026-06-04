@@ -48,6 +48,7 @@ describe("Account address → checkout (coș)", () => {
       cy.contains("h2", "Shipping Information").should("exist");
       cy.contains("Fill the form below with a new shipping address.").should("exist");
       cy.get('input[placeholder="First name"]').should("exist");
+      cy.get('input[placeholder="Email address"]').should("exist");
       cy.contains("SELECT ADDRESS:").should("not.exist");
     });
 
