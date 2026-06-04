@@ -1,6 +1,6 @@
 import cors from "cors";
 import express from "express";
-import { env } from "./config/env";
+import { buildCorsOptions } from "./config/cors";
 import { healthRouter } from "./routes/health.route";
 import { boxTypesRouter } from "./routes/box-types.route";
 import { ordersRouter } from "./routes/orders.route";
@@ -15,16 +15,7 @@ import {
 
 export const app = express();
 
-app.use(
-  cors({
-    origin:
-      env.corsOrigins === "*"
-        ? true
-        : env.corsOrigins.length === 1
-          ? env.corsOrigins[0]
-          : env.corsOrigins,
-  })
-);
+app.use(cors(buildCorsOptions()));
 
 // Stripe webhook must be registered BEFORE express.json() so that the raw
 // request body is available for signature verification.
