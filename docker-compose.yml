@@ -53,7 +53,7 @@ services:
       DB_PORT: 3306
       MINIO_ENDPOINT: minio
       MINIO_PORT_API: 9000
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3006}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3006,https://boxmag.eu,https://www.boxmag.eu}
     depends_on:
       mysql:
         condition: service_healthy

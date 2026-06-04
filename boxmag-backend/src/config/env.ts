@@ -10,10 +10,20 @@ function toNumber(value: string | undefined, fallback: number): number {
   return Number.isNaN(parsed) ? fallback : parsed;
 }
 
+/** Comma-separated list in CORS_ORIGIN, or "*" for all origins. */
+function parseCorsOrigins(value: string | undefined): string[] | "*" {
+  const raw = (value ?? "*").trim();
+  if (!raw || raw === "*") return "*";
+  return raw
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: toNumber(process.env.PORT, 4000),
-  corsOrigin: process.env.CORS_ORIGIN ?? "*",
+  corsOrigins: parseCorsOrigins(process.env.CORS_ORIGIN),
   frontendBaseUrl: process.env.FRONTEND_BASE_URL ?? "http://localhost:3006",
   backendPublicUrl:
     process.env.BACKEND_PUBLIC_URL ??
