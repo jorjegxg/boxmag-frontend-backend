@@ -1,6 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { applyCorsHeaders, isAllowedCorsOrigin } from "./lib/cors";
 
 const LANG_COOKIE = "boxmag.language";
+
+function handleApiCors(request: NextRequest): NextResponse | null {
+  if (!request.nextUrl.pathname.startsWith("/api")) {
+    return null;
+  }
+
+  const origin = request.headers.get("origin");
+
+  if (request.method === "OPTIONS") {
+    if (!isAllowedCorsOrigin(origin)) {
+      return new NextResponse(null, { status: 403 });
+    }
+    const headers = new Headers();
+    applyCorsHeaders(headers, origin);
+    return new NextResponse(null, { status: 204, headers });
+  }
+
+  const response = NextResponse.next();
+  applyCorsHeaders(response.headers, origin);
+  return response;
+}
 
 function isStaticPath(pathname: string) {
   return (
@@ -15,6 +37,11 @@ function isStaticPath(pathname: string) {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const apiCorsResponse = handleApiCors(request);
+  if (apiCorsResponse) {
+    return apiCorsResponse;
+  }
 
   if (isStaticPath(pathname)) {
     return NextResponse.next();
