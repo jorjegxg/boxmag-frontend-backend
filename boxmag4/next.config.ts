@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 import fs from "fs";
 import path from "path";
-import { getAllowedDevHosts } from "./lib/cors";
+import { originsToDevHosts, parseCorsOrigins } from "./lib/cors";
 
 function readRootEnvValue(key: string): string | undefined {
   const rootEnvPath = path.resolve(process.cwd(), "../.env");
@@ -19,8 +19,14 @@ function readRootEnvValue(key: string): string | undefined {
   return undefined;
 }
 
+const corsOriginRaw =
+  process.env.CORS_ORIGIN ?? readRootEnvValue("CORS_ORIGIN") ?? "";
+const allowedCorsOrigins = parseCorsOrigins(corsOriginRaw);
+const corsOriginEnv =
+  corsOriginRaw.trim() || allowedCorsOrigins.join(",");
+
 const nextConfig: NextConfig = {
-  allowedDevOrigins: getAllowedDevHosts(),
+  allowedDevOrigins: originsToDevHosts(allowedCorsOrigins),
   images: {
     dangerouslyAllowLocalIP: true,
     remotePatterns: [
@@ -39,8 +45,7 @@ const nextConfig: NextConfig = {
     ],
   },
   env: {
-    CORS_ORIGIN:
-      process.env.CORS_ORIGIN ?? readRootEnvValue("CORS_ORIGIN") ?? "",
+    CORS_ORIGIN: corsOriginEnv,
     NEXT_PUBLIC_APP_ENV:
       process.env.NEXT_PUBLIC_APP_ENV ??
       readRootEnvValue("NODE_ENV") ??

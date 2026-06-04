@@ -1,5 +1,4 @@
-import fs from "fs";
-import path from "path";
+/** Edge-safe CORS helpers (no Node fs/path — used by middleware). */
 
 export const DEFAULT_CORS_ORIGINS = [
   "http://localhost:3006",
@@ -7,38 +6,24 @@ export const DEFAULT_CORS_ORIGINS = [
   "https://www.boxmag.eu",
 ];
 
-const rootEnvPath = path.resolve(process.cwd(), "../.env");
-
-function readRootEnvValue(key: string): string | undefined {
-  if (!fs.existsSync(rootEnvPath)) return undefined;
-  const lines = fs.readFileSync(rootEnvPath, "utf8").split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const separatorIndex = trimmed.indexOf("=");
-    if (separatorIndex < 0) continue;
-    const currentKey = trimmed.slice(0, separatorIndex).trim();
-    if (currentKey !== key) continue;
-    return trimmed.slice(separatorIndex + 1).trim();
-  }
-  return undefined;
-}
-
-/** Full browser origins from CORS_ORIGIN (comma-separated), same as backend. */
-export function getAllowedCorsOrigins(): string[] {
-  const raw =
-    process.env.CORS_ORIGIN?.trim() ?? readRootEnvValue("CORS_ORIGIN")?.trim();
-  if (!raw || raw === "*") return DEFAULT_CORS_ORIGINS;
-  const parsed = raw
+export function parseCorsOrigins(raw: string | undefined): string[] {
+  const trimmed = raw?.trim();
+  if (!trimmed || trimmed === "*") return DEFAULT_CORS_ORIGINS;
+  const parsed = trimmed
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
   return parsed.length > 0 ? parsed : DEFAULT_CORS_ORIGINS;
 }
 
+/** Full browser origins from CORS_ORIGIN (comma-separated), same as backend. */
+export function getAllowedCorsOrigins(): string[] {
+  return parseCorsOrigins(process.env.CORS_ORIGIN);
+}
+
 /** Hostnames for Next.js allowedDevOrigins (no scheme/port). */
-export function getAllowedDevHosts(): string[] {
-  const hosts = getAllowedCorsOrigins()
+export function originsToDevHosts(origins: string[]): string[] {
+  const hosts = origins
     .map((origin) => {
       try {
         return new URL(origin).hostname;
