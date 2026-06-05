@@ -899,12 +899,12 @@ function CheckoutProductColumn({
   value2: string;
 }) {
   return (
-    <div className="flex flex-col justify-center">
-      <div className="flex gap-2">
+    <div className="flex min-w-[140px] flex-col justify-center">
+      <div className="flex flex-wrap gap-x-2 gap-y-1">
         <span className="font-bold">{name1}</span>
         <span className="text-my-gray">{value1}</span>
       </div>
-      <div className="mt-2 flex gap-2">
+      <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1">
         <span className="font-bold">{name2}</span>
         <span className="text-my-gray">{value2}</span>
       </div>
@@ -936,34 +936,38 @@ function CheckoutProductDetails({
       {cartItems.map((item) => (
         <div
           key={item.itemNo}
-          className="flex flex-col sm:flex-row flex-wrap gap-6 text-sm justify-between rounded-lg border border-gray-200 p-4"
+          className="flex flex-col gap-6 rounded-lg border border-gray-200 p-4 text-sm"
         >
-          <Image
-            src={item.imageUrl || "/b2b/boxes/box.png"}
-            alt={item.name}
-            width={100}
-            height={100}
-            className="object-contain shrink-0"
-          />
-          <CheckoutProductColumn
-            name1={t("checkout.product.itemNo")}
-            value1={item.itemNo}
-            name2={t("checkout.product.productName")}
-            value2={item.name}
-          />
-          <CheckoutProductColumn
-            name1={t("checkout.product.amountQty")}
-            value1={String(item.quantity)}
-            name2={t("checkout.product.palletPcs")}
-            value2="-"
-          />
-          <CheckoutProductColumn
-            name1={t("checkout.product.netWeight")}
-            value1="-"
-            name2={t("checkout.product.priceWithoutTax")}
-            value2={`€ ${(item.unitPrice * item.quantity).toFixed(2)}`}
-          />
-          <div className="flex min-w-[220px] flex-col items-start justify-center gap-3">
+          <div className="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-start">
+            <div className="flex h-[100px] w-[100px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-white">
+              <Image
+                src={item.imageUrl || "/b2b/boxes/box.png"}
+                alt={item.name}
+                width={100}
+                height={100}
+                className="h-full w-full object-contain"
+              />
+            </div>
+            <CheckoutProductColumn
+              name1={t("checkout.product.itemNo")}
+              value1={item.itemNo}
+              name2={t("checkout.product.productName")}
+              value2={item.name}
+            />
+            <CheckoutProductColumn
+              name1={t("checkout.product.amountQty")}
+              value1={String(item.quantity)}
+              name2={t("checkout.product.palletPcs")}
+              value2="-"
+            />
+            <CheckoutProductColumn
+              name1={t("checkout.product.netWeight")}
+              value1="-"
+              name2={t("checkout.product.priceWithoutTax")}
+              value2={`€ ${(item.unitPrice * item.quantity).toFixed(2)}`}
+            />
+          </div>
+          <div className="flex flex-col items-end gap-3">
             <div className="flex items-center gap-2">
               <span className="font-bold">{t("checkout.quantity")}</span>
               <CheckoutCartQuantityInput
