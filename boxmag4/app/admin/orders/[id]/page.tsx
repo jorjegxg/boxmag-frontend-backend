@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { OrderAttachmentActions } from "../../../global/components/order-attachment-actions";
 
 type OrderItem = {
   itemNo: string;
@@ -46,6 +47,7 @@ type AdminOrderDetails = {
   items: OrderItem[] | null;
   priceBreakdown: PriceBreakdown | null;
   attachmentName: string | null;
+  hasAttachment: boolean;
   createdAt: string;
 };
 
@@ -375,7 +377,11 @@ export default function AdminOrderDetailsPage() {
                     <DetailField label="Box print" value={order.boxPrint} />
                     <DetailField label="Size" value={order.size} />
                     <DetailField label="Transport" value={order.transport} />
-                    <DetailField label="Attachment" value={order.attachmentName ?? "No"} />
+                    <OrderAttachmentActions
+                      orderId={order.id}
+                      attachmentName={order.attachmentName}
+                      hasAttachment={order.hasAttachment}
+                    />
                   </div>
                 </div>
 

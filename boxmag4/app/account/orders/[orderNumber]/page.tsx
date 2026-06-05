@@ -10,6 +10,7 @@ import { HaveAQuestion } from "../../../global/components/have-a-question";
 import { NewsletterSubscribe } from "../../../global/components/newsletter-subscribe";
 import { useCartStore } from "../../../stores/cart_store";
 import { useNotification } from "../../../global/components/notification-center";
+import { OrderAttachmentActions } from "../../../global/components/order-attachment-actions";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const FALLBACK_PRODUCT_IMAGE = "/b2b/boxes/box.png";
 
@@ -55,6 +56,7 @@ type OrderDetails = {
   items: OrderItem[] | null;
   priceBreakdown: PriceBreakdown | null;
   attachmentName: string | null;
+  hasAttachment: boolean;
   createdAt: string;
 };
 
@@ -123,8 +125,13 @@ export default function AccountOrderDetailsPage() {
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [accountEmail, setAccountEmail] = useState("");
   const addCartItem = useCartStore((s) => s.addItem);
   const { notify } = useNotification();
+
+  useEffect(() => {
+    setAccountEmail((localStorage.getItem(AUTH_EMAIL_STORAGE_KEY) ?? "").trim());
+  }, []);
 
   useEffect(() => {
     if (!Number.isInteger(orderId) || orderId <= 0) {
@@ -482,13 +489,18 @@ export default function AccountOrderDetailsPage() {
                         <span>Size</span>
                         <span>{order.size}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span>Attachment</span>
-                        <span>{order.attachmentName ?? "None"}</span>
-                      </div>
                     </div>
                   </div>
                 ) : null}
+              </div>
+
+              <div className="rounded-lg border border-gray-200 p-4">
+                <OrderAttachmentActions
+                  orderId={order.id}
+                  attachmentName={order.attachmentName}
+                  hasAttachment={order.hasAttachment}
+                  ownerEmail={accountEmail}
+                />
               </div>
 
               {cleanCustomerMessage.trim().length > 0 ? (

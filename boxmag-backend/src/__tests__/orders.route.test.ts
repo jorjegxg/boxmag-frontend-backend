@@ -21,6 +21,18 @@ vi.mock("../services/email", () => ({
   sendNewOrderNotificationEmail: vi.fn(async () => undefined),
 }));
 
+vi.mock("../services/minio", () => ({
+  uploadOrderAttachmentToMinio: vi.fn(async () => ({
+    objectName: "orders/attachments/test.pdf",
+    url: "http://localhost:9000/bucket/orders/attachments/test.pdf",
+  })),
+  getOrderAttachmentFromMinio: vi.fn(async () => ({
+    buffer: Buffer.from("sample attachment"),
+    contentType: "application/pdf",
+    size: 17,
+  })),
+}));
+
 import { app } from "../app";
 
 describe("orders routes", () => {
@@ -48,6 +60,28 @@ describe("orders routes", () => {
     expect(response.status).toBe(400);
     expect(response.body.ok).toBe(false);
     expect(response.body.message).toContain("Invalid order payload");
+  });
+
+  it("returns order attachment for authorized account email", async () => {
+    queryMock.mockResolvedValueOnce([
+      [
+        {
+          id: 12,
+          attachment_name: "specs.pdf",
+          attachment_object_name: "orders/attachments/specs.pdf",
+          attachment_url: "http://localhost:9000/bucket/orders/attachments/specs.pdf",
+        },
+      ],
+    ]);
+
+    const response = await request(app)
+      .get("/api/orders/12/attachment")
+      .query({ email: "customer@example.com" });
+
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toContain("application/pdf");
+    expect(response.headers["content-disposition"]).toContain("specs.pdf");
+    expect(Buffer.from(response.body).toString()).toBe("sample attachment");
   });
 
   it("links business order to user when accountEmail matches order email", async () => {

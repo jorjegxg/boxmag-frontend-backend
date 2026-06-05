@@ -136,3 +136,20 @@ export async function getObjectBufferFromMinio(
   const objectStream = await minioClient.getObject(env.minioBucketName, objectName);
   return streamToBuffer(objectStream);
 }
+
+export async function getOrderAttachmentFromMinio(objectName: string): Promise<{
+  buffer: Buffer;
+  contentType: string | null;
+  size: number;
+}> {
+  const stat = await minioClient.statObject(env.minioBucketName, objectName);
+  const buffer = await getObjectBufferFromMinio(objectName);
+  const meta = stat.metaData ?? {};
+  const contentType =
+    meta["content-type"] ?? meta["Content-Type"] ?? null;
+  return {
+    buffer,
+    contentType: typeof contentType === "string" ? contentType : null,
+    size: stat.size,
+  };
+}

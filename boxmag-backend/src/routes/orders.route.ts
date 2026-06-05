@@ -2,7 +2,10 @@ import { Router } from "express";
 import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { PoolConnection } from "mysql2/promise";
 import { mysqlPool } from "../db/mysql";
-import { uploadOrderAttachmentToMinio } from "../services/minio";
+import {
+  getOrderAttachmentFromMinio,
+  uploadOrderAttachmentToMinio,
+} from "../services/minio";
 import {
   isOrderEmailTransportConfigured,
   sendBusinessOrderConfirmationEmailToCustomer,
@@ -193,6 +196,46 @@ function parseAttachmentPayload(value: unknown): AttachmentPayload | null {
   };
 }
 
+function orderHasStoredAttachment(row: {
+  attachment_object_name: string | null;
+  attachment_url: string | null;
+}): boolean {
+  return Boolean(
+    row.attachment_object_name?.trim() || row.attachment_url?.trim(),
+  );
+}
+
+function guessAttachmentMimeType(fileName: string): string {
+  const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
+  const mimeByExtension: Record<string, string> = {
+    pdf: "application/pdf",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    webp: "image/webp",
+    svg: "image/svg+xml",
+    zip: "application/zip",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    txt: "text/plain",
+    csv: "text/csv",
+  };
+  return mimeByExtension[extension] ?? "application/octet-stream";
+}
+
+function buildAttachmentContentDisposition(
+  fileName: string,
+  inline: boolean,
+): string {
+  const dispositionType = inline ? "inline" : "attachment";
+  const asciiFallback =
+    fileName.replace(/[^\x20-\x7E]/g, "_").trim() || "attachment";
+  return `${dispositionType}; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
+}
+
 function buildPriceBreakdown(row: OrderListRow) {
   const subtotal = centsToAmount(row.subtotal_cents);
   const vatAmount = centsToAmount(row.vat_cents);
@@ -268,6 +311,7 @@ ordersRouter.get("/", async (req, res) => {
         quantity: row.quantity,
         attachmentName: row.attachment_name,
         attachmentUrl: row.attachment_url,
+        hasAttachment: orderHasStoredAttachment(row),
         message: row.message ?? "",
         items: parseCartItemsJson(row.items_json),
         priceBreakdown: buildPriceBreakdown(row),
@@ -285,6 +329,120 @@ ordersRouter.get("/", async (req, res) => {
     res.status(500).json({
       ok: false,
       message: "Failed to load orders",
+    });
+  }
+});
+
+ordersRouter.get("/:orderId/attachment", async (req, res) => {
+  const orderId = Number(req.params.orderId);
+  const emailFilter =
+    typeof req.query.email === "string" && req.query.email.trim().length > 0
+      ? req.query.email.trim().toLowerCase()
+      : null;
+  const forceDownload =
+    req.query.download === "1" || req.query.download === "true";
+
+  if (!Number.isInteger(orderId) || orderId <= 0) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid order id",
+    });
+    return;
+  }
+
+  try {
+    const sql = `SELECT o.id, o.attachment_name, o.attachment_object_name, o.attachment_url
+       FROM orders o
+       LEFT JOIN contacts c ON c.order_id = o.id
+       WHERE o.id = ?
+       ${
+         emailFilter
+           ? `AND (
+                LOWER(c.email) = ?
+                OR o.user_id = (SELECT id FROM users WHERE LOWER(email) = ? AND is_active = 1 LIMIT 1)
+              )`
+           : ""
+       }
+       LIMIT 1`;
+    const [rows] = emailFilter
+      ? await mysqlPool.query<
+          RowDataPacket & {
+            id: number;
+            attachment_name: string | null;
+            attachment_object_name: string | null;
+            attachment_url: string | null;
+          }
+        >(sql, [orderId, emailFilter, emailFilter])
+      : await mysqlPool.query<
+          RowDataPacket & {
+            id: number;
+            attachment_name: string | null;
+            attachment_object_name: string | null;
+            attachment_url: string | null;
+          }
+        >(sql, [orderId]);
+
+    if (rows.length === 0) {
+      res.status(404).json({
+        ok: false,
+        message: "Order not found",
+      });
+      return;
+    }
+
+    const row = rows[0]!;
+    if (!orderHasStoredAttachment(row)) {
+      res.status(404).json({
+        ok: false,
+        message: "Order attachment not found",
+      });
+      return;
+    }
+
+    const fileName = row.attachment_name?.trim() || "attachment";
+    let buffer: Buffer;
+    let contentType: string | null = null;
+
+    if (row.attachment_object_name?.trim()) {
+      const attachment = await getOrderAttachmentFromMinio(
+        row.attachment_object_name.trim(),
+      );
+      buffer = attachment.buffer;
+      contentType = attachment.contentType;
+    } else if (row.attachment_url?.trim()) {
+      const attachmentResponse = await fetch(row.attachment_url.trim());
+      if (!attachmentResponse.ok) {
+        res.status(502).json({
+          ok: false,
+          message: "Failed to load order attachment",
+        });
+        return;
+      }
+      const arrayBuffer = await attachmentResponse.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      contentType = attachmentResponse.headers.get("content-type");
+    } else {
+      res.status(404).json({
+        ok: false,
+        message: "Order attachment not found",
+      });
+      return;
+    }
+
+    res.setHeader(
+      "Content-Type",
+      contentType?.trim() || guessAttachmentMimeType(fileName),
+    );
+    res.setHeader(
+      "Content-Disposition",
+      buildAttachmentContentDisposition(fileName, !forceDownload),
+    );
+    res.send(buffer);
+  } catch (error) {
+    console.error("Failed to load order attachment", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to load order attachment",
     });
   }
 });
@@ -364,6 +522,7 @@ ordersRouter.get("/:orderId", async (req, res) => {
         quantity: row.quantity,
         attachmentName: row.attachment_name,
         attachmentUrl: row.attachment_url,
+        hasAttachment: orderHasStoredAttachment(row),
         message: row.message ?? "",
         items: parseCartItemsJson(row.items_json),
         priceBreakdown: buildPriceBreakdown(row),
