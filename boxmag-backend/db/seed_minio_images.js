@@ -12,13 +12,33 @@ dotenv.config({ path: path.join(repoRoot, ".env") });
 
 const shouldPurgeBucket = process.argv.includes("--purge");
 
+/** Docker service names (mysql, minio) only resolve inside the compose network. */
+function resolveHostForHostMachine(host) {
+  const normalized = (host || "localhost").trim();
+  if (normalized === "minio" || normalized === "mysql") {
+    return "127.0.0.1";
+  }
+  return normalized;
+}
+
+function resolveDbPort(rawHost, rawPort) {
+  const host = (rawHost || "localhost").trim();
+  if (host === "mysql" && process.env.MYSQL_PORT) {
+    return Number(process.env.MYSQL_PORT);
+  }
+  return Number(rawPort || 3306);
+}
+
+const rawDbHost = process.env.DB_HOST || "localhost";
+const rawMinioHost = process.env.MINIO_ENDPOINT || "localhost";
+
 const config = {
-  dbHost: process.env.DB_HOST || "localhost",
-  dbPort: Number(process.env.DB_PORT || 3306),
+  dbHost: resolveHostForHostMachine(rawDbHost),
+  dbPort: resolveDbPort(rawDbHost, process.env.DB_PORT),
   dbName: process.env.DB_NAME || "boxmag4",
   dbUser: process.env.DB_USER || "boxmag4",
   dbPassword: process.env.DB_PASSWORD || "change-me-user",
-  minioEndpoint: process.env.MINIO_ENDPOINT || "localhost",
+  minioEndpoint: resolveHostForHostMachine(rawMinioHost),
   minioPort: Number(process.env.MINIO_PORT_API || 9000),
   minioUseSSL: process.env.MINIO_USE_SSL === "true",
   minioAccessKey: process.env.MINIO_ROOT_USER || "boxmagadmin",
