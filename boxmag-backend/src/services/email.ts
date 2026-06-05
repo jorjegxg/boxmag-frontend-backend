@@ -93,25 +93,27 @@ function resolveLineItems(
 function buildProductsTableText(
   lineItems: CartLineItem[],
   currency: string | null,
+  includeLinePricing = true,
 ): string {
-  const header = ["Cod", "Produs", "Cant.", "Pret unitar", "Total linie"].join(
-    "\t",
-  );
-  const rows = lineItems.map((item) =>
-    [
-      item.itemNo || "—",
-      item.name,
-      String(item.quantity),
+  const header = includeLinePricing
+    ? ["Cod", "Produs", "Cant.", "Pret unitar", "Total linie"]
+    : ["Cod", "Produs", "Cant."];
+  const rows = lineItems.map((item) => {
+    const base = [item.itemNo || "—", item.name, String(item.quantity)];
+    if (!includeLinePricing) return base.join("\t");
+    return [
+      ...base,
       item.unitPrice > 0 ? formatMoney(item.unitPrice, currency) : "—",
       item.lineTotal > 0 ? formatMoney(item.lineTotal, currency) : "—",
-    ].join("\t"),
-  );
-  return [header, ...rows].join("\n");
+    ].join("\t");
+  });
+  return [header.join("\t"), ...rows].join("\n");
 }
 
 function buildProductsTableHtml(
   lineItems: CartLineItem[],
   currency: string | null,
+  includeLinePricing = true,
 ): string {
   const rows = lineItems
     .map(
@@ -120,8 +122,12 @@ function buildProductsTableHtml(
         <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827;">${escapeHtml(item.itemNo || "—")}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827;">${escapeHtml(item.name)}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827;text-align:center;">${item.quantity}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827;text-align:right;">${escapeHtml(formatMoneyOrDash(item.unitPrice, currency))}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827;text-align:right;font-weight:600;">${escapeHtml(formatMoneyOrDash(item.lineTotal, currency))}</td>
+        ${
+          includeLinePricing
+            ? `<td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827;text-align:right;">${escapeHtml(formatMoneyOrDash(item.unitPrice, currency))}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827;text-align:right;font-weight:600;">${escapeHtml(formatMoneyOrDash(item.lineTotal, currency))}</td>`
+            : ""
+        }
       </tr>`,
     )
     .join("");
@@ -135,15 +141,19 @@ function buildProductsTableHtml(
           <th align="left" style="padding:10px 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Cod</th>
           <th align="left" style="padding:10px 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Produs</th>
           <th align="center" style="padding:10px 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Cant.</th>
-          <th align="right" style="padding:10px 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Pret unitar</th>
-          <th align="right" style="padding:10px 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Total linie</th>
+          ${
+            includeLinePricing
+              ? `<th align="right" style="padding:10px 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Pret unitar</th>
+          <th align="right" style="padding:10px 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Total linie</th>`
+              : ""
+          }
         </tr>
       </thead>
       <tbody>
         ${rows}
       </tbody>
       ${
-        subtotal > 0
+        includeLinePricing && subtotal > 0
           ? `<tfoot>
         <tr style="background:#fff7ed;">
           <td colspan="4" align="right" style="padding:12px;font-size:13px;font-weight:700;color:#374151;">Subtotal produse</td>
@@ -536,7 +546,11 @@ async function buildEmailAttachments(
   }
 }
 
-function buildOrderEmailContent(params: NewOrderEmailParams) {
+function buildOrderEmailContent(
+  params: NewOrderEmailParams,
+  options?: { includeLinePricing?: boolean },
+) {
+  const includeLinePricing = options?.includeLinePricing ?? true;
   const orderNumber = `ORD-${String(params.orderId).padStart(4, "0")}`;
   const sizeText =
     params.lengthMm != null && params.widthMm != null && params.heightMm != null
@@ -559,8 +573,16 @@ function buildOrderEmailContent(params: NewOrderEmailParams) {
     quantity: params.quantity,
   });
 
-  const productsTableText = buildProductsTableText(lineItems, currency);
-  const productsTableHtml = buildProductsTableHtml(lineItems, currency);
+  const productsTableText = buildProductsTableText(
+    lineItems,
+    currency,
+    includeLinePricing,
+  );
+  const productsTableHtml = buildProductsTableHtml(
+    lineItems,
+    currency,
+    includeLinePricing,
+  );
   const priceBreakdownText = params.priceBreakdown
     ? buildPriceBreakdownText(params.priceBreakdown)
     : "";
@@ -603,13 +625,30 @@ export async function sendNewOrderNotificationEmail(
     displayMessage,
   } = buildOrderEmailContent(params);
 
+  const isQuoteRequest = params.priceBreakdown == null;
+  const quoteRequestNoticeText = isQuoteRequest
+    ? "Clientul asteapta o oferta de pret. Te rugam sa ii trimiti oferta cat mai curand posibil."
+    : "";
+  const quoteRequestNoticeHtml = isQuoteRequest
+    ? `<div style="margin:0 0 20px;padding:14px 16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;">
+        <p style="margin:0;font-size:15px;line-height:1.6;color:#9a3412;font-weight:700;">
+          Clientul asteapta o oferta de pret. Te rugam sa ii trimiti oferta cat mai curand posibil.
+        </p>
+      </div>`
+    : "";
+
   const attachments = await buildEmailAttachments(params);
   await transporter.sendMail({
     from: env.emailOrdersFrom,
     to: env.ordersNotificationTo,
-    subject: `Comanda noua ${orderNumber}`,
+    subject: isQuoteRequest
+      ? `Cerere oferta noua ${orderNumber}`
+      : `Comanda noua ${orderNumber}`,
     text: [
-      "A fost creata o comanda noua in platforma Boxmag.",
+      isQuoteRequest
+        ? "A fost trimisa o cerere noua de oferta in platforma Boxmag."
+        : "A fost creata o comanda noua in platforma Boxmag.",
+      quoteRequestNoticeText,
       "",
       `Numar comanda: ${orderNumber}`,
       `Client: ${params.customerName}`,
@@ -638,10 +677,17 @@ export async function sendNewOrderNotificationEmail(
       productsTableText,
       priceBreakdownText ? `\n${priceBreakdownText}` : "",
       displayMessage ? `\nMesaj client:\n${displayMessage}` : "",
-    ].join("\n"),
+    ]
+      .filter(Boolean)
+      .join("\n"),
     html: `
       <div style="font-family:Arial,Helvetica,sans-serif;color:#111827;line-height:1.5;max-width:720px;">
-        <p style="margin:0 0 16px;">A fost creata o comanda noua in platforma <strong>Boxmag</strong>.</p>
+        <p style="margin:0 0 16px;">${
+          isQuoteRequest
+            ? "A fost trimisa o cerere noua de oferta in platforma <strong>Boxmag</strong>."
+            : "A fost creata o comanda noua in platforma <strong>Boxmag</strong>."
+        }</p>
+        ${quoteRequestNoticeHtml}
         <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#b91c1c;">${escapeHtml(orderNumber)}</p>
         <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;">
           <tr><td style="padding:4px 0;color:#6b7280;width:180px;">Client</td><td style="padding:4px 0;font-weight:600;">${escapeHtml(params.customerName)}</td></tr>
@@ -679,7 +725,7 @@ export async function sendBusinessOrderConfirmationEmailToCustomer(
     productsTableText,
     productsTableHtml,
     displayMessage,
-  } = buildOrderEmailContent(params);
+  } = buildOrderEmailContent(params, { includeLinePricing: false });
 
   const attachments = await buildEmailAttachments(params);
   await transporter.sendMail({
