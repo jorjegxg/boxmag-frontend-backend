@@ -25,6 +25,8 @@ import useBusinessOrderStore from "../stores/business_order_store";
 import { useNotification } from "../global/components/notification-center";
 import { useLanguage } from "../i18n/language-context";
 
+const MAX_ATTACHMENT_BYTES = 18 * 1024 * 1024;
+
 const BussinessPage = () => {
   const publicAppEnv = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase();
   const effectiveEnv =
@@ -39,6 +41,8 @@ const BussinessPage = () => {
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachmentName, setAttachmentName] = useState("");
+  const [attachmentBase64, setAttachmentBase64] = useState("");
+  const [attachmentMimeType, setAttachmentMimeType] = useState("");
   const [length, setLength] = useState(
     () => searchParams.get("length") ?? (isDevelopment ? "400" : ""),
   );
@@ -171,6 +175,8 @@ const BussinessPage = () => {
         quantity,
         message,
         attachmentName,
+        attachmentBase64,
+        attachmentMimeType,
         acceptedTerms,
       });
       router.push("/order-summary");
@@ -337,9 +343,43 @@ const BussinessPage = () => {
               id="pdf"
               type="file"
               className="sr-only"
-              onChange={(e) =>
-                setAttachmentName(e.target.files?.[0]?.name ?? "")
-              }
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) {
+                  setAttachmentName("");
+                  setAttachmentBase64("");
+                  setAttachmentMimeType("");
+                  return;
+                }
+                if (file.size > MAX_ATTACHMENT_BYTES) {
+                  notify({
+                    type: "error",
+                    message: t("business.maxFileSizePdf"),
+                  });
+                  setAttachmentName("");
+                  setAttachmentBase64("");
+                  setAttachmentMimeType("");
+                  e.currentTarget.value = "";
+                  return;
+                }
+                setAttachmentName(file.name);
+                setAttachmentMimeType(file.type || "application/octet-stream");
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const result = typeof reader.result === "string" ? reader.result : "";
+                  setAttachmentBase64(result);
+                };
+                reader.onerror = () => {
+                  notify({
+                    type: "error",
+                    message: "Failed to read attachment file.",
+                  });
+                  setAttachmentName("");
+                  setAttachmentBase64("");
+                  setAttachmentMimeType("");
+                };
+                reader.readAsDataURL(file);
+              }}
             />
             <button
               type="button"

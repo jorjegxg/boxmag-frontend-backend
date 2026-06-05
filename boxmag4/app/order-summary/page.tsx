@@ -394,6 +394,8 @@ export default function OrderSummaryPage() {
           quantity: draft.quantity,
           ftl: false,
           attachmentName: draft.attachmentName || null,
+          attachmentBase64: draft.attachmentBase64 || null,
+          attachmentMimeType: draft.attachmentMimeType || null,
           message: draft.message,
           acceptedTerms: draft.acceptedTerms,
           firstName,
@@ -411,7 +413,18 @@ export default function OrderSummaryPage() {
         }),
       });
 
-      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      const responseText = await response.text();
+      let payload: { ok?: boolean; message?: string };
+      try {
+        payload = JSON.parse(responseText) as { ok?: boolean; message?: string };
+      } catch {
+        if (response.status === 413) {
+          throw new Error(
+            "File is too large. Maximum allowed size is 18 MB.",
+          );
+        }
+        throw new Error(`Server error (${response.status}). Please try again.`);
+      }
       if (!response.ok || payload.ok !== true) {
         throw new Error(payload.message ?? `Failed with status ${response.status}`);
       }

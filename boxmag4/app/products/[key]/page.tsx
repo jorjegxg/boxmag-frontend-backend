@@ -9,18 +9,10 @@ import { NewsletterSubscribe } from "../../global/components/newsletter-subscrib
 import { useCartStore } from "../../stores/cart_store";
 import { MIN_ORDER_QTY } from "../../constants/order";
 import { FaCheck } from "react-icons/fa";
+import { normalizeImageUrl } from "@/app/utils/normalize-image-url";
+
 const BOXES_PER_PALLET = 9000;
 const imageRequestCache = new Set<string>();
-
-function normalizeImageUrl(baseUrl: string, imagePath: string): string {
-  const trimmed = imagePath.trim();
-  if (!trimmed) return "/placeholders/box4.png";
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed;
-  }
-  const normalizedPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  return `${baseUrl}${normalizedPath}`;
-}
 
 type BoxTypeApi = {
   id: number;

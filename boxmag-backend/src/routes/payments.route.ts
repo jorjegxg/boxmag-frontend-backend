@@ -12,6 +12,11 @@ import {
 import { getStripeClient, isStripeConfigured } from "../services/stripe";
 import { parseCartItemsJson } from "../utils/cart-items";
 import { MIN_ORDER_QTY } from "../constants/order";
+import {
+  MAX_ORDER_ATTACHMENT_BYTES,
+  MAX_ORDER_ATTACHMENT_MB,
+} from "../config/uploads";
+import { uploadOrderAttachmentToMinio } from "../services/minio";
 
 type CartItemPayload = {
   itemNo: string;
@@ -46,6 +51,13 @@ type CreateCheckoutSessionPayload = {
   consentPhone?: unknown;
   consentEmail?: unknown;
   acceptedTerms?: unknown;
+  attachment?: unknown;
+};
+
+type AttachmentPayload = {
+  fileName: string;
+  contentBase64: string;
+  mimeType?: string | null;
 };
 
 function toRequiredString(value: unknown): string | null {
@@ -74,6 +86,33 @@ function toPositiveInt(value: unknown): number | null {
 
 function toCents(amount: number): number {
   return Math.round(amount * 100);
+}
+
+function parseAttachmentPayload(value: unknown): AttachmentPayload | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Record<string, unknown>;
+  const fileName = toRequiredString(candidate.fileName);
+  const contentBase64 = toRequiredString(candidate.contentBase64);
+  if (!fileName || !contentBase64) return null;
+  return {
+    fileName,
+    contentBase64,
+    mimeType: toRequiredString(candidate.mimeType),
+  };
+}
+
+function parseAttachmentBase64(value: string): Buffer | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const base64Payload = trimmed.includes(",")
+    ? trimmed.slice(trimmed.indexOf(",") + 1)
+    : trimmed;
+  try {
+    const buffer = Buffer.from(base64Payload, "base64");
+    return buffer.length > 0 ? buffer : null;
+  } catch {
+    return null;
+  }
 }
 
 function parseCartItems(value: unknown): CartItemPayload[] | null {
@@ -148,6 +187,8 @@ type OrderRow = RowDataPacket & {
   transport: string;
   quantity: number;
   attachment_name: string | null;
+  attachment_object_name: string | null;
+  attachment_url: string | null;
   message: string | null;
   items_json: string | null;
   created_at: string;
@@ -200,6 +241,7 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
   const shippingEta = toRequiredString(payload.shipping?.etaText) ?? "";
   const shippingPrice = toNonNegativeNumber(payload.shipping?.price);
   const vatPercentRaw = toNonNegativeNumber(payload.vatPercent);
+  const attachmentPayload = parseAttachmentPayload(payload.attachment);
   const vatPercent =
     vatPercentRaw != null ? vatPercentRaw : env.taxPercent ?? 0;
 
@@ -257,6 +299,43 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
 
   let connection: PoolConnection | undefined;
   let createdOrderId: number | null = null;
+  let attachmentName: string | null = null;
+  let attachmentObjectName: string | null = null;
+  let attachmentUrl: string | null = null;
+  if (attachmentPayload) {
+    const attachmentBuffer = parseAttachmentBase64(attachmentPayload.contentBase64);
+    if (!attachmentBuffer) {
+      res.status(400).json({
+        ok: false,
+        message: "Invalid attachment payload.",
+      });
+      return;
+    }
+    if (attachmentBuffer.length > MAX_ORDER_ATTACHMENT_BYTES) {
+      res.status(400).json({
+        ok: false,
+        message: `Attachment is too large. Maximum allowed size is ${MAX_ORDER_ATTACHMENT_MB} MB.`,
+      });
+      return;
+    }
+    try {
+      const uploaded = await uploadOrderAttachmentToMinio({
+        fileBuffer: attachmentBuffer,
+        originalFileName: attachmentPayload.fileName,
+        ...(attachmentPayload.mimeType ? { mimeType: attachmentPayload.mimeType } : {}),
+      });
+      attachmentName = attachmentPayload.fileName;
+      attachmentObjectName = uploaded.objectName;
+      attachmentUrl = uploaded.url;
+    } catch (uploadError) {
+      console.error("Failed to upload checkout attachment to MinIO", uploadError);
+      res.status(502).json({
+        ok: false,
+        message: "Failed to upload attachment.",
+      });
+      return;
+    }
+  }
 
   try {
     connection = await mysqlPool.getConnection();
@@ -277,11 +356,11 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
     const [orderInsertResult] = await conn.execute<ResultSetHeader>(
       `INSERT INTO orders
         (box_type_name, cardboard_type, cardboard_colour, box_print,
-         size_type, transport, quantity, ftl, message, items_json,
+         size_type, transport, quantity, ftl, attachment_name, attachment_object_name, attachment_url, message, items_json,
          accepted_terms, status, payment_status,
          total_amount_cents, subtotal_cents, vat_percent, vat_cents,
          shipping_cents, shipping_method, shipping_eta, currency)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         "Checkout Cart Order",
         "N/A",
@@ -291,6 +370,9 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
         shippingName,
         totalQuantity || 1,
         0,
+        attachmentName,
+        attachmentObjectName,
+        attachmentUrl,
         orderMessageLines.join("\n"),
         itemsJson,
         1,
@@ -488,7 +570,8 @@ paymentsRouter.get("/sessions/:sessionId", async (req, res) => {
     const [orderRows] = await mysqlPool.query<OrderRow[]>(
       `SELECT id, status, payment_status, stripe_session_id, stripe_payment_intent_id,
               total_amount_cents, currency, box_type_name, cardboard_type, cardboard_colour,
-              box_print, size_type, transport, quantity, attachment_name, message, created_at
+              box_print, size_type, transport, quantity, attachment_name, attachment_object_name,
+              attachment_url, message, created_at
        FROM orders WHERE stripe_session_id = ? LIMIT 1`,
       [session.id],
     );
@@ -566,7 +649,7 @@ async function markOrderPaidBySession(
               total_amount_cents, subtotal_cents, vat_percent, vat_cents, shipping_cents,
               shipping_method, shipping_eta, currency, box_type_name, cardboard_type,
               cardboard_colour, box_print, size_type, transport, quantity, attachment_name,
-              message, items_json, created_at
+              attachment_object_name, attachment_url, message, items_json, created_at
        FROM orders WHERE stripe_session_id = ? LIMIT 1`,
       [session.id],
     );
@@ -610,6 +693,8 @@ async function markOrderPaidBySession(
       quantity: order.quantity,
       ftl: false,
       attachmentName: order.attachment_name,
+      attachmentObjectName: order.attachment_object_name,
+      attachmentUrl: order.attachment_url,
       boxTypeName: order.box_type_name,
       message: order.message ?? "",
       items: cartItems,
@@ -649,6 +734,8 @@ async function markOrderPaidBySession(
       quantity: order.quantity,
       ftl: false,
       attachmentName: order.attachment_name,
+      attachmentObjectName: order.attachment_object_name,
+      attachmentUrl: order.attachment_url,
       boxTypeName: order.box_type_name,
       message: order.message ?? "",
       items: cartItems,

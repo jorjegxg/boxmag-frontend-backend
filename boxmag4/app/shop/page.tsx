@@ -7,6 +7,7 @@ import { useLanguage } from "../i18n/language-context";
 import { FaCheck, FaShoppingCart } from "react-icons/fa";
 import { useCartStore } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
+import { normalizeImageUrl } from "@/app/utils/normalize-image-url";
 
 type BoxType = {
   id: number;
@@ -39,16 +40,6 @@ type BoxTypeProduct = {
     withTax: number;
   }>;
 };
-
-function normalizeImageUrl(baseUrl: string, imagePath: string): string {
-  const trimmed = imagePath.trim();
-  if (!trimmed) return "/placeholders/box4.png";
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed;
-  }
-  const normalizedPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  return `${baseUrl}${normalizedPath}`;
-}
 
 function resolvePrimaryImageUrl(
   baseUrl: string,

@@ -7,6 +7,8 @@ export type BusinessOrderDraft = {
   quantity: string;
   message: string;
   attachmentName: string;
+  attachmentBase64: string;
+  attachmentMimeType: string;
   acceptedTerms: boolean;
 };
 
@@ -23,6 +25,8 @@ const emptyDraft: BusinessOrderDraft = {
   quantity: "",
   message: "",
   attachmentName: "",
+  attachmentBase64: "",
+  attachmentMimeType: "",
   acceptedTerms: false,
 };
 

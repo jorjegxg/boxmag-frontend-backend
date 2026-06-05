@@ -127,6 +127,8 @@ CREATE TABLE IF NOT EXISTS orders (
   quantity INT NOT NULL,
   ftl TINYINT(1) NOT NULL DEFAULT 0,
   attachment_name VARCHAR(255) NULL,
+  attachment_object_name VARCHAR(500) NULL,
+  attachment_url VARCHAR(1000) NULL,
   message TEXT NOT NULL,
   items_json LONGTEXT NULL,
   accepted_terms TINYINT(1) NOT NULL DEFAULT 1,

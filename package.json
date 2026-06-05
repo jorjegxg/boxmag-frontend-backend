@@ -1,0 +1,8 @@
+{
+  "name": "boxmag",
+  "private": true,
+  "description": "Boxmag monorepo — frontend, backend, DB",
+  "scripts": {
+    "reset:db": "bash scripts/reset-db.sh"
+  }
+}

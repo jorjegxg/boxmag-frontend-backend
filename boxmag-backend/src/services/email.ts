@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { env } from "../config/env";
 import type { CartLineItem } from "../utils/cart-items";
+import { getObjectBufferFromMinio } from "./minio";
 
 const transporter = nodemailer.createTransport({
   host: env.smtpHost,
@@ -473,11 +474,67 @@ export type NewOrderEmailParams = {
   quantity: number;
   ftl: boolean;
   attachmentName: string | null;
+  attachmentObjectName?: string | null;
+  attachmentUrl?: string | null;
   boxTypeName: string;
   message: string;
   items?: CartLineItem[] | null;
   priceBreakdown?: OrderEmailPriceBreakdown | null;
 };
+
+type NodemailerAttachment = {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+};
+
+function guessContentTypeFromFileName(fileName: string): string | undefined {
+  const ext = fileName.trim().toLowerCase().split(".").pop();
+  switch (ext) {
+    case "pdf":
+      return "application/pdf";
+    case "png":
+      return "image/png";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "webp":
+      return "image/webp";
+    case "doc":
+      return "application/msword";
+    case "docx":
+      return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    default:
+      return undefined;
+  }
+}
+
+async function buildEmailAttachments(
+  params: NewOrderEmailParams,
+): Promise<NodemailerAttachment[]> {
+  const objectName = params.attachmentObjectName?.trim();
+  if (!objectName) return [];
+
+  const fallbackFileName = "attachment";
+  const safeFileName = (params.attachmentName?.trim() || fallbackFileName).slice(0, 180);
+  const contentType = guessContentTypeFromFileName(safeFileName);
+  try {
+    const buffer = await getObjectBufferFromMinio(objectName);
+    return [
+      {
+        filename: safeFileName,
+        content: buffer,
+        ...(contentType ? { contentType } : {}),
+      },
+    ];
+  } catch (error) {
+    console.error(
+      `Failed to load attachment from MinIO for email (object=${objectName})`,
+      error,
+    );
+    return [];
+  }
+}
 
 function buildOrderEmailContent(params: NewOrderEmailParams) {
   const orderNumber = `ORD-${String(params.orderId).padStart(4, "0")}`;
@@ -546,6 +603,7 @@ export async function sendNewOrderNotificationEmail(
     displayMessage,
   } = buildOrderEmailContent(params);
 
+  const attachments = await buildEmailAttachments(params);
   await transporter.sendMail({
     from: env.emailOrdersFrom,
     to: env.ordersNotificationTo,
@@ -608,6 +666,7 @@ export async function sendNewOrderNotificationEmail(
         }
       </div>
     `,
+    ...(attachments.length > 0 ? { attachments } : {}),
   });
 }
 
@@ -622,6 +681,7 @@ export async function sendBusinessOrderConfirmationEmailToCustomer(
     displayMessage,
   } = buildOrderEmailContent(params);
 
+  const attachments = await buildEmailAttachments(params);
   await transporter.sendMail({
     from: env.emailOrdersFrom,
     to: params.customerEmail,
@@ -722,6 +782,7 @@ export async function sendBusinessOrderConfirmationEmailToCustomer(
         </table>
       </div>
     `,
+    ...(attachments.length > 0 ? { attachments } : {}),
   });
 }
 
@@ -737,6 +798,7 @@ export async function sendOrderConfirmationEmailToCustomer(
     displayMessage,
   } = buildOrderEmailContent(params);
 
+  const attachments = await buildEmailAttachments(params);
   await transporter.sendMail({
     from: env.emailOrdersFrom,
     to: params.customerEmail,
@@ -775,5 +837,6 @@ export async function sendOrderConfirmationEmailToCustomer(
         <p style="margin:4px 0 0;">Echipa Boxmag</p>
       </div>
     `,
+    ...(attachments.length > 0 ? { attachments } : {}),
   });
 }

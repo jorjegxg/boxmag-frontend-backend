@@ -48,6 +48,7 @@ const GUEST_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SHIPPING_METHODS_CACHE_KEY = "boxmag.checkout.shippingMethods.v1";
 const SHIPPING_METHODS_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 const CART_QTY_STEP = 10;
+const MAX_ATTACHMENT_BYTES = 18 * 1024 * 1024;
 
 type ShippingMethodOption = {
   id: number;
@@ -115,6 +116,9 @@ export default function CheckoutPage() {
   const [submitOrderMessage, setSubmitOrderMessage] = useState<string | null>(
     null,
   );
+  const [attachmentName, setAttachmentName] = useState("");
+  const [attachmentBase64, setAttachmentBase64] = useState("");
+  const [attachmentMimeType, setAttachmentMimeType] = useState("");
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
     if (!value) return "http://localhost:3005";
@@ -360,6 +364,14 @@ export default function CheckoutPage() {
             consentPhone: true,
             consentEmail: true,
             acceptedTerms: true,
+            attachment:
+              attachmentName && attachmentBase64
+                ? {
+                    fileName: attachmentName,
+                    contentBase64: attachmentBase64,
+                    mimeType: attachmentMimeType || null,
+                  }
+                : null,
           }),
         },
       );
@@ -461,6 +473,21 @@ export default function CheckoutPage() {
           shippingMethod={shippingMethod}
           setShippingMethod={setShippingMethod}
           shippingMethods={shippingMethods}
+        />
+        <BottomPadding className="pb-6" />
+        <OrderAttachmentSection
+          attachmentName={attachmentName}
+          onAttachmentSelected={(payload) => {
+            setAttachmentName(payload.fileName);
+            setAttachmentBase64(payload.contentBase64);
+            setAttachmentMimeType(payload.mimeType);
+          }}
+          onAttachmentCleared={() => {
+            setAttachmentName("");
+            setAttachmentBase64("");
+            setAttachmentMimeType("");
+          }}
+          onError={(message) => setSubmitOrderMessage(message)}
         />
         <BottomPadding />
         <hr className="border-gray-200" />
@@ -704,6 +731,75 @@ export default function CheckoutPage() {
       </div>
     );
   }
+}
+
+function OrderAttachmentSection({
+  attachmentName,
+  onAttachmentSelected,
+  onAttachmentCleared,
+  onError,
+}: {
+  attachmentName: string;
+  onAttachmentSelected: (payload: {
+    fileName: string;
+    contentBase64: string;
+    mimeType: string;
+  }) => void;
+  onAttachmentCleared: () => void;
+  onError: (message: string) => void;
+}) {
+  return (
+    <div className="w-full">
+      <label className="mb-2 block text-sm font-semibold text-gray-800">
+        Attachment (optional)
+      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="inline-flex cursor-pointer items-center rounded-lg bg-my-yellow px-4 py-2.5 text-sm font-semibold text-black hover:bg-my-yellow-bright">
+          <input
+            type="file"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) {
+                onAttachmentCleared();
+                return;
+              }
+              if (file.size > MAX_ATTACHMENT_BYTES) {
+                onError("Attachment is too large (max 10 MB).");
+                onAttachmentCleared();
+                event.currentTarget.value = "";
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = () => {
+                const result = typeof reader.result === "string" ? reader.result : "";
+                if (!result) {
+                  onError("Failed to read attachment.");
+                  onAttachmentCleared();
+                  return;
+                }
+                onAttachmentSelected({
+                  fileName: file.name,
+                  contentBase64: result,
+                  mimeType: file.type || "application/octet-stream",
+                });
+              };
+              reader.onerror = () => {
+                onError("Failed to read attachment.");
+                onAttachmentCleared();
+              };
+              reader.readAsDataURL(file);
+            }}
+          />
+          Choose File
+        </label>
+        <span className="max-w-full truncate text-sm text-gray-600">
+          {attachmentName || "No file chosen"}
+        </span>
+      </div>
+      <p className="mt-2 text-xs text-gray-500">Accepted max file size: 10 MB.</p>
+    </div>
+  );
 }
 
 function CheckoutCartQuantityInput({

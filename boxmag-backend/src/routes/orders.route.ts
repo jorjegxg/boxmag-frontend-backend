@@ -2,11 +2,16 @@ import { Router } from "express";
 import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { PoolConnection } from "mysql2/promise";
 import { mysqlPool } from "../db/mysql";
+import { uploadOrderAttachmentToMinio } from "../services/minio";
 import {
   isOrderEmailTransportConfigured,
   sendBusinessOrderConfirmationEmailToCustomer,
   sendNewOrderNotificationEmail,
 } from "../services/email";
+import {
+  MAX_ORDER_ATTACHMENT_BYTES,
+  MAX_ORDER_ATTACHMENT_MB,
+} from "../config/uploads";
 import { parseCartItemsJson } from "../utils/cart-items";
 
 type CreateOrderPayload = {
@@ -39,6 +44,15 @@ type CreateOrderPayload = {
   consentPhone?: unknown;
   consentEmail?: unknown;
   accountEmail?: unknown;
+  attachment?: unknown;
+  attachmentBase64?: unknown;
+  attachmentMimeType?: unknown;
+};
+
+type AttachmentPayload = {
+  fileName: string;
+  contentBase64: string;
+  mimeType?: string | null;
 };
 
 type UserIdRow = RowDataPacket & {
@@ -115,6 +129,8 @@ type OrderListRow = RowDataPacket & {
   transport: string;
   quantity: number;
   attachment_name: string | null;
+  attachment_object_name: string | null;
+  attachment_url: string | null;
   message: string | null;
   items_json: string | null;
   status: string;
@@ -146,6 +162,35 @@ function vatPercentToNumber(value: string | number | null): number | null {
   if (value == null) return null;
   const num = typeof value === "string" ? Number(value) : value;
   return Number.isFinite(num) ? num : null;
+}
+
+function parseAttachmentBase64(value: unknown): Buffer | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const base64Payload = trimmed.includes(",")
+    ? trimmed.slice(trimmed.indexOf(",") + 1)
+    : trimmed;
+  try {
+    const buffer = Buffer.from(base64Payload, "base64");
+    if (buffer.length === 0) return null;
+    return buffer;
+  } catch {
+    return null;
+  }
+}
+
+function parseAttachmentPayload(value: unknown): AttachmentPayload | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Record<string, unknown>;
+  const fileName = toOptionalString(candidate.fileName);
+  const contentBase64 = toOptionalString(candidate.contentBase64);
+  if (!fileName || !contentBase64) return null;
+  return {
+    fileName,
+    contentBase64,
+    mimeType: toOptionalString(candidate.mimeType),
+  };
 }
 
 function buildPriceBreakdown(row: OrderListRow) {
@@ -182,7 +227,8 @@ ordersRouter.get("/", async (req, res) => {
   try {
     const sql = `SELECT o.id, o.box_type_name, o.cardboard_type, o.cardboard_colour, o.box_print,
               o.length_mm, o.width_mm, o.height_mm, o.size_type, o.transport,
-              o.quantity, o.attachment_name, o.message, o.items_json, o.status,
+              o.quantity, o.attachment_name, o.attachment_object_name, o.attachment_url,
+              o.message, o.items_json, o.status,
               o.payment_status, o.total_amount_cents, o.subtotal_cents,
               o.vat_percent, o.vat_cents, o.shipping_cents, o.shipping_method,
               o.shipping_eta, o.currency, o.created_at,
@@ -221,6 +267,7 @@ ordersRouter.get("/", async (req, res) => {
         transport: row.transport,
         quantity: row.quantity,
         attachmentName: row.attachment_name,
+        attachmentUrl: row.attachment_url,
         message: row.message ?? "",
         items: parseCartItemsJson(row.items_json),
         priceBreakdown: buildPriceBreakdown(row),
@@ -260,7 +307,8 @@ ordersRouter.get("/:orderId", async (req, res) => {
   try {
     const sql = `SELECT o.id, o.box_type_name, o.cardboard_type, o.cardboard_colour, o.box_print,
               o.length_mm, o.width_mm, o.height_mm, o.size_type, o.transport,
-              o.quantity, o.attachment_name, o.message, o.items_json, o.status,
+              o.quantity, o.attachment_name, o.attachment_object_name, o.attachment_url,
+              o.message, o.items_json, o.status,
               o.payment_status, o.total_amount_cents, o.subtotal_cents,
               o.vat_percent, o.vat_cents, o.shipping_cents, o.shipping_method,
               o.shipping_eta, o.currency, o.created_at,
@@ -315,6 +363,7 @@ ordersRouter.get("/:orderId", async (req, res) => {
         transport: row.transport,
         quantity: row.quantity,
         attachmentName: row.attachment_name,
+        attachmentUrl: row.attachment_url,
         message: row.message ?? "",
         items: parseCartItemsJson(row.items_json),
         priceBreakdown: buildPriceBreakdown(row),
@@ -390,6 +439,41 @@ ordersRouter.post("/", async (req, res) => {
   const boxTypeId = toOptionalNumber(payload.boxTypeId);
   const vatNumber = toOptionalString(payload.vatNumber);
   const attachmentName = toOptionalString(payload.attachmentName);
+  const attachmentPayload = parseAttachmentPayload(payload.attachment);
+  const attachmentBuffer =
+    parseAttachmentBase64(payload.attachmentBase64) ??
+    parseAttachmentBase64(attachmentPayload?.contentBase64);
+  const attachmentMimeType =
+    toOptionalString(payload.attachmentMimeType) ??
+    toOptionalString(attachmentPayload?.mimeType ?? null);
+  const effectiveAttachmentName = attachmentName ?? attachmentPayload?.fileName ?? null;
+  let attachmentObjectName: string | null = null;
+  let attachmentUrl: string | null = null;
+  if (attachmentBuffer && attachmentBuffer.length > MAX_ORDER_ATTACHMENT_BYTES) {
+    res.status(400).json({
+      ok: false,
+      message: `Attachment is too large. Maximum allowed size is ${MAX_ORDER_ATTACHMENT_MB} MB.`,
+    });
+    return;
+  }
+  if (effectiveAttachmentName && attachmentBuffer) {
+    try {
+      const uploaded = await uploadOrderAttachmentToMinio({
+        fileBuffer: attachmentBuffer,
+        originalFileName: effectiveAttachmentName,
+        ...(attachmentMimeType ? { mimeType: attachmentMimeType } : {}),
+      });
+      attachmentObjectName = uploaded.objectName;
+      attachmentUrl = uploaded.url;
+    } catch (uploadError) {
+      console.error("Failed to upload order attachment to MinIO", uploadError);
+      res.status(502).json({
+        ok: false,
+        message: "Failed to upload attachment",
+      });
+      return;
+    }
+  }
   const ftl = payload.ftl === true;
   const createAccount = payload.createAccount === true;
   const consentPhone = payload.consentPhone === true;
@@ -405,8 +489,9 @@ ordersRouter.post("/", async (req, res) => {
     const [orderInsertResult] = await conn.execute<ResultSetHeader>(
       `INSERT INTO orders
         (user_id, box_type_id, box_type_name, cardboard_type, cardboard_colour, box_print,
-         length_mm, width_mm, height_mm, size_type, transport, quantity, ftl, attachment_name, message, accepted_terms)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         length_mm, width_mm, height_mm, size_type, transport, quantity, ftl, attachment_name,
+         attachment_object_name, attachment_url, message, accepted_terms)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         boxTypeId,
@@ -421,7 +506,9 @@ ordersRouter.post("/", async (req, res) => {
         transport,
         quantity,
         ftl ? 1 : 0,
-        attachmentName,
+        effectiveAttachmentName,
+        attachmentObjectName,
+        attachmentUrl,
         message,
         1,
       ]
@@ -481,7 +568,9 @@ ordersRouter.post("/", async (req, res) => {
           transport,
           quantity,
           ftl,
-          attachmentName,
+          attachmentName: effectiveAttachmentName,
+          attachmentObjectName,
+          attachmentUrl,
           boxTypeName,
           message,
           items: null,
@@ -511,7 +600,9 @@ ordersRouter.post("/", async (req, res) => {
           transport,
           quantity,
           ftl,
-          attachmentName,
+          attachmentName: effectiveAttachmentName,
+          attachmentObjectName,
+          attachmentUrl,
           boxTypeName,
           message,
           items: null,

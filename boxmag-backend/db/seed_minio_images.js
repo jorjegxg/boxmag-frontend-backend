@@ -10,6 +10,8 @@ const dotenv = require("dotenv");
 const repoRoot = path.resolve(__dirname, "../..");
 dotenv.config({ path: path.join(repoRoot, ".env") });
 
+const shouldPurgeBucket = process.argv.includes("--purge");
+
 const config = {
   dbHost: process.env.DB_HOST || "localhost",
   dbPort: Number(process.env.DB_PORT || 3306),
@@ -56,6 +58,32 @@ async function ensureBucket(minioClient, bucketName) {
   await minioClient.setBucketPolicy(bucketName, buildPublicReadPolicy(bucketName));
 }
 
+async function listAllObjectNames(minioClient, bucketName) {
+  return new Promise((resolve, reject) => {
+    const names = [];
+    const stream = minioClient.listObjectsV2(bucketName, "", true);
+
+    stream.on("data", (obj) => names.push(obj.name));
+    stream.on("error", reject);
+    stream.on("end", () => resolve(names));
+  });
+}
+
+async function purgeBucket(minioClient, bucketName) {
+  const names = await listAllObjectNames(minioClient, bucketName);
+  if (names.length === 0) {
+    console.log(`Bucket "${bucketName}" is already empty.`);
+    return;
+  }
+
+  const batchSize = 1000;
+  for (let i = 0; i < names.length; i += batchSize) {
+    await minioClient.removeObjects(bucketName, names.slice(i, i + batchSize));
+  }
+
+  console.log(`Removed ${names.length} object(s) from bucket "${bucketName}".`);
+}
+
 function resolveLocalImagePath(fileName) {
   for (const dirPath of IMAGE_SEARCH_DIRS) {
     const candidate = path.join(dirPath, fileName);
@@ -86,6 +114,10 @@ async function main() {
 
   await ensureBucket(minioClient, config.minioBucketName);
 
+  if (shouldPurgeBucket) {
+    await purgeBucket(minioClient, config.minioBucketName);
+  }
+
   const connection = await mysql.createConnection({
     host: config.dbHost,
     port: config.dbPort,
@@ -110,8 +142,11 @@ async function main() {
 
       if (!fileName) continue;
 
-      // Skip rows already pointing to the configured MinIO URL.
-      if (currentPath.startsWith(`${config.minioPublicBaseUrl.replace(/\/+$/, "")}/`)) {
+      // After a full reset the bucket was purged; re-upload even existing MinIO URLs.
+      if (
+        !shouldPurgeBucket &&
+        currentPath.startsWith(`${config.minioPublicBaseUrl.replace(/\/+$/, "")}/`)
+      ) {
         continue;
       }
 

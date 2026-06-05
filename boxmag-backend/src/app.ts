@@ -1,6 +1,7 @@
 import cors from "cors";
-import express from "express";
+import express, { type NextFunction, type Request, type Response } from "express";
 import { buildCorsOptions } from "./config/cors";
+import { JSON_BODY_LIMIT } from "./config/uploads";
 import { healthRouter } from "./routes/health.route";
 import { boxTypesRouter } from "./routes/box-types.route";
 import { ordersRouter } from "./routes/orders.route";
@@ -25,7 +26,26 @@ app.post(
   stripeWebhookHandler,
 );
 
-app.use(express.json());
+app.use(express.json({ limit: JSON_BODY_LIMIT }));
+
+app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
+  const isPayloadTooLarge =
+    typeof err === "object" &&
+    err !== null &&
+    (("type" in err && err.type === "entity.too.large") ||
+      ("status" in err && err.status === 413));
+
+  if (isPayloadTooLarge) {
+    res.status(413).json({
+      ok: false,
+      message:
+        "Request payload is too large. Reduce the attachment size and try again.",
+    });
+    return;
+  }
+
+  next(err);
+});
 
 app.get("/", (_req, res) => {
   res.json({
