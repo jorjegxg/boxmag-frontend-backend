@@ -60,8 +60,7 @@ export default function HowToBuyPage() {
                 <li>Stripe payments,</li>
                 <li>PayPal payments,</li>
                 <li>Netopya payments – deferred payments, up to 90 days,</li>
-                <li>bank transfer for orders in EUR: RO85 BTRL 0610 4202 4207 76XX</li>
-                <li>bank transfer for orders in RON: RO39 BTRL 0610 1202 4207 76XX</li>
+                <li>bank transfer (EUR): RO85 BTRL 0610 4202 4207 76XX</li>
               </ul>
             </li>
             <li>{t("howToBuy.li4")}</li>

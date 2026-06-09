@@ -103,11 +103,10 @@ function CheckoutSuccessPageContent() {
   const isPaid =
     data?.paymentStatus === "paid" ||
     data?.paymentStatus === "no_payment_required";
-  const totalDisplay = data?.amountTotal != null && data.currency
-    ? `${(data.amountTotal / 100).toFixed(2)} ${data.currency.toUpperCase()}`
-    : data?.order?.totalAmountCents != null && data.order.currency
-      ? `${(data.order.totalAmountCents / 100).toFixed(2)} ${data.order.currency.toUpperCase()}`
-      : null;
+  const totalCents =
+    data?.amountTotal ?? data?.order?.totalAmountCents ?? null;
+  const totalDisplay =
+    totalCents != null ? `€${(totalCents / 100).toFixed(2)}` : null;
 
   return (
     <div>

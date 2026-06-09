@@ -76,11 +76,9 @@ function paymentBadgeClass(status: string): string {
   return "text-gray-600 bg-gray-50";
 }
 
-function formatCurrency(value: number | null, currency: string | null): string {
+function formatCurrency(value: number | null): string {
   if (value == null) return "—";
-  const code = (currency ?? "EUR").toUpperCase();
-  const symbol = code === "EUR" ? "€" : code === "USD" ? "$" : code === "GBP" ? "£" : `${code} `;
-  return `${symbol}${value.toFixed(2)}`;
+  return `€${value.toFixed(2)}`;
 }
 
 function parseStripeMessageItems(message: string): OrderItem[] {
@@ -334,7 +332,6 @@ export default function AccountOrderDetailsPage() {
                   <div className="mt-4 space-y-3">
                     {displayItems.map((item) => {
                       const imageSrc = item.imageUrl ?? FALLBACK_PRODUCT_IMAGE;
-                      const currency = order.priceBreakdown?.currency ?? null;
                       return (
                         <div
                           key={item.itemNo}
@@ -360,7 +357,7 @@ export default function AccountOrderDetailsPage() {
                               {item.name}
                             </p>
                             <p className="mt-2 text-xs text-gray-600">
-                              {item.quantity} × {formatCurrency(item.unitPrice, currency)}
+                              {item.quantity} × {formatCurrency(item.unitPrice)}
                             </p>
                           </div>
                           <div className="flex flex-row items-center justify-between gap-4 sm:flex-col sm:items-end sm:gap-1">
@@ -368,7 +365,7 @@ export default function AccountOrderDetailsPage() {
                               Line total
                             </p>
                             <p className="text-base font-bold text-gray-900">
-                              {formatCurrency(item.lineTotal, currency)}
+                              {formatCurrency(item.lineTotal)}
                             </p>
                           </div>
                         </div>
@@ -407,10 +404,7 @@ export default function AccountOrderDetailsPage() {
                     <div className="flex items-center justify-between">
                       <span>Subtotal</span>
                       <span className="font-medium text-gray-900">
-                        {formatCurrency(
-                          order.priceBreakdown.subtotal,
-                          order.priceBreakdown.currency,
-                        )}
+                        {formatCurrency(order.priceBreakdown.subtotal)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -421,10 +415,7 @@ export default function AccountOrderDetailsPage() {
                           : ""}
                       </span>
                       <span className="font-medium text-gray-900">
-                        {formatCurrency(
-                          order.priceBreakdown.vatAmount,
-                          order.priceBreakdown.currency,
-                        )}
+                        {formatCurrency(order.priceBreakdown.vatAmount)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -439,10 +430,7 @@ export default function AccountOrderDetailsPage() {
                           : ""}
                       </span>
                       <span className="font-medium text-gray-900">
-                        {formatCurrency(
-                          order.priceBreakdown.shipping,
-                          order.priceBreakdown.currency,
-                        )}
+                        {formatCurrency(order.priceBreakdown.shipping)}
                       </span>
                     </div>
                     <div className="mt-2 flex items-center justify-between border-t border-gray-200 pt-3">
@@ -450,10 +438,7 @@ export default function AccountOrderDetailsPage() {
                         Total
                       </span>
                       <span className="text-base font-bold text-my-red">
-                        {formatCurrency(
-                          order.priceBreakdown.total,
-                          order.priceBreakdown.currency,
-                        )}
+                        {formatCurrency(order.priceBreakdown.total)}
                       </span>
                     </div>
                   </div>

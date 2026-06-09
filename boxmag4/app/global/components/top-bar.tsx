@@ -7,20 +7,13 @@ import type { Language } from "../../i18n/translations";
 
 export function TopBar() {
   const { language, setLanguage, t } = useLanguage();
-  const [currency, setCurrency] = useState("EUR €");
   const [shippingTo, setShippingTo] = useState("RO");
 
   useEffect(() => {
-    const savedCurrency = localStorage.getItem("boxmag.currency");
     const savedShipping = localStorage.getItem("boxmag.shippingTo");
-
-    if (savedCurrency) setCurrency(savedCurrency);
     if (savedShipping) setShippingTo(savedShipping);
+    localStorage.removeItem("boxmag.currency");
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem("boxmag.currency", currency);
-  }, [currency]);
 
   useEffect(() => {
     localStorage.setItem("boxmag.shippingTo", shippingTo);
@@ -76,12 +69,6 @@ export function TopBar() {
                 setLanguage(next);
               }
             }}
-          />
-          <Selector
-            label={t("topBar.currency")}
-            value={currency}
-            options={["EUR €", "RON lei", "USD $"]}
-            onChange={setCurrency}
           />
           <Selector
             label={t("topBar.shippingTo")}
