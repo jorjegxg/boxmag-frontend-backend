@@ -9,8 +9,8 @@
     "lint": "eslint",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run --e2e --browser chrome",
-    "optimize:images": "node ../scripts/optimize-images.mjs",
-    "optimize:images:dry-run": "node ../scripts/optimize-images.mjs --dry-run"
+    "optimize:images": "node scripts/optimize-images.mjs",
+    "optimize:images:dry-run": "node scripts/optimize-images.mjs --dry-run"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.3",

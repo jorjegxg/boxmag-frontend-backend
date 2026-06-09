@@ -1,0 +1,10 @@
+{
+  "name": "boxmag",
+  "private": true,
+  "description": "Boxmag monorepo — frontend, backend, DB",
+  "scripts": {
+    "reset:db": "bash scripts/reset-db.sh",
+    "optimize:images": "npm run optimize:images --prefix boxmag4",
+    "optimize:images:dry-run": "npm run optimize:images:dry-run --prefix boxmag4"
+  }
+}
