@@ -9,6 +9,7 @@ const PARTNER_LOGOS = [
     width: 120,
     height: 48,
     className: "h-8 md:h-10 w-auto",
+    href: "https://www.dpd.com/ro/en/",
   },
   {
     src: "/logos/idO6xMl5EH_logos.jpeg",
@@ -16,6 +17,7 @@ const PARTNER_LOGOS = [
     width: 64,
     height: 64,
     className: "h-10 md:h-12 w-auto",
+    href: "https://trusted.ro/",
   },
   {
     src: "/logos/Stripe wordmark - Blurple - Small.png",
@@ -23,8 +25,24 @@ const PARTNER_LOGOS = [
     width: 120,
     height: 32,
     className: "h-7 md:h-8 w-auto",
+    href: "https://stripe.com/",
   },
-] as const;
+  {
+    src: "/logos/visa-brandmark-blue-1960x622.png",
+    alt: "Visa",
+    width: 1960,
+    height: 622,
+    className: "h-7 md:h-8 w-auto",
+    href: "https://www.visa.com/",
+  },
+] satisfies Array<{
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  className: string;
+  href?: string;
+}>;
 
 export function PartnerLogosStrip() {
   return (
@@ -34,8 +52,8 @@ export function PartnerLogosStrip() {
     >
       <div className="max-w-7xl mx-auto px-6 lg:px-20">
         <ul className="flex flex-wrap items-center justify-center gap-10 md:gap-16 lg:gap-20">
-          {PARTNER_LOGOS.map((logo) => (
-            <li key={logo.src} className="flex items-center justify-center shrink-0">
+          {PARTNER_LOGOS.map((logo) => {
+            const image = (
               <Image
                 src={logo.src}
                 alt={logo.alt}
@@ -43,8 +61,25 @@ export function PartnerLogosStrip() {
                 height={logo.height}
                 className={`object-contain ${logo.className}`}
               />
-            </li>
-          ))}
+            );
+
+            return (
+              <li key={logo.src} className="flex items-center justify-center shrink-0">
+                {logo.href ? (
+                  <a
+                    href={logo.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center"
+                  >
+                    {image}
+                  </a>
+                ) : (
+                  image
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </section>
