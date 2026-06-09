@@ -899,7 +899,7 @@ function CheckoutProductColumn({
   value2: string;
 }) {
   return (
-    <div className="flex min-w-[140px] flex-col justify-center">
+    <div className="flex min-w-0 flex-1 flex-col justify-center">
       <div className="flex flex-wrap gap-x-2 gap-y-1">
         <span className="font-bold">{name1}</span>
         <span className="text-my-gray">{value1}</span>
@@ -938,7 +938,7 @@ function CheckoutProductDetails({
           key={item.itemNo}
           className="flex flex-col gap-6 rounded-lg border border-gray-200 p-4 text-sm"
         >
-          <div className="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-start">
+          <div className="flex w-full flex-col gap-6 sm:flex-row sm:items-start">
             <div className="flex h-[100px] w-[100px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-white">
               <Image
                 src={item.imageUrl || "/b2b/boxes/box.png"}
