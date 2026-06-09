@@ -119,6 +119,13 @@ const ALLOWED_ORDER_STATUSES = new Set([
   "done",
 ]);
 
+type OrderAttachmentRow = RowDataPacket & {
+  id: number;
+  attachment_name: string | null;
+  attachment_object_name: string | null;
+  attachment_url: string | null;
+};
+
 type OrderListRow = RowDataPacket & {
   id: number;
   box_type_name: string;
@@ -365,22 +372,12 @@ ordersRouter.get("/:orderId/attachment", async (req, res) => {
        }
        LIMIT 1`;
     const [rows] = emailFilter
-      ? await mysqlPool.query<
-          RowDataPacket & {
-            id: number;
-            attachment_name: string | null;
-            attachment_object_name: string | null;
-            attachment_url: string | null;
-          }
-        >(sql, [orderId, emailFilter, emailFilter])
-      : await mysqlPool.query<
-          RowDataPacket & {
-            id: number;
-            attachment_name: string | null;
-            attachment_object_name: string | null;
-            attachment_url: string | null;
-          }
-        >(sql, [orderId]);
+      ? await mysqlPool.query<OrderAttachmentRow[]>(sql, [
+          orderId,
+          emailFilter,
+          emailFilter,
+        ])
+      : await mysqlPool.query<OrderAttachmentRow[]>(sql, [orderId]);
 
     if (rows.length === 0) {
       res.status(404).json({
