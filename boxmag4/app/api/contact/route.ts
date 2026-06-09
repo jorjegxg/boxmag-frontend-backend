@@ -117,7 +117,8 @@ export async function POST(req: Request): Promise<Response> {
       );
     }
 
-    const vatCheck = checkVAT(body.vatNumber.trim().toUpperCase(), countries);
+    const normalizedVat = body.vatNumber.trim().toUpperCase().replace(/\s+/g, "");
+    const vatCheck = checkVAT(normalizedVat, countries);
     if (!vatCheck.isValid && !vatCheck.isValidFormat) {
       return Response.json(
         {

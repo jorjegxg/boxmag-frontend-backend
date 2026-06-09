@@ -13,6 +13,13 @@
 
 const BASE = "/contact";
 
+const mockVatLookup = (companyName = "Test SRL") => {
+  cy.intercept("GET", "/api/vat-lookup*", {
+    statusCode: 200,
+    body: { ok: true, companyName },
+  }).as("vatLookup");
+};
+
 const fillForm = (overrides: Partial<{
   firstName: string;
   surname: string;
@@ -35,10 +42,18 @@ const fillForm = (overrides: Partial<{
     ...overrides,
   };
 
+  const hasValidVatFormat = /^[A-Za-z]{2}[A-Za-z0-9]{2,12}$/.test(data.vatNumber);
+  if (hasValidVatFormat) {
+    mockVatLookup(data.companyName);
+  }
+
   cy.get("#firstName").clear().type(data.firstName);
   cy.get("#surname").clear().type(data.surname);
-  cy.get("#companyName").clear().type(data.companyName);
   cy.get("#vatNumber").clear().type(data.vatNumber);
+  if (hasValidVatFormat) {
+    cy.wait("@vatLookup");
+    cy.get("#companyName").should("have.value", data.companyName);
+  }
   cy.get("#email").clear().type(data.email);
   cy.get("#phone").clear().type(data.phone);
   cy.get("#country").select(data.country);
@@ -87,10 +102,14 @@ describe("Contact page – validare câmpuri obligatorii", () => {
   });
 
   it("afișează eroare la submit fără câmpuri completate", () => {
+    cy.intercept("GET", "/api/vat-lookup*", {
+      statusCode: 404,
+      body: { ok: false, message: "VAT number not found or invalid" },
+    });
+
     // Ștergem orice pre-fill din dev mode
     cy.get("#firstName").clear();
     cy.get("#surname").clear();
-    cy.get("#companyName").clear();
     cy.get("#vatNumber").clear();
     cy.get("#email").clear();
     cy.get("#phone").clear();
@@ -105,9 +124,13 @@ describe("Contact page – validare câmpuri obligatorii", () => {
   });
 
   it("focus-ul sare pe primul câmp lipsă", () => {
+    cy.intercept("GET", "/api/vat-lookup*", {
+      statusCode: 404,
+      body: { ok: false, message: "VAT number not found or invalid" },
+    });
+
     cy.get("#firstName").clear();
     cy.get("#surname").clear();
-    cy.get("#companyName").clear();
     cy.get("#vatNumber").clear();
     cy.get("#email").clear();
     cy.get("#phone").clear();
@@ -127,7 +150,7 @@ describe("Contact page – validare VAT", () => {
   });
 
   it("afișează eroare la VAT invalid", () => {
-    fillForm({ vatNumber: "INVALID000" });
+    fillForm({ vatNumber: "INVALID000", companyName: "" });
     // acceptăm termenii
     cy.get('input[type="checkbox"]').check({ force: true });
 

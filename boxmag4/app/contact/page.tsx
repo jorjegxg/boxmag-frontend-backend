@@ -4,7 +4,7 @@ import { B2b } from "../global/components/b2b";
 import Link from "next/link";
 import { ServicesSection } from "../global/components/services-section";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
   FaCommentAlt,
@@ -18,6 +18,13 @@ import { useNotification } from "../global/components/notification-center";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
+const lockedInputClass =
+  "w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-3 text-gray-600 cursor-not-allowed focus:outline-none";
+const VAT_NUMBER_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
+
+function normalizeVatNumber(value: string): string {
+  return value.trim().toUpperCase().replace(/\s+/g, "");
+}
 const MAX_ATTACHMENT_MB = 10;
 const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_MB * 1024 * 1024;
 const MAX_ATTACHMENTS = 5;
@@ -34,12 +41,12 @@ export default function ContactUsPage() {
   const [surname, setSurname] = useState(
     shouldAutofillContactForm ? "Doe" : "",
   );
-  const [companyName, setCompanyName] = useState(
-    shouldAutofillContactForm ? "Boxmag Test SRL" : "",
-  );
+  const [companyName, setCompanyName] = useState("");
   const [vatNumber, setVatNumber] = useState(
-    shouldAutofillContactForm ? "RO12345678" : "",
+    shouldAutofillContactForm ? "RO4534966" : "",
   );
+  const [isLookingUpVat, setIsLookingUpVat] = useState(false);
+  const [vatLookupError, setVatLookupError] = useState<string | null>(null);
   const [email, setEmail] = useState(
     shouldAutofillContactForm ? "yotrevorgxg@gmail.com" : "",
   );
@@ -57,6 +64,63 @@ export default function ContactUsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    const normalizedVat = normalizeVatNumber(vatNumber);
+    if (!VAT_NUMBER_REGEX.test(normalizedVat)) {
+      setCompanyName("");
+      setVatLookupError(null);
+      return;
+    }
+
+    let isCancelled = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      setIsLookingUpVat(true);
+      setVatLookupError(null);
+
+      try {
+        const response = await fetch(
+          `/api/vat-lookup?vat=${encodeURIComponent(normalizedVat)}`,
+          { signal: controller.signal },
+        );
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          companyName?: string;
+          message?: string;
+        };
+
+        if (isCancelled) return;
+
+        if (!response.ok || payload.ok !== true || !payload.companyName) {
+          setCompanyName("");
+          setVatLookupError(
+            payload.message ?? t("contact.vatLookupFailed"),
+          );
+          return;
+        }
+
+        setCompanyName(payload.companyName);
+        setVatLookupError(null);
+      } catch (error) {
+        if (isCancelled || (error instanceof DOMException && error.name === "AbortError")) {
+          return;
+        }
+        setCompanyName("");
+        setVatLookupError(t("contact.vatLookupFailed"));
+      } finally {
+        if (!isCancelled) {
+          setIsLookingUpVat(false);
+        }
+      }
+    }, 600);
+
+    return () => {
+      isCancelled = true;
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [vatNumber, t]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -71,8 +135,39 @@ export default function ContactUsPage() {
     if (!firstName.trim())
       registerMissingField("firstName", t("contact.firstName"));
     if (!surname.trim()) registerMissingField("surname", t("contact.surname"));
-    if (!companyName.trim())
+    if (isLookingUpVat) {
+      notify({
+        type: "error",
+        message: t("contact.vatLookupInProgress"),
+      });
+      return;
+    }
+
+    const normalizedVat = normalizeVatNumber(vatNumber);
+    if (normalizedVat) {
+      const vatFormatCheck = checkVAT(normalizedVat, countries);
+      if (!vatFormatCheck.isValid && !vatFormatCheck.isValidFormat) {
+        notify({
+          type: "error",
+          message:
+            "Invalid VAT number. Please provide a valid VAT for the selected country (e.g. RO12345678).",
+        });
+        document.getElementById("vatNumber")?.focus();
+        return;
+      }
+    }
+
+    if (!companyName.trim()) {
+      if (vatLookupError) {
+        notify({
+          type: "error",
+          message: vatLookupError,
+        });
+        document.getElementById("vatNumber")?.focus();
+        return;
+      }
       registerMissingField("companyName", t("contact.companyName"));
+    }
     if (!email.trim()) registerMissingField("email", t("contact.email"));
     if (!phone.trim()) registerMissingField("phone", t("contact.phone"));
     if (!country.trim()) registerMissingField("country", t("contact.country"));
@@ -99,7 +194,7 @@ export default function ContactUsPage() {
       return;
     }
 
-    const vatCheck = checkVAT(vatNumber.trim().toUpperCase(), countries);
+    const vatCheck = checkVAT(normalizedVat, countries);
     if (!vatCheck.isValid && !vatCheck.isValidFormat) {
       notify({
         type: "error",
@@ -134,7 +229,7 @@ export default function ContactUsPage() {
       formData.append("firstName", firstName);
       formData.append("surname", surname);
       formData.append("companyName", companyName);
-      formData.append("vatNumber", vatNumber);
+      formData.append("vatNumber", normalizedVat);
       formData.append("email", email);
       formData.append("phone", phone);
       formData.append("country", country);
@@ -262,10 +357,15 @@ export default function ContactUsPage() {
                   id="companyName"
                   type="text"
                   required
+                  readOnly
                   value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder={t("contact.companyName")}
-                  className={inputClass}
+                  placeholder={
+                    isLookingUpVat
+                      ? t("contact.vatLookupLoading")
+                      : t("contact.companyNameAuto")
+                  }
+                  className={lockedInputClass}
+                  aria-busy={isLookingUpVat}
                 />
               </div>
               <div>
@@ -280,12 +380,23 @@ export default function ContactUsPage() {
                   type="text"
                   required
                   value={vatNumber}
-                  onChange={(e) => setVatNumber(e.target.value)}
+                  onChange={(e) => setVatNumber(e.target.value.toUpperCase())}
                   placeholder={t("contact.vatNumber")}
-                  pattern="[A-Za-z]{2}[A-Za-z0-9]{2,12}"
-                  title="Use country code plus 2-12 letters/digits (e.g. RO12345678)"
+                  pattern="[A-Za-z]{2}\s?[A-Za-z0-9]{2,12}"
+                  title="Use country code plus 2-12 letters/digits (e.g. RO12345678 or RO 12345678)"
                   className={inputClass}
+                  aria-describedby={vatLookupError ? "vatNumber-error" : undefined}
                 />
+                {isLookingUpVat ? (
+                  <p className="mt-1 text-sm text-gray-500">
+                    {t("contact.vatLookupLoading")}
+                  </p>
+                ) : null}
+                {!isLookingUpVat && vatLookupError ? (
+                  <p id="vatNumber-error" className="mt-1 text-sm text-red-600">
+                    {vatLookupError}
+                  </p>
+                ) : null}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

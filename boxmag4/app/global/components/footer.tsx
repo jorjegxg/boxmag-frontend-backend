@@ -32,6 +32,7 @@ export function Footer() {
             <div className="flex items-start gap-2">
               <FaMapMarkerAlt className="mt-0.5" />
               <span>
+                <span className="block font-semibold">REKO PACKAGING</span>
                 Stefan cel Mare 131 Street,
                 <br />
                 RO-725400 - Radauti, Suceava
