@@ -3,6 +3,7 @@ import multer from "multer";
 import { RowDataPacket } from "mysql2";
 import { env } from "../config/env";
 import { mysqlPool } from "../db/mysql";
+import { optimizeUploadedBoxImage } from "../services/image-optimize";
 import { uploadBoxImageToMinio } from "../services/minio";
 
 type BoxTypeRow = RowDataPacket & {
@@ -90,10 +91,15 @@ boxTypesRouter.post("/upload-image", imageUpload.single("image"), async (req, re
   }
 
   try {
+    const optimized = await optimizeUploadedBoxImage(
+      req.file.buffer,
+      req.file.mimetype,
+    );
     const imagePath = await uploadBoxImageToMinio({
-      fileBuffer: req.file.buffer,
+      fileBuffer: optimized.buffer,
       originalFileName: req.file.originalname,
-      mimeType: req.file.mimetype,
+      mimeType: optimized.mimeType,
+      extensionOverride: optimized.extension,
     });
 
     res.status(201).json({
@@ -125,10 +131,15 @@ boxTypesRouter.post("/upload-images", imageUpload.array("images", 10), async (re
   try {
     const uploadedImages = await Promise.all(
       files.map(async (file) => {
+        const optimized = await optimizeUploadedBoxImage(
+          file.buffer,
+          file.mimetype,
+        );
         const imagePath = await uploadBoxImageToMinio({
-          fileBuffer: file.buffer,
+          fileBuffer: optimized.buffer,
           originalFileName: file.originalname,
-          mimeType: file.mimetype,
+          mimeType: optimized.mimeType,
+          extensionOverride: optimized.extension,
         });
         return {
           url: imagePath,

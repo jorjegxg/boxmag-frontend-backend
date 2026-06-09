@@ -1,22 +1,39 @@
 # Exemplu nginx pentru Boxmag (VPS + docker compose --profile app)
 #
-# Presupuneri:
-#   - Frontend Docker: 127.0.0.1:3006
-#   - Backend Docker:  127.0.0.1:3005
-#   - MinIO API:       127.0.0.1:9000  (bucket public pentru poze cutii)
-#   - .env producție:
-#       BACKEND_PUBLIC_URL=https://api.boxmag.eu
-#       MINIO_PUBLIC_BASE_URL=https://storage.boxmag.eu
-#       CORS_ORIGIN=https://boxmag.eu,https://www.boxmag.eu
-#       FRONTEND_BASE_URL=https://boxmag.eu
+# Domeniu canonical (SEO): https://boxmag.eu
+#   - boxmag.ro, www.boxmag.ro, www.boxmag.eu -> 301 permanent catre boxmag.eu
+#   - evita continut duplicat intre .eu si .ro
+#
+# Presupuneri Docker:
+#   - Frontend: 127.0.0.1:3006
+#   - Backend:  127.0.0.1:3005
+#   - MinIO:    127.0.0.1:9000
+#
+# .env productie:
+#   BACKEND_PUBLIC_URL=https://api.boxmag.eu
+#   MINIO_PUBLIC_BASE_URL=https://storage.boxmag.eu
+#   CORS_ORIGIN=https://boxmag.eu,https://www.boxmag.eu
+#   FRONTEND_BASE_URL=https://boxmag.eu
 #
 # Instalare pe Ubuntu/Debian:
 #   sudo cp deploy/nginx/boxmag.conf.example /etc/nginx/sites-available/boxmag.eu
 #   sudo ln -sf /etc/nginx/sites-available/boxmag.eu /etc/nginx/sites-enabled/boxmag.eu
 #   sudo nginx -t && sudo systemctl reload nginx
-#   sudo certbot --nginx -d boxmag.eu -d www.boxmag.eu -d api.boxmag.eu -d storage.boxmag.eu
+#   sudo certbot --nginx \
+#     -d boxmag.eu -d www.boxmag.eu \
+#     -d boxmag.ro -d www.boxmag.ro \
+#     -d api.boxmag.eu -d storage.boxmag.eu
 
-# Redirect HTTP -> HTTPS (toate host-urile)
+# --- HTTP ---
+
+# .ro -> direct la canonical HTTPS (un singur salt)
+server {
+    listen 80;
+    listen [::]:80;
+    server_name boxmag.ro www.boxmag.ro;
+    return 301 https://boxmag.eu$request_uri;
+}
+
 server {
     listen 80;
     listen [::]:80;
@@ -24,7 +41,21 @@ server {
     return 301 https://$host$request_uri;
 }
 
-# www -> apex
+# --- HTTPS: redirect domenii secundare -> canonical ---
+
+# boxmag.ro + www -> boxmag.eu (pastreaza calea: /shop, /business, etc.)
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name boxmag.ro www.boxmag.ro;
+
+    ssl_certificate     /etc/letsencrypt/live/boxmag.eu/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/boxmag.eu/privkey.pem;
+
+    return 301 https://boxmag.eu$request_uri;
+}
+
+# www.boxmag.eu -> boxmag.eu
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -36,7 +67,9 @@ server {
     return 301 https://boxmag.eu$request_uri;
 }
 
-# Frontend (Next.js)
+# --- HTTPS: servicii principale ---
+
+# Frontend (Next.js) — domeniu canonical
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -79,7 +112,6 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
 
-        # Stripe webhook: body-ul brut trebuie sa ajunga la backend
         proxy_request_buffering on;
         proxy_read_timeout 120s;
         proxy_send_timeout 120s;
@@ -87,7 +119,7 @@ server {
 }
 
 # MinIO — bucket public (poze cutii din catalog)
-# URL-urile din DB arata: https://storage.boxmag.eu/boxmag4-images/boxes/...
+# URL-uri in DB: https://storage.boxmag.eu/boxmag4-images/boxes/...
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -98,7 +130,6 @@ server {
 
     client_max_body_size 25m;
 
-    # Optional: blocheaza consola MinIO (9001) din internet
     location / {
         proxy_pass http://127.0.0.1:9000;
         proxy_http_version 1.1;

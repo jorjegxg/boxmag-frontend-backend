@@ -46,10 +46,12 @@ async function ensurePublicBucket(): Promise<void> {
   await ensureBucketPromise;
 }
 
-function sanitizeObjectName(fileName: string): string {
+function sanitizeObjectName(fileName: string, extensionOverride?: string): string {
   const trimmed = fileName.trim();
   const dotIndex = trimmed.lastIndexOf(".");
-  const extension = dotIndex > 0 ? trimmed.slice(dotIndex).toLowerCase() : "";
+  const extension =
+    extensionOverride ??
+    (dotIndex > 0 ? trimmed.slice(dotIndex).toLowerCase() : "");
   const baseName = (dotIndex > 0 ? trimmed.slice(0, dotIndex) : trimmed)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -84,10 +86,14 @@ export async function uploadBoxImageToMinio(args: {
   fileBuffer: Buffer;
   originalFileName: string;
   mimeType: string;
+  extensionOverride?: string;
 }): Promise<string> {
   await ensurePublicBucket();
 
-  const objectName = sanitizeObjectName(args.originalFileName);
+  const objectName = sanitizeObjectName(
+    args.originalFileName,
+    args.extensionOverride,
+  );
   await minioClient.putObject(
     env.minioBucketName,
     objectName,
