@@ -491,17 +491,6 @@ export default function AdminOrderDetailsPage() {
                     </div>
                   </div>
                 ) : null}
-
-                {!hasDisplayItems && order.message.trim().length > 0 ? (
-                  <div className="rounded-xl border border-gray-200 p-4">
-                    <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                      Raw message
-                    </h3>
-                    <div className="mt-3 whitespace-pre-line text-sm text-gray-700">
-                      {order.message}
-                    </div>
-                  </div>
-                ) : null}
               </>
             )}
           </div>
