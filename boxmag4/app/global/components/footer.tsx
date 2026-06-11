@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FaMapMarkerAlt, FaPhoneAlt, FaFax, FaEnvelope } from "react-icons/fa";
 import { FaFacebookF, FaInstagram } from "react-icons/fa6";
 import { useLanguage } from "../../i18n/language-context";
+import { siteEmails } from "../../../lib/site-emails";
 
 export function Footer() {
   const { t } = useLanguage();
@@ -53,11 +54,11 @@ export function Footer() {
               <span>+40 230 565 997</span>
             </Link>
             <Link
-              href="mailto:info@reko-packaging.ro"
+              href={`mailto:${siteEmails.info}`}
               className="flex items-center gap-2 hover:underline"
             >
               <FaEnvelope />
-              <span>info@reko-packaging.ro</span>
+              <span>{siteEmails.info}</span>
             </Link>
           </div>
 

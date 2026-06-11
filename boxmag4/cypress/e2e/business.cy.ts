@@ -149,8 +149,9 @@ describe("Business page – încărcare", () => {
   it("afișează secțiunea de contact B2B", () => {
     visitBusiness();
 
-    cy.contains("b2b@reko-packaging.ro").should("exist");
-    cy.get('a[href="mailto:b2b@reko-packaging.ro"]').should("exist");
+    const b2bEmail = Cypress.env("b2bEmail") as string;
+    cy.contains(b2bEmail).should("exist");
+    cy.get(`a[href="mailto:${b2bEmail}"]`).should("exist");
     cy.contains("+40 799 553 345").should("exist");
   });
 

@@ -9,6 +9,7 @@ import { ServicesSection } from "../global/components/services-section";
 import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { useLanguage } from "../i18n/language-context";
+import { siteEmails } from "../../lib/site-emails";
 
 export default function AboutPage() {
   const { t } = useLanguage();
@@ -156,7 +157,7 @@ export default function AboutPage() {
                 <p className="mt-3 font-bold text-black">Tel:</p>
                 <p className="text-gray-800">+40 799 553 345</p>
                 <p className="mt-2 font-bold text-black">Mail:</p>
-                <p className="text-gray-800">info@reko-packaging.ro</p>
+                <p className="text-gray-800">{siteEmails.info}</p>
               </div>
               <div className="rounded-2xl border-2 border-my-red p-6 lg:p-8 bg-white w-full max-w-[560px] mx-auto text-center">
                 <p className="font-bold text-black mb-2">Boxmag.eu</p>

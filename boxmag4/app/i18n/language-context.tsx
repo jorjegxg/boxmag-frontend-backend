@@ -3,6 +3,18 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { Language } from "./translations";
 import { translations } from "./translations";
+import { siteEmails } from "../../lib/site-emails";
+
+const emailPlaceholders: Record<string, string> = {
+  infoEmail: siteEmails.info,
+  b2bEmail: siteEmails.b2b,
+};
+
+function interpolateEmails(text: string): string {
+  return text.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
+    emailPlaceholders[name] ?? match,
+  );
+}
 
 type LanguageContextType = {
   language: Language;
@@ -34,7 +46,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     () => ({
       language,
       setLanguage: setLanguageState,
-      t: (key: string) => translations[language][key] ?? translations.en[key] ?? key,
+      t: (key: string) =>
+        interpolateEmails(
+          translations[language][key] ?? translations.en[key] ?? key,
+        ),
     }),
     [language]
   );

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { FaEnvelope, FaPhoneAlt, FaClock } from "react-icons/fa";
+import { siteEmails } from "../../../lib/site-emails";
 
 export function B2bProfessionalsSection() {
   return (
@@ -32,11 +33,11 @@ export function B2bProfessionalsSection() {
           </p>
           <div className="space-y-1.5 text-white text-sm">
             <a
-              href="mailto:b2b@reko-packaging.ro"
+              href={`mailto:${siteEmails.b2b}`}
               className="flex items-center justify-center lg:justify-start gap-3 hover:text-my-yellow transition-colors"
             >
               <FaEnvelope className="w-4 h-4 text-my-yellow shrink-0" />
-              <span>b2b@reko-packaging.ro</span>
+              <span>{siteEmails.b2b}</span>
             </a>
             <a
               href="tel:+40799553345"

@@ -1,22 +1,9 @@
 import type { NextConfig } from "next";
-import fs from "fs";
-import path from "path";
 import { originsToDevHosts, parseCorsOrigins } from "./lib/cors";
+import { readRootEnvValue } from "./lib/root-env";
 
-function readRootEnvValue(key: string): string | undefined {
-  const rootEnvPath = path.resolve(process.cwd(), "../.env");
-  if (!fs.existsSync(rootEnvPath)) return undefined;
-  const lines = fs.readFileSync(rootEnvPath, "utf8").split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const separatorIndex = trimmed.indexOf("=");
-    if (separatorIndex < 0) continue;
-    const currentKey = trimmed.slice(0, separatorIndex).trim();
-    if (currentKey !== key) continue;
-    return trimmed.slice(separatorIndex + 1).trim();
-  }
-  return undefined;
+function envFromRoot(key: string, fallback = ""): string {
+  return process.env[key] ?? readRootEnvValue(key) ?? fallback;
 }
 
 const corsOriginRaw =
@@ -67,8 +54,11 @@ const nextConfig: NextConfig = {
     SMTP_PASS: process.env.SMTP_PASS ?? readRootEnvValue("SMTP_PASS") ?? "",
     EMAIL_FROM:
       process.env.EMAIL_FROM ?? readRootEnvValue("EMAIL_FROM") ?? "",
-    CONTACT_TO:
-      process.env.CONTACT_TO ?? readRootEnvValue("CONTACT_TO") ?? "",
+    CONTACT_TO: envFromRoot("CONTACT_TO"),
+    NEXT_PUBLIC_INFO_EMAIL: envFromRoot("NEXT_PUBLIC_INFO_EMAIL"),
+    NEXT_PUBLIC_B2B_EMAIL: envFromRoot("NEXT_PUBLIC_B2B_EMAIL"),
+    DEV_DEMO_CUSTOMER_EMAIL: envFromRoot("DEV_DEMO_CUSTOMER_EMAIL"),
+    DEV_AUTOFILL_EMAIL: envFromRoot("DEV_AUTOFILL_EMAIL"),
   },
 
   turbopack: {

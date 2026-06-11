@@ -86,7 +86,7 @@ describe("Contact page – încărcare", () => {
   it("afișează secțiunea de informații magazin (adresă, telefon, mail)", () => {
     cy.contains("Stefan cel Mare 131").should("exist");
     cy.contains("+40 799 553 345").should("exist");
-    cy.contains("info@reko-packaging.ro").should("exist");
+    cy.contains(Cypress.env("infoEmail") as string).should("exist");
   });
 
   it("breadcrumb-ul conține linkul Home", () => {

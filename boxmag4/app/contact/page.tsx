@@ -15,6 +15,7 @@ import {
 import { checkVAT, countries } from "jsvat";
 import { useLanguage } from "../i18n/language-context";
 import { useNotification } from "../global/components/notification-center";
+import { siteEmails } from "../../lib/site-emails";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -48,7 +49,7 @@ export default function ContactUsPage() {
   const [isLookingUpVat, setIsLookingUpVat] = useState(false);
   const [vatLookupError, setVatLookupError] = useState<string | null>(null);
   const [email, setEmail] = useState(
-    shouldAutofillContactForm ? "yotrevorgxg@gmail.com" : "",
+    shouldAutofillContactForm ? siteEmails.devAutofill : "",
   );
   const [phone, setPhone] = useState(
     shouldAutofillContactForm ? "+40799111222" : "",
@@ -581,7 +582,7 @@ export default function ContactUsPage() {
                 <FaEnvelope className="w-5 h-5 text-gray-800 shrink-0" />
                 <p>
                   <span className="font-bold text-gray-900">Mail:</span>{" "}
-                  info@reko-packaging.ro
+                  {siteEmails.info}
                 </p>
               </div>
             </div>

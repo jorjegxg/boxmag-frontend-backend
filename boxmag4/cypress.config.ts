@@ -1,6 +1,15 @@
 import { defineConfig } from "cypress";
+import { readRootEnvValue } from "./lib/root-env";
+
+function envFromRoot(key: string): string {
+  return process.env[key] ?? readRootEnvValue(key) ?? "";
+}
 
 export default defineConfig({
+  env: {
+    infoEmail: envFromRoot("NEXT_PUBLIC_INFO_EMAIL"),
+    b2bEmail: envFromRoot("NEXT_PUBLIC_B2B_EMAIL"),
+  },
   e2e: {
     baseUrl: "http://localhost:3006",
     viewportWidth: 1280,

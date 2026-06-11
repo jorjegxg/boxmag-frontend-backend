@@ -8,6 +8,7 @@ import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { FaShieldAlt } from "react-icons/fa";
 import { useLanguage } from "../i18n/language-context";
+import { siteEmails } from "../../lib/site-emails";
 
 function PolicySection({
   title,
@@ -67,10 +68,10 @@ export default function PrivacyPolicyPage() {
               <li>
                 {t("privacyPolicy.basic.item2.beforeEmail")}{" "}
                 <a
-                  href="mailto:info@reko-packaging.ro"
+                  href={`mailto:${siteEmails.info}`}
                   className="text-my-red underline hover:no-underline"
                 >
-                  info@reko-packaging.ro
+                  {siteEmails.info}
                 </a>
                 {t("privacyPolicy.basic.item2.afterEmail")}
               </li>
@@ -161,10 +162,10 @@ export default function PrivacyPolicyPage() {
               <li>
                 {t("privacyPolicy.recipients.item2.beforeEmail")}{" "}
                 <a
-                  href="mailto:info@reko-packaging.ro"
+                  href={`mailto:${siteEmails.info}`}
                   className="text-my-red underline hover:no-underline"
                 >
-                  info@reko-packaging.ro
+                  {siteEmails.info}
                 </a>
                 {t("privacyPolicy.recipients.item2.afterEmail")}
               </li>

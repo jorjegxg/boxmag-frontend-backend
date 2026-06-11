@@ -41,8 +41,9 @@ export const env = {
   emailFrom: process.env.EMAIL_FROM ?? process.env.SMTP_USER ?? "",
   contactTo: process.env.CONTACT_TO ?? "",
   emailOrdersFrom: process.env.EMAIL_ORDERS_FROM ?? "",
-  ordersNotificationTo:
-    process.env.ORDERS_NOTIFICATION_TO ?? "comenzi@reko-packaging.ro",
+  ordersNotificationTo: process.env.ORDERS_NOTIFICATION_TO ?? "",
+  infoEmail: process.env.NEXT_PUBLIC_INFO_EMAIL ?? "",
+  b2bEmail: process.env.NEXT_PUBLIC_B2B_EMAIL ?? "",
   verificationExpiresMinutes: toNumber(process.env.VERIFICATION_EXPIRES_MINUTES, 60),
   minioEndpoint: process.env.MINIO_ENDPOINT ?? "localhost",
   minioPort: toNumber(process.env.MINIO_PORT_API, 9000),

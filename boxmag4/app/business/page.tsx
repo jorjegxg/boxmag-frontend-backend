@@ -23,6 +23,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import useBusinessStore from "./store/business_store";
 import useBusinessOrderStore from "../stores/business_order_store";
 import { useNotification } from "../global/components/notification-center";
+import { siteEmails } from "../../lib/site-emails";
 import { useLanguage } from "../i18n/language-context";
 
 const MAX_ATTACHMENT_BYTES = 18 * 1024 * 1024;
@@ -456,11 +457,11 @@ const BussinessPage = () => {
             </p>
             <div className="space-y-1.5 text-white text-sm">
               <a
-                href="mailto:b2b@reko-packaging.ro"
+                href={`mailto:${siteEmails.b2b}`}
                 className="flex items-center justify-center lg:justify-start gap-3 hover:text-my-yellow transition-colors"
               >
                 <FaEnvelope className="w-4 h-4 text-my-yellow shrink-0" />
-                <span>b2b@reko-packaging.ro</span>
+                <span>{siteEmails.b2b}</span>
               </a>
               <a
                 href="tel:+40799553345"

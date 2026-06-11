@@ -16,6 +16,7 @@ import {
   FaEye,
   FaEyeSlash,
 } from "react-icons/fa";
+import { siteEmails } from "../../lib/site-emails";
 
 type Tab = "account" | "address" | "orders";
 
@@ -73,7 +74,7 @@ function LoginRequiredView({
   onLoginSuccess: (email: string) => void;
 }) {
   const [email, setEmail] = useState(
-    isDevelopment ? "customer.demo@reko-packaging.ro" : "",
+    isDevelopment ? siteEmails.devDemoCustomer : "",
   );
   const [password, setPassword] = useState(isDevelopment ? "dummy123" : "");
   const [showPassword, setShowPassword] = useState(false);
@@ -916,7 +917,7 @@ export default function AccountPage() {
   const [activeTab, setActiveTab] = useState<Tab>("account");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loggedInEmail, setLoggedInEmail] = useState(
-    isDevelopment ? "customer.demo@reko-packaging.ro" : "",
+    isDevelopment ? siteEmails.devDemoCustomer : "",
   );
   const [accountProfile, setAccountProfile] = useState<UserProfile>({
     firstName: "",
