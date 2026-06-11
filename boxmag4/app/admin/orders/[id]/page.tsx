@@ -51,6 +51,12 @@ type AdminOrderDetails = {
   createdAt: string;
 };
 
+type OfferSenderOption = {
+  key: "info" | "b2b" | "orders";
+  email: string;
+  label: string;
+};
+
 type OrderStatusValue = "new" | "in progress" | "completed" | "done";
 const ORDER_STATUS_OPTIONS: OrderStatusValue[] = [
   "new",
@@ -60,6 +66,8 @@ const ORDER_STATUS_OPTIONS: OrderStatusValue[] = [
 ];
 
 const FALLBACK_PRODUCT_IMAGE = "/b2b/boxes/box.png";
+const DEFAULT_OFFER_MESSAGE =
+  "Va transmitem oferta pentru cererea dumneavoastra. Mai jos regasiti detaliile comenzii.";
 
 function statusBadgeClass(status: string): string {
   const normalized = status.trim().toLowerCase();
@@ -127,7 +135,9 @@ function parseStripeMessageItems(message: string): OrderItem[] {
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+        {label}
+      </p>
       <p className="mt-1 text-sm font-medium text-gray-900">{value || "—"}</p>
     </div>
   );
@@ -142,6 +152,14 @@ export default function AdminOrderDetailsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [offerSenders, setOfferSenders] = useState<OfferSenderOption[]>([]);
+  const [selectedSenderKey, setSelectedSenderKey] = useState<
+    OfferSenderOption["key"] | ""
+  >("");
+  const [offerMessage, setOfferMessage] = useState(DEFAULT_OFFER_MESSAGE);
+  const [isSendingOffer, setIsSendingOffer] = useState(false);
+  const [offerError, setOfferError] = useState<string | null>(null);
+  const [offerSuccess, setOfferSuccess] = useState<string | null>(null);
 
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -162,9 +180,12 @@ export default function AdminOrderDetailsPage() {
       setIsLoading(true);
       setLoadError(null);
       try {
-        const response = await fetch(`${backendBaseUrl}/api/orders/${orderId}`, {
-          signal: controller.signal,
-        });
+        const response = await fetch(
+          `${backendBaseUrl}/api/orders/${orderId}`,
+          {
+            signal: controller.signal,
+          },
+        );
         const payload = (await response.json()) as {
           ok?: boolean;
           message?: string;
@@ -178,7 +199,9 @@ export default function AdminOrderDetailsPage() {
         if (controller.signal.aborted) return;
         setOrder(null);
         setLoadError(
-          error instanceof Error ? error.message : "Failed to load order details",
+          error instanceof Error
+            ? error.message
+            : "Failed to load order details",
         );
       } finally {
         if (!controller.signal.aborted) {
@@ -191,6 +214,37 @@ export default function AdminOrderDetailsPage() {
     return () => controller.abort();
   }, [backendBaseUrl, orderId]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    const loadOfferSenders = async () => {
+      try {
+        const response = await fetch(
+          `${backendBaseUrl}/api/orders/offer-senders`,
+          { signal: controller.signal },
+        );
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          data?: OfferSenderOption[];
+        };
+        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
+          return;
+        }
+        setOfferSenders(payload.data);
+        setSelectedSenderKey((current) => {
+          if (current) return current;
+          const ordersSender = payload.data?.find((sender) => sender.key === "orders");
+          return ordersSender?.key ?? payload.data?.[0]?.key ?? "";
+        });
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setOfferSenders([]);
+      }
+    };
+
+    void loadOfferSenders();
+    return () => controller.abort();
+  }, [backendBaseUrl]);
+
   const isCartOrder = useMemo(
     () => Array.isArray(order?.items) && (order?.items?.length ?? 0) > 0,
     [order],
@@ -202,7 +256,7 @@ export default function AdminOrderDetailsPage() {
   );
 
   const displayItems = useMemo(
-    () => (isCartOrder ? order?.items ?? [] : parsedMessageItems),
+    () => (isCartOrder ? (order?.items ?? []) : parsedMessageItems),
     [isCartOrder, order?.items, parsedMessageItems],
   );
 
@@ -215,24 +269,73 @@ export default function AdminOrderDetailsPage() {
     return order.message;
   }, [order, hasDisplayItems]);
 
+  const handleSendOffer = async () => {
+    if (!order || !selectedSenderKey) return;
+    setIsSendingOffer(true);
+    setOfferError(null);
+    setOfferSuccess(null);
+    try {
+      const response = await fetch(
+        `${backendBaseUrl}/api/orders/${order.id}/send-offer`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fromKey: selectedSenderKey,
+            message: offerMessage,
+          }),
+        },
+      );
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+        data?: { to?: string; from?: string | null };
+      };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.message ?? "Failed to send offer email");
+      }
+      setOfferSuccess(
+        `Offer sent to ${payload.data?.to ?? order.email}${
+          payload.data?.from ? ` from ${payload.data.from}` : ""
+        }.`,
+      );
+    } catch (error) {
+      setOfferError(
+        error instanceof Error ? error.message : "Failed to send offer email",
+      );
+    } finally {
+      setIsSendingOffer(false);
+    }
+  };
+
   const handleStatusChange = async (nextStatus: OrderStatusValue) => {
     if (!order) return;
     setIsUpdatingStatus(true);
     setStatusError(null);
     try {
-      const response = await fetch(`${backendBaseUrl}/api/orders/${order.id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      const payload = (await response.json()) as { ok?: boolean; message?: string };
+      const response = await fetch(
+        `${backendBaseUrl}/api/orders/${order.id}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: nextStatus }),
+        },
+      );
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+      };
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+        throw new Error(
+          payload.message ?? `Failed with status ${response.status}`,
+        );
       }
       setOrder((prev) => (prev ? { ...prev, status: nextStatus } : prev));
     } catch (error) {
       setStatusError(
-        error instanceof Error ? error.message : "Failed to update order status",
+        error instanceof Error
+          ? error.message
+          : "Failed to update order status",
       );
     } finally {
       setIsUpdatingStatus(false);
@@ -278,14 +381,22 @@ export default function AdminOrderDetailsPage() {
             ) : loadError ? (
               <div className="space-y-4">
                 <p className="text-sm font-medium text-red-700">{loadError}</p>
-                <Link href="/admin" className="text-sm font-semibold text-my-red hover:underline">
+                <Link
+                  href="/admin"
+                  className="text-sm font-semibold text-my-red hover:underline"
+                >
                   Back to admin
                 </Link>
               </div>
             ) : !order ? (
               <div className="space-y-4">
-                <p className="text-sm font-medium text-red-700">Order not found.</p>
-                <Link href="/admin" className="text-sm font-semibold text-my-red hover:underline">
+                <p className="text-sm font-medium text-red-700">
+                  Order not found.
+                </p>
+                <Link
+                  href="/admin"
+                  className="text-sm font-semibold text-my-red hover:underline"
+                >
                   Back to admin
                 </Link>
               </div>
@@ -293,7 +404,9 @@ export default function AdminOrderDetailsPage() {
               <>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">{order.orderNumber}</h2>
+                    <h2 className="text-lg font-bold text-gray-900">
+                      {order.orderNumber}
+                    </h2>
                     <p className="mt-1 text-sm text-gray-600">
                       Placed on {new Date(order.createdAt).toLocaleString()}
                     </p>
@@ -309,12 +422,16 @@ export default function AdminOrderDetailsPage() {
 
                 <div className="grid grid-cols-1 gap-4 rounded-xl border border-gray-200 p-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase text-gray-500">Status</p>
+                    <p className="text-xs font-semibold uppercase text-gray-500">
+                      Status
+                    </p>
                     <select
                       value={selectedStatus}
                       disabled={isUpdatingStatus}
                       onChange={(event) =>
-                        void handleStatusChange(event.target.value as OrderStatusValue)
+                        void handleStatusChange(
+                          event.target.value as OrderStatusValue,
+                        )
                       }
                       className="mt-2 h-9 w-full rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-900 focus:border-my-red focus:outline-none focus:ring-2 focus:ring-my-red disabled:bg-gray-100"
                     >
@@ -329,7 +446,9 @@ export default function AdminOrderDetailsPage() {
                     ) : null}
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase text-gray-500">Order status</p>
+                    <p className="text-xs font-semibold uppercase text-gray-500">
+                      Order status
+                    </p>
                     <span
                       className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-bold uppercase ${statusBadgeClass(order.status)}`}
                     >
@@ -338,7 +457,9 @@ export default function AdminOrderDetailsPage() {
                   </div>
                   {order.paymentStatus ? (
                     <div>
-                      <p className="text-xs font-semibold uppercase text-gray-500">Payment</p>
+                      <p className="text-xs font-semibold uppercase text-gray-500">
+                        Payment
+                      </p>
                       <span
                         className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-bold uppercase ${paymentBadgeClass(order.paymentStatus)}`}
                       >
@@ -346,7 +467,10 @@ export default function AdminOrderDetailsPage() {
                       </span>
                     </div>
                   ) : null}
-                  <DetailField label="Total quantity" value={String(order.quantity)} />
+                  <DetailField
+                    label="Total quantity"
+                    value={String(order.quantity)}
+                  />
                 </div>
 
                 <div className="rounded-xl border border-gray-200 p-4">
@@ -369,8 +493,14 @@ export default function AdminOrderDetailsPage() {
                   </h3>
                   <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <DetailField label="Box type" value={order.boxTypeName} />
-                    <DetailField label="Cardboard type" value={order.cardboardType} />
-                    <DetailField label="Cardboard colour" value={order.cardboardColour} />
+                    <DetailField
+                      label="Cardboard type"
+                      value={order.cardboardType}
+                    />
+                    <DetailField
+                      label="Cardboard colour"
+                      value={order.cardboardColour}
+                    />
                     <DetailField label="Box print" value={order.boxPrint} />
                     <DetailField label="Size" value={order.size} />
                     <DetailField label="Transport" value={order.transport} />
@@ -389,7 +519,8 @@ export default function AdminOrderDetailsPage() {
                     </h3>
                     <div className="mt-4 space-y-3">
                       {displayItems.map((item) => {
-                        const imageSrc = item.imageUrl ?? FALLBACK_PRODUCT_IMAGE;
+                        const imageSrc =
+                          item.imageUrl ?? FALLBACK_PRODUCT_IMAGE;
                         return (
                           <div
                             key={`${item.itemNo}-${item.name}`}
@@ -411,9 +542,12 @@ export default function AdminOrderDetailsPage() {
                               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                                 {item.itemNo}
                               </p>
-                              <p className="mt-1 text-sm font-bold text-gray-900">{item.name}</p>
+                              <p className="mt-1 text-sm font-bold text-gray-900">
+                                {item.name}
+                              </p>
                               <p className="mt-2 text-xs text-gray-600">
-                                {item.quantity} × {formatCurrency(item.unitPrice)}
+                                {item.quantity} ×{" "}
+                                {formatCurrency(item.unitPrice)}
                               </p>
                             </div>
                             <div className="flex flex-row items-center justify-between gap-4 sm:flex-col sm:items-end sm:gap-1">
@@ -491,6 +625,96 @@ export default function AdminOrderDetailsPage() {
                     </div>
                   </div>
                 ) : null}
+
+                <div className="rounded-xl border border-gray-200 p-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
+                    Send offer email
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Sends an offer email to{" "}
+                    <span className="font-semibold text-gray-900">
+                      {order.email || "—"}
+                    </span>{" "}
+                    with order details included.
+                  </p>
+
+                  {offerSenders.length === 0 ? (
+                    <p className="mt-4 text-sm text-amber-700">
+                      No sender addresses configured. Set SMTP and email env
+                      variables in `.env`.
+                    </p>
+                  ) : (
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <label
+                          htmlFor="offer-sender"
+                          className="text-xs font-semibold uppercase tracking-wide text-gray-500"
+                        >
+                          Send from
+                        </label>
+                        <select
+                          id="offer-sender"
+                          value={selectedSenderKey}
+                          disabled={isSendingOffer}
+                          onChange={(event) =>
+                            setSelectedSenderKey(
+                              event.target.value as OfferSenderOption["key"],
+                            )
+                          }
+                          className="mt-2 h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-my-red focus:outline-none focus:ring-2 focus:ring-my-red disabled:bg-gray-100"
+                        >
+                          {offerSenders.map((sender) => (
+                            <option key={sender.key} value={sender.key}>
+                              {sender.label} ({sender.email})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="offer-message"
+                          className="text-xs font-semibold uppercase tracking-wide text-gray-500"
+                        >
+                          Message
+                        </label>
+                        <textarea
+                          id="offer-message"
+                          rows={5}
+                          value={offerMessage}
+                          disabled={isSendingOffer}
+                          onChange={(event) => setOfferMessage(event.target.value)}
+                          className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-my-red focus:outline-none focus:ring-2 focus:ring-my-red disabled:bg-gray-100"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <button
+                          type="button"
+                          disabled={
+                            isSendingOffer ||
+                            !selectedSenderKey ||
+                            !order.email.trim()
+                          }
+                          onClick={() => void handleSendOffer()}
+                          className="inline-flex h-10 items-center justify-center rounded-md bg-my-red px-5 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isSendingOffer ? "Sending..." : "Send offer email"}
+                        </button>
+                        {offerSuccess ? (
+                          <p className="text-sm font-medium text-green-700">
+                            {offerSuccess}
+                          </p>
+                        ) : null}
+                        {offerError ? (
+                          <p className="text-sm font-medium text-red-700">
+                            {offerError}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>

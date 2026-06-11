@@ -17,8 +17,12 @@ vi.mock("../db/mysql", () => ({
 
 vi.mock("../services/email", () => ({
   isOrderEmailTransportConfigured: vi.fn(() => false),
+  getOrderOfferSenderOptions: vi.fn(() => [
+    { key: "orders", email: "orders@example.com", label: "Orders" },
+  ]),
   sendBusinessOrderConfirmationEmailToCustomer: vi.fn(async () => undefined),
   sendNewOrderNotificationEmail: vi.fn(async () => undefined),
+  sendOrderOfferEmailToCustomer: vi.fn(async () => undefined),
 }));
 
 vi.mock("../services/minio", () => ({

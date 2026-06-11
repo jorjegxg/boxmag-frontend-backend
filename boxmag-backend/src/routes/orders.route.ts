@@ -7,9 +7,13 @@ import {
   uploadOrderAttachmentToMinio,
 } from "../services/minio";
 import {
+  getOrderOfferSenderOptions,
   isOrderEmailTransportConfigured,
+  type NewOrderEmailParams,
+  type OrderOfferFromKey,
   sendBusinessOrderConfirmationEmailToCustomer,
   sendNewOrderNotificationEmail,
+  sendOrderOfferEmailToCustomer,
 } from "../services/email";
 import {
   MAX_ORDER_ATTACHMENT_BYTES,
@@ -138,6 +142,7 @@ type OrderListRow = RowDataPacket & {
   size_type: string;
   transport: string;
   quantity: number;
+  ftl?: number | null;
   attachment_name: string | null;
   attachment_object_name: string | null;
   attachment_url: string | null;
@@ -157,11 +162,23 @@ type OrderListRow = RowDataPacket & {
   first_name: string;
   surname: string;
   company_name: string;
+  vat_number?: string | null;
   email: string;
   phone: string;
+  address?: string | null;
+  postcode?: string | null;
   city: string;
   country: string;
+  create_account?: number | null;
+  consent_phone?: number | null;
+  consent_email?: number | null;
 };
+
+const ALLOWED_OFFER_FROM_KEYS = new Set<OrderOfferFromKey>([
+  "info",
+  "b2b",
+  "orders",
+]);
 
 function centsToAmount(value: number | null): number | null {
   if (value == null) return null;
@@ -241,6 +258,68 @@ function buildAttachmentContentDisposition(
   const asciiFallback =
     fileName.replace(/[^\x20-\x7E]/g, "_").trim() || "attachment";
   return `${dispositionType}; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
+}
+
+function mapOrderRowToEmailParams(row: OrderListRow): NewOrderEmailParams {
+  return {
+    orderId: row.id,
+    customerName:
+      [row.first_name, row.surname].filter(Boolean).join(" ").trim() ||
+      row.company_name ||
+      "Unknown customer",
+    customerEmail: row.email,
+    companyName: row.company_name ?? "",
+    vatNumber: row.vat_number ?? null,
+    customerPhone: row.phone ?? "",
+    customerAddress: row.address ?? "",
+    customerPostcode: row.postcode ?? "",
+    customerCity: row.city ?? "",
+    customerCountry: row.country ?? "",
+    createAccount: Boolean(row.create_account),
+    consentPhone: Boolean(row.consent_phone),
+    consentEmail: Boolean(row.consent_email),
+    cardboardType: row.cardboard_type,
+    cardboardColour: row.cardboard_colour,
+    boxPrint: row.box_print,
+    lengthMm: row.length_mm,
+    widthMm: row.width_mm,
+    heightMm: row.height_mm,
+    sizeType: row.size_type,
+    transport: row.transport,
+    quantity: row.quantity,
+    ftl: Boolean(row.ftl),
+    attachmentName: row.attachment_name,
+    attachmentObjectName: row.attachment_object_name,
+    attachmentUrl: row.attachment_url,
+    boxTypeName: row.box_type_name,
+    message: row.message ?? "",
+    items: parseCartItemsJson(row.items_json),
+    priceBreakdown: buildPriceBreakdown(row),
+  };
+}
+
+async function loadOrderRowById(
+  orderId: number,
+): Promise<OrderListRow | null> {
+  const [rows] = await mysqlPool.query<OrderListRow[]>(
+    `SELECT o.id, o.box_type_name, o.cardboard_type, o.cardboard_colour, o.box_print,
+            o.length_mm, o.width_mm, o.height_mm, o.size_type, o.transport, o.ftl,
+            o.quantity, o.attachment_name, o.attachment_object_name, o.attachment_url,
+            o.message, o.items_json, o.status,
+            o.payment_status, o.total_amount_cents, o.subtotal_cents,
+            o.vat_percent, o.vat_cents, o.shipping_cents, o.shipping_method,
+            o.shipping_eta, o.currency, o.created_at,
+            c.first_name, c.surname, c.company_name, c.vat_number, c.email, c.phone,
+            c.address, c.postcode, c.city, c.country,
+            c.create_account, c.consent_phone, c.consent_email
+     FROM orders o
+     LEFT JOIN contacts c ON c.order_id = o.id
+     WHERE o.id = ?
+     LIMIT 1`,
+    [orderId],
+  );
+
+  return rows[0] ?? null;
 }
 
 function buildPriceBreakdown(row: OrderListRow) {
@@ -336,6 +415,99 @@ ordersRouter.get("/", async (req, res) => {
     res.status(500).json({
       ok: false,
       message: "Failed to load orders",
+    });
+  }
+});
+
+ordersRouter.get("/offer-senders", (_req, res) => {
+  res.json({
+    ok: true,
+    data: getOrderOfferSenderOptions(),
+  });
+});
+
+ordersRouter.post("/:orderId/send-offer", async (req, res) => {
+  const orderId = Number(req.params.orderId);
+  const body = (req.body ?? {}) as {
+    fromKey?: unknown;
+    message?: unknown;
+  };
+  const fromKeyRaw = toRequiredString(body.fromKey);
+  const fromKey = fromKeyRaw as OrderOfferFromKey | null;
+  const offerMessage = toOptionalString(body.message);
+
+  if (!Number.isInteger(orderId) || orderId <= 0) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid order id",
+    });
+    return;
+  }
+
+  if (!fromKey || !ALLOWED_OFFER_FROM_KEYS.has(fromKey)) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid sender address",
+    });
+    return;
+  }
+
+  if (!isOrderEmailTransportConfigured()) {
+    res.status(503).json({
+      ok: false,
+      message: "Email transport is not configured",
+    });
+    return;
+  }
+
+  const senderOptions = getOrderOfferSenderOptions();
+  if (!senderOptions.some((option) => option.key === fromKey)) {
+    res.status(400).json({
+      ok: false,
+      message: "Selected sender address is not configured",
+    });
+    return;
+  }
+
+  try {
+    const row = await loadOrderRowById(orderId);
+    if (!row) {
+      res.status(404).json({
+        ok: false,
+        message: "Order not found",
+      });
+      return;
+    }
+
+    const customerEmail = row.email?.trim();
+    if (!customerEmail) {
+      res.status(400).json({
+        ok: false,
+        message: "Order has no customer email",
+      });
+      return;
+    }
+
+    await sendOrderOfferEmailToCustomer({
+      ...mapOrderRowToEmailParams(row),
+      fromKey,
+      offerMessage,
+    });
+
+    const selectedSender = senderOptions.find((option) => option.key === fromKey);
+    res.json({
+      ok: true,
+      data: {
+        orderId,
+        to: customerEmail,
+        from: selectedSender?.email ?? null,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to send order offer email", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to send offer email",
     });
   }
 });

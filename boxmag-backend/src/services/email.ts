@@ -886,3 +886,168 @@ export async function sendOrderConfirmationEmailToCustomer(
     ...(attachments.length > 0 ? { attachments } : {}),
   });
 }
+
+export type OrderOfferFromKey = "info" | "b2b" | "orders";
+
+export function resolveOrderOfferFromAddress(
+  key: OrderOfferFromKey,
+): string | null {
+  switch (key) {
+    case "info":
+      return env.infoEmail.trim() || null;
+    case "b2b":
+      return env.b2bEmail.trim() || null;
+    case "orders":
+      return env.emailOrdersFrom.trim() || null;
+    default:
+      return null;
+  }
+}
+
+export function getOrderOfferSenderOptions(): Array<{
+  key: OrderOfferFromKey;
+  email: string;
+  label: string;
+}> {
+  const options: Array<{
+    key: OrderOfferFromKey;
+    email: string;
+    label: string;
+  }> = [];
+
+  if (env.emailOrdersFrom.trim()) {
+    options.push({
+      key: "orders",
+      email: env.emailOrdersFrom.trim(),
+      label: "Orders",
+    });
+  }
+  if (env.infoEmail.trim()) {
+    options.push({
+      key: "info",
+      email: env.infoEmail.trim(),
+      label: "Info",
+    });
+  }
+  if (env.b2bEmail.trim()) {
+    options.push({
+      key: "b2b",
+      email: env.b2bEmail.trim(),
+      label: "B2B",
+    });
+  }
+
+  return options;
+}
+
+export async function sendOrderOfferEmailToCustomer(
+  params: NewOrderEmailParams & {
+    fromKey: OrderOfferFromKey;
+    offerMessage?: string | null;
+  },
+): Promise<void> {
+  if (!isOrderEmailTransportConfigured()) {
+    throw new Error("Email transport is not configured");
+  }
+
+  const fromAddress = resolveOrderOfferFromAddress(params.fromKey);
+  if (!fromAddress) {
+    throw new Error("Selected sender address is not configured");
+  }
+
+  const {
+    orderNumber,
+    sizeText,
+    productsTableText,
+    productsTableHtml,
+    priceBreakdownText,
+    priceBreakdownHtml,
+    displayMessage,
+  } = buildOrderEmailContent(params);
+
+  const offerMessage = params.offerMessage?.trim() ?? "";
+  const defaultOfferText =
+    "Va transmitem oferta pentru cererea dumneavoastra. Mai jos regasiti detaliile comenzii.";
+
+  await transporter.sendMail({
+    from: `"Boxmag" <${fromAddress}>`,
+    replyTo: fromAddress,
+    to: params.customerEmail,
+    subject: `Oferta ${orderNumber}`,
+    text: [
+      `Salut ${params.customerName || "client"},`,
+      "",
+      offerMessage || defaultOfferText,
+      "",
+      `Numar comanda: ${orderNumber}`,
+      `Companie: ${params.companyName || "—"}`,
+      `Tip cutie: ${params.boxTypeName}`,
+      `Tip carton: ${params.cardboardType}`,
+      `Culoare carton: ${params.cardboardColour}`,
+      `Tipar cutie: ${params.boxPrint}`,
+      `Dimensiune: ${sizeText}`,
+      `Transport: ${params.transport}`,
+      `Cantitate: ${params.quantity}`,
+      "",
+      "Produse:",
+      productsTableText,
+      priceBreakdownText ? `\n${priceBreakdownText}` : "",
+      displayMessage ? `\nMesaj client:\n${displayMessage}` : "",
+      "",
+      "Cu respect,",
+      "Echipa Boxmag",
+    ]
+      .filter((line, index, arr) => !(line === "" && arr[index - 1] === ""))
+      .join("\n"),
+    html: `
+      <div style="margin:0;background:#f5f7fb;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:720px;margin:0 auto;border-collapse:separate;border-spacing:0;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+          <tr>
+            <td style="background:#ef6b56;padding:18px 24px;">
+              <h1 style="margin:0;font-size:20px;line-height:1.3;color:#ffffff;font-weight:700;">Oferta ${escapeHtml(orderNumber)}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px;">
+              <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#374151;">
+                Salut ${escapeHtml(params.customerName || "client")},
+              </p>
+              <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;white-space:pre-line;">
+                ${escapeHtml(offerMessage || defaultOfferText)}
+              </p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;">
+                <tr><td style="padding:4px 0;color:#6b7280;width:160px;">Numar comanda</td><td style="padding:4px 0;font-weight:600;">${escapeHtml(orderNumber)}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Companie</td><td style="padding:4px 0;">${escapeHtml(params.companyName || "—")}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Tip cutie</td><td style="padding:4px 0;">${escapeHtml(params.boxTypeName)}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Tip carton</td><td style="padding:4px 0;">${escapeHtml(params.cardboardType)}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Culoare carton</td><td style="padding:4px 0;">${escapeHtml(params.cardboardColour)}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Tipar cutie</td><td style="padding:4px 0;">${escapeHtml(params.boxPrint)}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Dimensiune</td><td style="padding:4px 0;">${escapeHtml(sizeText)}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Transport</td><td style="padding:4px 0;">${escapeHtml(params.transport)}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Cantitate</td><td style="padding:4px 0;font-weight:600;">${params.quantity}</td></tr>
+              </table>
+
+              <h3 style="margin:0 0 8px;font-size:15px;color:#111827;">Produse</h3>
+              ${productsTableHtml}
+              ${priceBreakdownHtml}
+              ${
+                displayMessage
+                  ? `<div style="margin-top:20px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+                <p style="margin:0 0 8px;font-weight:700;">Mesaj client</p>
+                <p style="margin:0;white-space:pre-line;">${escapeHtml(displayMessage)}</p>
+              </div>`
+                  : ""
+              }
+
+              <p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#374151;">
+                Cu respect,<br />
+                <strong>Echipa Boxmag</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `,
+  });
+}
