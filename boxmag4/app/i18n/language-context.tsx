@@ -8,6 +8,7 @@ import { siteEmails } from "../../lib/site-emails";
 const emailPlaceholders: Record<string, string> = {
   infoEmail: siteEmails.info,
   b2bEmail: siteEmails.b2b,
+  ordersEmail: siteEmails.orders,
 };
 
 function interpolateEmails(text: string): string {

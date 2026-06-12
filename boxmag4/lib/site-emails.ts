@@ -2,6 +2,7 @@
 export const siteEmails = {
   info: process.env.NEXT_PUBLIC_INFO_EMAIL?.trim() ?? "",
   b2b: process.env.NEXT_PUBLIC_B2B_EMAIL?.trim() ?? "",
+  orders: process.env.NEXT_PUBLIC_ORDERS_EMAIL?.trim() ?? "",
   devDemoCustomer: process.env.DEV_DEMO_CUSTOMER_EMAIL?.trim() ?? "",
   devAutofill: process.env.DEV_AUTOFILL_EMAIL?.trim() ?? "",
 } as const;

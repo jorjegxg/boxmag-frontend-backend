@@ -53,13 +53,42 @@ export function Footer() {
               <FaFax />
               <span>+40 230 565 997</span>
             </Link>
-            <Link
-              href={`mailto:${siteEmails.info}`}
-              className="flex items-center gap-2 hover:underline"
-            >
-              <FaEnvelope />
-              <span>{siteEmails.info}</span>
-            </Link>
+            {siteEmails.info ? (
+              <Link
+                href={`mailto:${siteEmails.info}`}
+                className="flex items-center gap-2 hover:underline"
+              >
+                <FaEnvelope className="shrink-0" />
+                <span>
+                  <span className="font-semibold">{t("footer.emailInfo")}: </span>
+                  {siteEmails.info}
+                </span>
+              </Link>
+            ) : null}
+            {siteEmails.b2b ? (
+              <Link
+                href={`mailto:${siteEmails.b2b}`}
+                className="flex items-center gap-2 hover:underline"
+              >
+                <FaEnvelope className="shrink-0" />
+                <span>
+                  <span className="font-semibold">{t("footer.emailB2b")}: </span>
+                  {siteEmails.b2b}
+                </span>
+              </Link>
+            ) : null}
+            {siteEmails.orders ? (
+              <Link
+                href={`mailto:${siteEmails.orders}`}
+                className="flex items-center gap-2 hover:underline"
+              >
+                <FaEnvelope className="shrink-0" />
+                <span>
+                  <span className="font-semibold">{t("footer.emailOrders")}: </span>
+                  {siteEmails.orders}
+                </span>
+              </Link>
+            ) : null}
           </div>
 
           {/* Our company */}
