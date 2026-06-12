@@ -121,6 +121,8 @@
   "checkout.cartEmpty": "Der Warenkorb ist leer.",
   "checkout.quantity": "Menge",
   "checkout.removeProduct": "Produkt entfernen",
+  "checkout.removedProduct": "{{name}} wurde entfernt ({{qty}} Stk.).",
+  "checkout.undoRemove": "Rückgängig",
   "checkout.aria.decreaseQuantity": "Menge verringern",
   "checkout.aria.increaseQuantity": "Menge erhöhen",
   "checkout.address.loading": "Ihre Adressen werden geladen...",

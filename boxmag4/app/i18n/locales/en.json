@@ -121,6 +121,8 @@
   "checkout.cartEmpty": "Cart is empty.",
   "checkout.quantity": "Quantity",
   "checkout.removeProduct": "Remove product",
+  "checkout.removedProduct": "{{name}} was removed ({{qty}} pcs).",
+  "checkout.undoRemove": "Undo",
   "checkout.aria.decreaseQuantity": "Decrease quantity",
   "checkout.aria.increaseQuantity": "Increase quantity",
   "checkout.address.loading": "Loading your addresses...",

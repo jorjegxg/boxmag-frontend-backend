@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FaArrowLeft } from "react-icons/fa";
@@ -108,6 +108,10 @@ function getShippingMethodDisplay(
   return { name: method.name, etaText: method.etaText };
 }
 
+function isDpdCarrierMethod(methodKey: string): boolean {
+  return methodKey === "standard" || methodKey === "express";
+}
+
 export default function CheckoutPage() {
   const { t } = useLanguage();
   const [addressType, setAddressType] = useState<"company" | "another">(
@@ -142,6 +146,7 @@ export default function CheckoutPage() {
   const cartSubtotal = useCartStore((s) => s.subtotal);
   const setCartItemQuantity = useCartStore((s) => s.setQuantity);
   const removeCartItem = useCartStore((s) => s.removeItem);
+  const restoreCartItem = useCartStore((s) => s.restoreItem);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [submitOrderMessage, setSubmitOrderMessage] = useState<string | null>(
     null,
@@ -513,6 +518,7 @@ export default function CheckoutPage() {
           cartItems={cartItems}
           setCartItemQuantity={setCartItemQuantity}
           removeCartItem={removeCartItem}
+          restoreCartItem={restoreCartItem}
           t={t}
         />
         <BottomPadding />
@@ -748,20 +754,6 @@ export default function CheckoutPage() {
         <h2 className="font-bold text-black text-base sm:text-lg mb-4 uppercase tracking-wide">
           {t("checkout.shippingMethod")}
         </h2>
-        {shippingMethod !== "own-transport" ? (
-          <div className="-mt-2 mb-4 flex items-center gap-3">
-            <p className="text-sm text-gray-600">
-              {t("checkout.shippingCarrierDpd")}
-            </p>
-            <Image
-              src="/logos/DPD_logo_redgrad_rgb.png"
-              alt="DPD"
-              width={88}
-              height={28}
-              className="h-6 w-auto object-contain"
-            />
-          </div>
-        ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {shippingMethods.map((method) => {
             const display = getShippingMethodDisplay(method, t);
@@ -795,9 +787,23 @@ export default function CheckoutPage() {
                   <span className="h-2.5 w-2.5 rounded-full bg-my-red" />
                 )}
               </span>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-bold text-black">{display.name}</p>
                 <p className="text-gray-500 text-sm mt-0.5">{display.etaText}</p>
+                {isDpdCarrierMethod(method.key) ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <p className="text-xs text-gray-600">
+                      {t("checkout.shippingCarrierDpd")}
+                    </p>
+                    <Image
+                      src="/logos/DPD_logo_redgrad_rgb.png"
+                      alt="DPD"
+                      width={88}
+                      height={28}
+                      className="h-5 w-auto object-contain"
+                    />
+                  </div>
+                ) : null}
                 <p className="font-bold text-black mt-2">
                   € {method.price.toFixed(2)}
                 </p>
@@ -990,18 +996,57 @@ function CheckoutProductColumn({
   );
 }
 
+const REMOVED_ITEM_UNDO_MS = 10000;
+
 function CheckoutProductDetails({
   cartItems,
   setCartItemQuantity,
   removeCartItem,
+  restoreCartItem,
   t,
 }: {
   cartItems: CartItem[];
   setCartItemQuantity: (itemNo: string, quantity: number) => void;
   removeCartItem: (itemNo: string) => void;
+  restoreCartItem: (item: CartItem) => void;
   t: (key: string) => string;
 }) {
-  if (cartItems.length === 0) {
+  const [removedItem, setRemovedItem] = useState<CartItem | null>(null);
+  const undoTimeoutRef = useRef<number | null>(null);
+
+  const clearRemovedItem = () => {
+    if (undoTimeoutRef.current != null) {
+      window.clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = null;
+    }
+    setRemovedItem(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (undoTimeoutRef.current != null) {
+        window.clearTimeout(undoTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleRemoveItem = (item: CartItem) => {
+    clearRemovedItem();
+    setRemovedItem(item);
+    removeCartItem(item.itemNo);
+    undoTimeoutRef.current = window.setTimeout(() => {
+      setRemovedItem(null);
+      undoTimeoutRef.current = null;
+    }, REMOVED_ITEM_UNDO_MS);
+  };
+
+  const handleUndoRemove = () => {
+    if (!removedItem) return;
+    restoreCartItem(removedItem);
+    clearRemovedItem();
+  };
+
+  if (cartItems.length === 0 && !removedItem) {
     return (
       <div className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-sm text-gray-600">
         {t("checkout.cartEmpty")}
@@ -1011,6 +1056,25 @@ function CheckoutProductDetails({
 
   return (
     <div className="space-y-4">
+      {removedItem ? (
+        <div
+          role="status"
+          className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p>
+            {t("checkout.removedProduct")
+              .replace("{{name}}", removedItem.name)
+              .replace("{{qty}}", String(removedItem.quantity))}
+          </p>
+          <button
+            type="button"
+            onClick={handleUndoRemove}
+            className="inline-flex shrink-0 items-center justify-center rounded-md bg-my-red px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-my-red/90"
+          >
+            {t("checkout.undoRemove")}
+          </button>
+        </div>
+      ) : null}
       {cartItems.map((item) => (
         <div
           key={item.itemNo}
@@ -1077,7 +1141,7 @@ function CheckoutProductDetails({
             </div>
             <button
               type="button"
-              onClick={() => removeCartItem(item.itemNo)}
+              onClick={() => handleRemoveItem(item)}
               className="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
             >
               <FaTrashAlt className="h-3.5 w-3.5" />

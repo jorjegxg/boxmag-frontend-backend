@@ -22,6 +22,7 @@ export type CartStoreType = {
   addProductToCart: (numberOfProducts: number) => void;
   addItem: (item: AddCartItemInput) => void;
   removeItem: (itemNo: string) => void;
+  restoreItem: (item: CartItem) => void;
   setQuantity: (itemNo: string, quantity: number) => void;
   clearCart: () => void;
 };
@@ -88,6 +89,20 @@ export const useCartStore = create<CartStoreType>()(
           return {
             items: nextItems,
             newCartItems: Math.max(0, state.newCartItems - removedQty),
+            totalItems: computeTotalItems(nextItems),
+            subtotal: computeSubtotal(nextItems),
+          };
+        });
+      },
+      restoreItem: (item) => {
+        set((state) => {
+          if (state.items.some((entry) => entry.itemNo === item.itemNo)) {
+            return state;
+          }
+          const nextItems = [...state.items, item];
+          return {
+            items: nextItems,
+            newCartItems: state.newCartItems + item.quantity,
             totalItems: computeTotalItems(nextItems),
             subtotal: computeSubtotal(nextItems),
           };

@@ -121,6 +121,8 @@
   "checkout.cartEmpty": "Coșul este gol.",
   "checkout.quantity": "Cantitate",
   "checkout.removeProduct": "Elimină produsul",
+  "checkout.removedProduct": "{{name}} a fost eliminat ({{qty}} buc.).",
+  "checkout.undoRemove": "Adaugă înapoi",
   "checkout.aria.decreaseQuantity": "Scade cantitatea",
   "checkout.aria.increaseQuantity": "Crește cantitatea",
   "checkout.address.loading": "Se încarcă adresele tale...",
