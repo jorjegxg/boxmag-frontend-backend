@@ -7,6 +7,7 @@ import { useLanguage } from "../i18n/language-context";
 import { FaCheck, FaShoppingCart } from "react-icons/fa";
 import { useCartStore } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
+import { getMinOrderUnitPrice, getShopPriceTiers } from "../constants/price-tiers";
 import { normalizeImageUrl } from "@/app/utils/normalize-image-url";
 
 type BoxType = {
@@ -267,7 +268,10 @@ function ShopPageContent() {
                   const imageUrl = boxType
                     ? resolvePrimaryImageUrl(backendBaseUrl, boxType.images)
                     : "/placeholders/box4.png";
-                  const firstPrice = product.prices[0];
+                  const shopPrices = getShopPriceTiers(product.prices);
+                  const firstPrice =
+                    shopPrices.find((price) => price.name === "300") ?? shopPrices[0];
+                  const unitPrice = getMinOrderUnitPrice(product.prices);
                   const size =
                     typeof product.internalDimensionsMM?.l === "number" &&
                     typeof product.internalDimensionsMM?.w === "number" &&
@@ -316,7 +320,7 @@ function ShopPageContent() {
                             addCartItem({
                               itemNo: product.itemNo,
                               name: product.productName,
-                              unitPrice: firstPrice?.withoutTax ?? 0,
+                              unitPrice,
                               quantity: MIN_ORDER_QTY,
                               imageUrl,
                             });

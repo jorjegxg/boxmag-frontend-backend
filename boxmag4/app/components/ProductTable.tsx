@@ -7,9 +7,14 @@ import { useLanguage } from "../i18n/language-context";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCartStore } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
+import {
+  getMinOrderUnitPrice,
+  getShopPriceTiers,
+  SHOP_PRICE_TIER_NAMES,
+} from "../constants/price-tiers";
 import { useNotification } from "../global/components/notification-center";
 
-const TABLE_COLUMN_COUNT = 15;
+const TABLE_COLUMN_COUNT = 14;
 
 export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
   const { t } = useLanguage();
@@ -137,7 +142,8 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
               const qtyToAdd = Number(product.amountQtyInPcs);
               const canAddToCart =
                 Number.isFinite(qtyToAdd) && qtyToAdd >= MIN_ORDER_QTY;
-              const basePrice = product.prices[0]?.withoutTax ?? 0;
+              const displayPrices = getShopPriceTiers(product.prices);
+              const basePrice = getMinOrderUnitPrice(product.prices);
               const isAnimated = animatedItemNo === product.itemNo;
 
               return (
@@ -161,11 +167,11 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                     {product.weightPieceGr} / {product.weightPalletKg}
                   </td>
 
-                  {Array.from({ length: 4 }).map((_, idx) => {
-                    const price = product.prices[idx];
+                  {SHOP_PRICE_TIER_NAMES.map((tierName) => {
+                    const price = displayPrices.find((tier) => tier.name === tierName);
                     return (
                       <td
-                        key={idx}
+                        key={tierName}
                         className="whitespace-nowrap px-3 py-2 text-center"
                       >
                         {price ? (
@@ -324,7 +330,7 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
           <th rowSpan={2} className="whitespace-nowrap px-3 py-2 text-left">
             {t("productTable.weight")}
           </th>
-          <th colSpan={4} className="px-3 py-2 text-center">
+          <th colSpan={3} className="px-3 py-2 text-center">
             {t("productTable.price")}
           </th>
           <th rowSpan={2} className="min-w-[220px] px-3 py-2 text-center">
@@ -338,9 +344,8 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
           <th>L</th>
           <th>W</th>
           <th>H</th>
-          <th className="px-3 py-2 text-center">&lt; 100 pcs</th>
-          <th className="px-3 py-2 text-center">&lt; 300 pcs</th>
-          <th className="px-3 py-2 text-center">&lt; 500 pcs</th>
+          <th className="px-3 py-2 text-center">{t("productTable.priceTier300")}</th>
+          <th className="px-3 py-2 text-center">{t("productTable.priceTier500")}</th>
           <th className="px-3 py-2 text-center">{t("productTable.palletPcs")}</th>
         </tr>
       </thead>

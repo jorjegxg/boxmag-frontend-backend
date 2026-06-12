@@ -8,7 +8,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 120, w: 85, h: 160 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -26,7 +25,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 125, w: 80, h: 160 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -44,7 +42,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 124, w: 80, h: 160 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -62,7 +59,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 120, w: 84, h: 180 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -80,7 +76,6 @@ export const products: Product[] = [
     qualityCardboard: "1.20E-21",
     palletDimensionsCM: { l: 120, w: 80, h: 180 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -98,7 +93,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 140, w: 80, h: 160 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -116,7 +110,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 128, w: 80, h: 160 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -134,7 +127,6 @@ export const products: Product[] = [
     qualityCardboard: "1.20E-21",
     palletDimensionsCM: { l: 120, w: 80, h: 180 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -152,7 +144,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 120, w: 85, h: 180 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -170,7 +161,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 120, w: 90, h: 160 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -188,7 +178,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 120, w: 80, h: 160 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -206,7 +195,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 280, w: 88, h: 132 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -224,7 +212,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 120, w: 80, h: 160 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -242,7 +229,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 120, w: 82, h: 160 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -260,7 +246,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 123, w: 80, h: 160 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },
@@ -278,7 +263,6 @@ export const products: Product[] = [
     qualityCardboard: "1.21B-31",
     palletDimensionsCM: { l: 120, w: 80, h: 160 },
     prices: [
-      { name: "100", withoutTax: 0.84, withTax: 1.0 },
       { name: "300", withoutTax: 0.84, withTax: 1.0 },
       { name: "500", withoutTax: 0.84, withTax: 1.0 },
       { name: "Pallet", withoutTax: 0.84, withTax: 1.0 },

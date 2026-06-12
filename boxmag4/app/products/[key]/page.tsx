@@ -8,6 +8,7 @@ import { B2b } from "../../global/components/b2b";
 import { NewsletterSubscribe } from "../../global/components/newsletter-subscribe";
 import { useCartStore } from "../../stores/cart_store";
 import { MIN_ORDER_QTY } from "../../constants/order";
+import { getMinOrderUnitPrice, getShopPriceTiers } from "../../constants/price-tiers";
 import { FaCheck } from "react-icons/fa";
 import { normalizeImageUrl } from "@/app/utils/normalize-image-url";
 
@@ -90,19 +91,21 @@ function ProductByKeyPageContent() {
   };
 
   const applyProductSelection = (product: BoxTypeProductApi, normalizedImageUrls: string[]) => {
-    const firstPrice = Array.isArray(product.prices) ? product.prices[0] : undefined;
+    const apiPrices = Array.isArray(product.prices) ? product.prices : [];
+    const shopPrices = getShopPriceTiers(apiPrices);
+    const firstPrice =
+      shopPrices.find((price) => price.name === "300") ?? shopPrices[0];
+    const minUnitPrice = getMinOrderUnitPrice(apiPrices);
 
     setProductName(String(product.productName ?? ""));
     setItemNo(String(product.itemNo ?? ""));
     setSizeLabel(formatSizeLabel(product));
     setImageUrls(normalizedImageUrls.length > 0 ? normalizedImageUrls : ["/placeholders/box4.png"]);
-    setSelectedProductPrices(Array.isArray(product.prices) ? product.prices : []);
+    setSelectedProductPrices(shopPrices);
     setFirstWithTax(
       firstPrice && typeof firstPrice.withTax === "number" ? firstPrice.withTax : null,
     );
-    setFirstWithoutTax(
-      firstPrice && typeof firstPrice.withoutTax === "number" ? firstPrice.withoutTax : null,
-    );
+    setFirstWithoutTax(Number.isFinite(minUnitPrice) ? minUnitPrice : null);
     setSelectedImage(0);
   };
 

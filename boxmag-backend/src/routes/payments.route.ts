@@ -66,6 +66,19 @@ function toRequiredString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+const VAT_NUMBER_REGEX = /^([A-Z]{2})?[A-Z0-9]{2,12}$/;
+
+function normalizeVatNumber(value: string): string {
+  return value.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function parseVatNumber(value: unknown): string | null {
+  const raw = toRequiredString(value);
+  if (!raw) return null;
+  const normalized = normalizeVatNumber(raw);
+  return VAT_NUMBER_REGEX.test(normalized) ? normalized : null;
+}
+
 function toNonNegativeNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
     return value;
@@ -244,6 +257,7 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
   const attachmentPayload = parseAttachmentPayload(payload.attachment);
   const vatPercent =
     vatPercentRaw != null ? vatPercentRaw : env.taxPercent ?? 0;
+  const vatNumber = parseVatNumber(payload.vatNumber);
 
   if (
     !email ||
@@ -251,12 +265,13 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
     cartItems.length === 0 ||
     !address ||
     !shippingName ||
-    shippingPrice == null
+    shippingPrice == null ||
+    !vatNumber
   ) {
     res.status(400).json({
       ok: false,
       message:
-        "Invalid checkout payload. Provide email, address, shipping and at least one cart item.",
+        "Invalid checkout payload. Provide email, VAT number, address, shipping and at least one cart item.",
     });
     return;
   }
@@ -402,7 +417,7 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
         address.lastName,
         address.companyName ||
           `${address.firstName} ${address.lastName}`.trim(),
-        toRequiredString(payload.vatNumber),
+        vatNumber,
         email,
         address.phone || "N/A",
         address.address,

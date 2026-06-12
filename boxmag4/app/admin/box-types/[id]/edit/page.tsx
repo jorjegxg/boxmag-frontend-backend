@@ -12,7 +12,13 @@ type EditablePrice = {
   withoutTax: number;
 };
 
-const FIXED_PRICE_NAMES = ["<100", "<300", "<500", "Pallet"] as const;
+const FIXED_PRICE_NAMES = ["300", "500", "Pallet"] as const;
+
+const PRICE_TIER_LABELS: Record<(typeof FIXED_PRICE_NAMES)[number], string> = {
+  "300": "< 300 buc",
+  "500": "< 500 buc",
+  Pallet: "Palet",
+};
 
 type EditableProduct = {
   id?: number;
@@ -777,7 +783,7 @@ export default function EditBoxTypePage() {
                               >
                                 <td className="w-1 whitespace-nowrap px-2 py-1">
                                   <span className="inline-flex h-8 items-center px-1 text-xs font-medium text-gray-700">
-                                    {FIXED_PRICE_NAMES[priceIndex]}
+                                    {PRICE_TIER_LABELS[FIXED_PRICE_NAMES[priceIndex]]}
                                   </span>
                                 </td>
                                 <td className="px-2 py-1">
@@ -919,17 +925,29 @@ function createEmptyProduct(): EditableProduct {
     palletDimensionsCM: { l: 0, w: 0, h: 0 },
     weightPieceGr: 0,
     weightPalletKg: 0,
-    amountQtyInPcs: 0,
+    amountQtyInPcs: 100,
     palletPcs: 0,
     prices: normalizePrices([]),
   };
 }
 
 function normalizePrices(prices: EditablePrice[]): EditablePrice[] {
-  return FIXED_PRICE_NAMES.map((name, index) => ({
-    id: prices[index]?.id,
+  const byName = new Map<string, EditablePrice>();
+  for (const price of prices) {
+    const compact = price.name.trim().toLowerCase().replace(/\s/g, "");
+    const normalizedName =
+      compact === "100" || compact === "<100" || compact === "under100"
+        ? "300"
+        : price.name.trim();
+    if (!byName.has(normalizedName)) {
+      byName.set(normalizedName, { ...price, name: normalizedName });
+    }
+  }
+
+  return FIXED_PRICE_NAMES.map((name) => ({
+    id: byName.get(name)?.id,
     name,
-    withoutTax: Number(prices[index]?.withoutTax ?? 0),
+    withoutTax: Number(byName.get(name)?.withoutTax ?? 0),
   }));
 }
 

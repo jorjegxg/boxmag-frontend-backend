@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FaMapMarkerAlt, FaPhoneAlt, FaFax, FaEnvelope } from "react-icons/fa";
+import { FaMapMarkerAlt, FaPhoneAlt, FaFax, FaEnvelope, FaGlobe } from "react-icons/fa";
 import { FaFacebookF, FaInstagram } from "react-icons/fa6";
 import { useLanguage } from "../../i18n/language-context";
 import { siteEmails } from "../../../lib/site-emails";
@@ -89,6 +89,18 @@ export function Footer() {
                 </span>
               </Link>
             ) : null}
+            <a
+              href="https://rekopackaging.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 hover:underline"
+            >
+              <FaGlobe className="shrink-0" />
+              <span>
+                <span className="font-semibold">{t("footer.presentationWebsite")}: </span>
+                rekopackaging.com
+              </span>
+            </a>
           </div>
 
           {/* Our company */}

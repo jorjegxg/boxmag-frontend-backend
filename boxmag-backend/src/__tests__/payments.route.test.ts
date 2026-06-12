@@ -61,6 +61,7 @@ describe("payments routes", () => {
           price: 30,
         },
         vatPercent: 21,
+        vatNumber: "RO12345678",
         address: {
           firstName: "Jane",
           lastName: "Doe",
@@ -76,6 +77,42 @@ describe("payments routes", () => {
     expect(response.status).toBe(400);
     expect(response.body.ok).toBe(false);
     expect(response.body.message).toContain("Minimum order quantity");
+  });
+
+  it("returns 400 when VAT number is missing or invalid", async () => {
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({
+        email: "buyer@example.com",
+        cartItems: [
+          {
+            itemNo: "STD-001",
+            name: "Standard Box",
+            unitPrice: 10,
+            quantity: 100,
+          },
+        ],
+        shipping: {
+          name: "Standard",
+          etaText: "3-5 days",
+          price: 30,
+        },
+        vatPercent: 21,
+        address: {
+          firstName: "Jane",
+          lastName: "Doe",
+          companyName: "Demo SRL",
+          phone: "799000000",
+          address: "Str Test 1",
+          postcode: "725400",
+          city: "Radauti",
+          country: "RO",
+        },
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(response.body.message).toContain("VAT number");
   });
 
   it("returns 400 when payload misses required checkout fields", async () => {

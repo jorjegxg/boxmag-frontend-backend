@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Product } from "../types/product";
 import { MIN_ORDER_QTY } from "../constants/order";
+import { clampToMinOrderQty, getShopPriceTiers } from "../constants/price-tiers";
 
 type TableStoreType = {
   products: Product[];
@@ -31,7 +32,14 @@ const useTableEComStore = create<TableStoreType>((set) => ({
       }
 
       const mapped = (payload.data as Array<any>).map((row) => {
-        const prices = Array.isArray(row.prices) ? row.prices : [];
+        const rawPrices = Array.isArray(row.prices) ? row.prices : [];
+        const prices = getShopPriceTiers(
+          rawPrices.map((p: any) => ({
+            name: String(p.name ?? ""),
+            withoutTax: Number(p.withoutTax ?? 0),
+            withTax: Number(p.withTax ?? Number(p.withoutTax ?? 0) * taxMultiplier),
+          })),
+        );
         return {
           itemNo: String(row.itemNo ?? ""),
           name: String(row.productName ?? ""),
@@ -47,15 +55,11 @@ const useTableEComStore = create<TableStoreType>((set) => ({
             w: Number(row.palletDimensionsCM?.w ?? 0),
             h: Number(row.palletDimensionsCM?.h ?? 0),
           },
-          prices: prices.map((p: any) => ({
-            name: String(p.name ?? ""),
-            withoutTax: Number(p.withoutTax ?? 0),
-            withTax: Number((Number(p.withoutTax ?? 0) * taxMultiplier).toFixed(2)),
-          })),
+          prices,
           weightPieceGr: Number(row.weightPieceGr ?? 0),
           weightPalletKg: Number(row.weightPalletKg ?? 0),
-          amountQtyInPcs: Math.max(MIN_ORDER_QTY, Number(row.amountQtyInPcs ?? 0)),
-          defaultAmountQtyInPcs: Math.max(MIN_ORDER_QTY, Number(row.amountQtyInPcs ?? 0)),
+          amountQtyInPcs: clampToMinOrderQty(Number(row.amountQtyInPcs ?? 0)),
+          defaultAmountQtyInPcs: clampToMinOrderQty(Number(row.amountQtyInPcs ?? 0)),
           palletPcs: Number(row.palletPcs ?? 0),
         } satisfies Product;
       });

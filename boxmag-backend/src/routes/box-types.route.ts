@@ -5,6 +5,12 @@ import { env } from "../config/env";
 import { mysqlPool } from "../db/mysql";
 import { optimizeUploadedBoxImage } from "../services/image-optimize";
 import { uploadBoxImageToMinio } from "../services/minio";
+import { MIN_ORDER_QTY } from "../constants/order";
+import {
+  clampToMinOrderQty,
+  filterShopPrices,
+  isRemovedPriceTier,
+} from "../constants/price-tiers";
 
 type BoxTypeRow = RowDataPacket & {
   id: number;
@@ -435,10 +441,10 @@ boxTypesRouter.get("/:id/products", async (req, res) => {
         },
         weightPieceGr: Number(row.weight_piece_gr),
         weightPalletKg: Number(row.weight_pallet_kg),
-        amountQtyInPcs: row.amount_qty_in_pcs,
+        amountQtyInPcs: clampToMinOrderQty(row.amount_qty_in_pcs),
         palletPcs: row.pallet_pcs,
         imageUrl: primaryImageUrl,
-        prices: pricesByProductId.get(row.id) ?? [],
+        prices: filterShopPrices(pricesByProductId.get(row.id) ?? []),
       })),
     });
   } catch (error) {
@@ -529,10 +535,21 @@ boxTypesRouter.put("/:id/products", async (req, res) => {
         });
         return;
       }
+      if (isRemovedPriceTier(price.name)) {
+        continue;
+      }
       normalizedPrices.push({
         name: price.name,
         withoutTax: price.withoutTax,
       });
+    }
+
+    if (product.amountQtyInPcs < MIN_ORDER_QTY) {
+      res.status(400).json({
+        ok: false,
+        message: `Minimum order quantity is ${MIN_ORDER_QTY} pcs per product`,
+      });
+      return;
     }
 
     normalizedProducts.push({

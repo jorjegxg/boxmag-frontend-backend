@@ -208,7 +208,7 @@ export function Shop2ProductsTable() {
               <td className="border border-[#d9d9d9] px-2 py-3 text-center">{row.w}</td>
               <td className="border border-[#d9d9d9] px-2 py-3 text-center">{row.h}</td>
               <td className="border border-[#d9d9d9] px-2 py-3 text-center">{row.bundlePacking}</td>
-              {["100", "300", "500", "Pallet"].map((priceName) => {
+              {["300", "500", "Pallet"].map((priceName) => {
                 const price = getPriceByName(row.prices, priceName);
                 return (
                   <td
@@ -236,7 +236,7 @@ export function Shop2ProductsTable() {
                         ? addCartItem({
                             itemNo: row.itemNo,
                             name: row.name,
-                            unitPrice: getPriceByName(row.prices, "100")?.withoutTax ?? 0,
+                            unitPrice: getPriceByName(row.prices, "300")?.withoutTax ?? 0,
                             quantity: qtyToAdd,
                           })
                         : undefined

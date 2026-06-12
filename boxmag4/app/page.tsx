@@ -330,7 +330,7 @@ function ProducersBanner() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              rekopackaging.com
+              REKOPACKAGING
             </a>{" "}
             · Since 1993
           </span>

@@ -50,6 +50,10 @@ type CheckoutShippingInformationProps = {
   isLoggedIn: boolean;
   guestEmail: string;
   setGuestEmail: Dispatch<SetStateAction<string>>;
+  vatNumber: string;
+  vatNumberError: boolean;
+  vatFormatError: boolean;
+  onVatNumberChange: (value: string) => void;
 };
 
 export function CheckoutShippingInformation({
@@ -66,6 +70,10 @@ export function CheckoutShippingInformation({
   isLoggedIn,
   guestEmail,
   setGuestEmail,
+  vatNumber,
+  vatNumberError,
+  vatFormatError,
+  onVatNumberChange,
 }: CheckoutShippingInformationProps) {
   const { t } = useLanguage();
   const hasSavedAddresses = addresses.length > 0;
@@ -183,6 +191,38 @@ export function CheckoutShippingInformation({
         </div>
       </div>
       <div className="mt-4 space-y-2">
+        <div>
+          <label
+            htmlFor="checkout-vatNumber"
+            className="mb-1 block text-sm font-semibold text-gray-800"
+          >
+            {t("checkout.vatNumber")} *
+          </label>
+          <input
+            id="checkout-vatNumber"
+            type="text"
+            value={vatNumber}
+            onChange={(e) => onVatNumberChange(e.target.value)}
+            className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red ${
+              vatNumberError || vatFormatError
+                ? "border-red-500 bg-red-50"
+                : "border-gray-300"
+            }`}
+            placeholder={t("checkout.placeholder.vatNumber")}
+            autoComplete="off"
+            required
+          />
+          {vatNumberError ? (
+            <p className="mt-1 text-sm text-red-600">
+              {t("checkout.error.vatNumberRequired")}
+            </p>
+          ) : null}
+          {!vatNumberError && vatFormatError ? (
+            <p className="mt-1 text-sm text-red-600">
+              {t("checkout.error.vatNumberInvalid")}
+            </p>
+          ) : null}
+        </div>
         {!isLoggedIn ? (
           <div>
             <input

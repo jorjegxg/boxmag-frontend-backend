@@ -12,14 +12,6 @@ const PARTNER_LOGOS = [
     href: "https://www.dpd.com/ro/en/",
   },
   {
-    src: "/logos/idO6xMl5EH_logos.jpeg",
-    alt: "Magazin de încredere — Trusted.ro",
-    width: 64,
-    height: 64,
-    className: "h-10 md:h-12 w-auto",
-    href: "https://trusted.ro/",
-  },
-  {
     src: "/logos/Stripe wordmark - Blurple - Small.png",
     alt: "Stripe",
     width: 120,

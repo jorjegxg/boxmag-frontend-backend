@@ -45,10 +45,15 @@ type ManualAddress = {
 
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const GUEST_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SHIPPING_METHODS_CACHE_KEY = "boxmag.checkout.shippingMethods.v1";
+const SHIPPING_METHODS_CACHE_KEY = "boxmag.checkout.shippingMethods.v2";
 const SHIPPING_METHODS_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 const CART_QTY_STEP = 10;
 const MAX_ATTACHMENT_BYTES = 18 * 1024 * 1024;
+const VAT_NUMBER_REGEX = /^([A-Z]{2})?[A-Z0-9]{2,12}$/i;
+
+function normalizeVatNumber(value: string): string {
+  return value.trim().toUpperCase().replace(/\s+/g, "");
+}
 
 type ShippingMethodOption = {
   id: number;
@@ -61,6 +66,15 @@ type ShippingMethodOption = {
 };
 
 const FALLBACK_SHIPPING_METHODS: ShippingMethodOption[] = [
+  {
+    id: 0,
+    key: "own-transport",
+    name: "Own transport",
+    etaText: "Customer pickup / own carrier",
+    price: 0,
+    isActive: true,
+    sortOrder: 0,
+  },
   {
     id: 1,
     key: "standard",
@@ -81,6 +95,19 @@ const FALLBACK_SHIPPING_METHODS: ShippingMethodOption[] = [
   },
 ];
 
+function getShippingMethodDisplay(
+  method: ShippingMethodOption,
+  t: (key: string) => string,
+): { name: string; etaText: string } {
+  if (method.key === "own-transport") {
+    return {
+      name: t("checkout.shipping.ownTransport"),
+      etaText: t("checkout.shipping.ownTransportEta"),
+    };
+  }
+  return { name: method.name, etaText: method.etaText };
+}
+
 export default function CheckoutPage() {
   const { t } = useLanguage();
   const [addressType, setAddressType] = useState<"company" | "another">(
@@ -97,6 +124,9 @@ export default function CheckoutPage() {
   );
   const [accountEmail, setAccountEmail] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
+  const [vatNumber, setVatNumber] = useState("");
+  const [vatNumberError, setVatNumberError] = useState(false);
+  const [vatFormatError, setVatFormatError] = useState(false);
   const [manualAddress, setManualAddress] = useState<ManualAddress>({
     firstName: "",
     lastName: "",
@@ -215,16 +245,26 @@ export default function CheckoutPage() {
     const loadAddresses = async () => {
       setIsLoadingAddresses(true);
       try {
-        const response = await fetch(
-          `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
-          { signal: controller.signal },
-        );
-        const payload = (await response.json()) as {
+        const [addressesResponse, profileResponse] = await Promise.all([
+          fetch(
+            `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
+            { signal: controller.signal },
+          ),
+          fetch(
+            `${backendBaseUrl}/api/auth/profile?email=${encodeURIComponent(loggedInEmail)}`,
+            { signal: controller.signal },
+          ),
+        ]);
+        const payload = (await addressesResponse.json()) as {
           ok?: boolean;
           data?: UserAddress[];
         };
+        const profilePayload = (await profileResponse.json()) as {
+          ok?: boolean;
+          data?: { vatNumber?: string };
+        };
         if (
-          !response.ok ||
+          !addressesResponse.ok ||
           payload.ok !== true ||
           !Array.isArray(payload.data)
         ) {
@@ -237,6 +277,11 @@ export default function CheckoutPage() {
           payload.data[0] ??
           null;
         setSelectedAddressId(defaultAddress?.id ?? null);
+        if (profileResponse.ok && profilePayload.ok === true && profilePayload.data) {
+          setVatNumber((prev) =>
+            prev || String(profilePayload.data?.vatNumber ?? "").trim(),
+          );
+        }
       } catch (_error) {
         if (controller.signal.aborted) return;
         setAddresses([]);
@@ -325,6 +370,24 @@ export default function CheckoutPage() {
       return;
     }
 
+    const normalizedVat = normalizeVatNumber(vatNumber);
+    if (!normalizedVat) {
+      setVatNumberError(true);
+      setVatFormatError(false);
+      setSubmitOrderMessage(t("checkout.error.vatNumberRequired"));
+      return;
+    }
+    if (!VAT_NUMBER_REGEX.test(normalizedVat)) {
+      setVatNumberError(false);
+      setVatFormatError(true);
+      setSubmitOrderMessage(t("checkout.error.vatNumberInvalid"));
+      return;
+    }
+    setVatNumberError(false);
+    setVatFormatError(false);
+
+    const shippingDisplay = getShippingMethodDisplay(selectedShippingMethod, t);
+
     setIsSubmittingOrder(true);
     setSubmitOrderMessage(t("checkout.redirecting"));
     try {
@@ -345,8 +408,8 @@ export default function CheckoutPage() {
               imageUrl: item.imageUrl ?? null,
             })),
             shipping: {
-              name: selectedShippingMethod?.name ?? "N/A",
-              etaText: selectedShippingMethod?.etaText ?? "",
+              name: shippingDisplay.name,
+              etaText: shippingDisplay.etaText,
               price: orderShipping,
             },
             vatPercent: taxPercent,
@@ -360,7 +423,7 @@ export default function CheckoutPage() {
               city: activeAddress.city,
               country: activeAddress.country,
             },
-            vatNumber: null,
+            vatNumber: normalizedVat,
             consentPhone: true,
             consentEmail: true,
             acceptedTerms: true,
@@ -467,6 +530,16 @@ export default function CheckoutPage() {
           isLoggedIn={accountEmail.length > 0}
           guestEmail={guestEmail}
           setGuestEmail={setGuestEmail}
+          vatNumber={vatNumber}
+          vatNumberError={vatNumberError}
+          vatFormatError={vatFormatError}
+          onVatNumberChange={(value) => {
+            setVatNumber(value);
+            if (value.trim().length > 0) {
+              setVatNumberError(false);
+              setVatFormatError(false);
+            }
+          }}
         />
         <BottomPadding />
         <ShippingMethod
@@ -675,20 +748,24 @@ export default function CheckoutPage() {
         <h2 className="font-bold text-black text-base sm:text-lg mb-4 uppercase tracking-wide">
           {t("checkout.shippingMethod")}
         </h2>
-        <div className="-mt-2 mb-4 flex items-center gap-3">
-          <p className="text-sm text-gray-600">
-            {t("checkout.shippingCarrierDpd")}
-          </p>
-          <Image
-            src="/logos/DPD_logo_redgrad_rgb.png"
-            alt="DPD"
-            width={88}
-            height={28}
-            className="h-6 w-auto object-contain"
-          />
-        </div>
+        {shippingMethod !== "own-transport" ? (
+          <div className="-mt-2 mb-4 flex items-center gap-3">
+            <p className="text-sm text-gray-600">
+              {t("checkout.shippingCarrierDpd")}
+            </p>
+            <Image
+              src="/logos/DPD_logo_redgrad_rgb.png"
+              alt="DPD"
+              width={88}
+              height={28}
+              className="h-6 w-auto object-contain"
+            />
+          </div>
+        ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {shippingMethods.map((method) => (
+          {shippingMethods.map((method) => {
+            const display = getShippingMethodDisplay(method, t);
+            return (
             <button
               key={method.id}
               type="button"
@@ -719,14 +796,15 @@ export default function CheckoutPage() {
                 )}
               </span>
               <div>
-                <p className="font-bold text-black">{method.name}</p>
-                <p className="text-gray-500 text-sm mt-0.5">{method.etaText}</p>
+                <p className="font-bold text-black">{display.name}</p>
+                <p className="text-gray-500 text-sm mt-0.5">{display.etaText}</p>
                 <p className="font-bold text-black mt-2">
                   € {method.price.toFixed(2)}
                 </p>
               </div>
             </button>
-          ))}
+          );
+          })}
         </div>
       </div>
     );
