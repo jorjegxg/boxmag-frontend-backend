@@ -73,9 +73,12 @@ export default function ShopPage() {
 
             <div className="mt-10 text-center">
               <p className="text-my-red text-xl lg:text-2xl font-extrabold">
+                <span className="font-semibold text-my-red">
+                  {t("shop.sloganPrefix")}
+                </span>{" "}
                 BOXFIX<sup className="align-top text-sm lg:text-base">®</sup>{" "}
                 <span className="font-semibold text-my-red">
-                  {t("shop.slogan")}
+                  {t("shop.sloganSuffix")}
                 </span>
               </p>
               <p className="mt-5 text-gray-700 max-w-4xl mx-auto leading-relaxed text-sm lg:text-base">
