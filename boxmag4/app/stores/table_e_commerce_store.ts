@@ -10,6 +10,8 @@ type TableStoreType = {
   increment: (itemNo: string) => void;
   decrement: (itemNo: string) => void;
   setAmountQty: (itemNo: string, value: number) => void;
+  addPallet: (itemNo: string) => void;
+  removePallet: (itemNo: string) => void;
   resetAmountQty: (itemNo: string) => void;
 };
 const incrementNumber = 20;
@@ -98,6 +100,31 @@ const useTableEComStore = create<TableStoreType>((set) => ({
           ? {
               ...el,
               amountQtyInPcs: Math.max(MIN_ORDER_QTY, Math.round(value)),
+            }
+          : el
+      ),
+    })),
+  addPallet: (itemNo: string) =>
+    set((state) => ({
+      products: state.products.map((el) =>
+        el.itemNo == itemNo && el.palletPcs > 0
+          ? {
+              ...el,
+              amountQtyInPcs: el.amountQtyInPcs + el.palletPcs,
+            }
+          : el
+      ),
+    })),
+  removePallet: (itemNo: string) =>
+    set((state) => ({
+      products: state.products.map((el) =>
+        el.itemNo == itemNo && el.palletPcs > 0
+          ? {
+              ...el,
+              amountQtyInPcs: Math.max(
+                MIN_ORDER_QTY,
+                el.amountQtyInPcs - el.palletPcs,
+              ),
             }
           : el
       ),

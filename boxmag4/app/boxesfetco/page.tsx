@@ -106,9 +106,6 @@ export default function ShopPage() {
           <h1 className="text-xl font-bold text-black sm:text-2xl mb-3 pb-3 border-b border-black/10">
             {t("shop.products")}
           </h1>
-          <p className="mb-6 text-sm text-gray-600 w-full">
-            {t("shop.productsHint")}
-          </p>
           <div className="-mx-4 sm:mx-0 min-w-0">
             <ProductsTable />
           </div>
