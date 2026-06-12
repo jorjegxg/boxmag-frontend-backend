@@ -4,6 +4,14 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { OrderAttachmentActions } from "../../../global/components/order-attachment-actions";
+import {
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_OPTIONS,
+  formatAdminDate,
+  formatOrderStatus,
+  formatPaymentStatus,
+  type OrderStatusValue,
+} from "../../admin-ro";
 
 type OrderItem = {
   itemNo: string;
@@ -56,14 +64,6 @@ type OfferSenderOption = {
   email: string;
   label: string;
 };
-
-type OrderStatusValue = "new" | "in progress" | "completed" | "done";
-const ORDER_STATUS_OPTIONS: OrderStatusValue[] = [
-  "new",
-  "in progress",
-  "completed",
-  "done",
-];
 
 const FALLBACK_PRODUCT_IMAGE = "/b2b/boxes/box.png";
 const DEFAULT_OFFER_MESSAGE =
@@ -170,7 +170,7 @@ export default function AdminOrderDetailsPage() {
   useEffect(() => {
     if (!Number.isInteger(orderId) || orderId <= 0) {
       setOrder(null);
-      setLoadError("Invalid order id.");
+      setLoadError("ID comandă invalid.");
       setIsLoading(false);
       return;
     }
@@ -192,7 +192,7 @@ export default function AdminOrderDetailsPage() {
           data?: AdminOrderDetails;
         };
         if (!response.ok || payload.ok !== true || !payload.data) {
-          throw new Error(payload.message ?? "Failed to load order details");
+          throw new Error(payload.message ?? "Nu s-au putut încărca detaliile comenzii");
         }
         setOrder(payload.data);
       } catch (error) {
@@ -201,7 +201,7 @@ export default function AdminOrderDetailsPage() {
         setLoadError(
           error instanceof Error
             ? error.message
-            : "Failed to load order details",
+            : "Nu s-au putut încărca detaliile comenzii",
         );
       } finally {
         if (!controller.signal.aborted) {
@@ -298,16 +298,18 @@ export default function AdminOrderDetailsPage() {
         data?: { to?: string; from?: string | null };
       };
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? "Failed to send offer email");
+        throw new Error(payload.message ?? "Nu s-a putut trimite emailul cu ofertă");
       }
       setOfferSuccess(
-        `Offer sent to ${payload.data?.to ?? order.email}${
-          payload.data?.from ? ` from ${payload.data.from}` : ""
+        `Ofertă trimisă către ${payload.data?.to ?? order.email}${
+          payload.data?.from ? ` de la ${payload.data.from}` : ""
         }.`,
       );
     } catch (error) {
       setOfferError(
-        error instanceof Error ? error.message : "Failed to send offer email",
+        error instanceof Error
+          ? error.message
+          : "Nu s-a putut trimite emailul cu ofertă",
       );
     } finally {
       setIsSendingOffer(false);
@@ -341,7 +343,7 @@ export default function AdminOrderDetailsPage() {
       setStatusError(
         error instanceof Error
           ? error.message
-          : "Failed to update order status",
+          : "Nu s-a putut actualiza statusul comenzii",
       );
     } finally {
       setIsUpdatingStatus(false);
@@ -359,7 +361,7 @@ export default function AdminOrderDetailsPage() {
       <section className="w-full bg-white px-6 pt-6 lg:px-20">
         <div className="mx-auto max-w-7xl text-xs uppercase tracking-wide text-gray-500 lg:text-sm">
           <Link href="/" className="hover:underline">
-            Home
+            Acasă
           </Link>
           <span className="mx-2">→</span>
           <Link href="/admin" className="hover:underline">
@@ -367,7 +369,7 @@ export default function AdminOrderDetailsPage() {
           </Link>
           <span className="mx-2">→</span>
           <span className="font-semibold text-gray-700">
-            {order ? order.orderNumber : `Order #${orderId}`}
+            {order ? order.orderNumber : `Comanda #${orderId}`}
           </span>
         </div>
       </section>
@@ -375,15 +377,15 @@ export default function AdminOrderDetailsPage() {
       <section className="w-full bg-white px-6 py-8 lg:px-20">
         <div className="mx-auto max-w-7xl overflow-hidden rounded-[28px] border border-black/15 bg-white">
           <div className="border-b border-gray-200 px-6 py-5 lg:px-8">
-            <h1 className="text-2xl font-bold text-gray-900">Order details</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Detalii comandă</h1>
             <p className="mt-1 text-sm text-gray-600">
-              Full order information from orders + contacts
+              Informații complete despre comandă
             </p>
           </div>
 
           <div className="space-y-6 p-6 lg:p-8">
             {isLoading ? (
-              <p className="text-sm text-gray-600">Loading order details...</p>
+              <p className="text-sm text-gray-600">Se încarcă detaliile comenzii...</p>
             ) : loadError ? (
               <div className="space-y-4">
                 <p className="text-sm font-medium text-red-700">{loadError}</p>
@@ -391,19 +393,19 @@ export default function AdminOrderDetailsPage() {
                   href="/admin"
                   className="text-sm font-semibold text-my-red hover:underline"
                 >
-                  Back to admin
+                  Înapoi la admin
                 </Link>
               </div>
             ) : !order ? (
               <div className="space-y-4">
                 <p className="text-sm font-medium text-red-700">
-                  Order not found.
+                  Comanda nu a fost găsită.
                 </p>
                 <Link
                   href="/admin"
                   className="text-sm font-semibold text-my-red hover:underline"
                 >
-                  Back to admin
+                  Înapoi la admin
                 </Link>
               </div>
             ) : (
@@ -414,7 +416,7 @@ export default function AdminOrderDetailsPage() {
                       {order.orderNumber}
                     </h2>
                     <p className="mt-1 text-sm text-gray-600">
-                      Placed on {new Date(order.createdAt).toLocaleString()}
+                      Plasată pe {formatAdminDate(order.createdAt)}
                     </p>
                   </div>
                   <button
@@ -422,14 +424,14 @@ export default function AdminOrderDetailsPage() {
                     onClick={() => router.push("/admin")}
                     className="inline-flex h-9 items-center rounded-md border border-gray-300 px-4 text-sm font-semibold text-gray-800 hover:bg-gray-50"
                   >
-                    Back to orders list
+                    Înapoi la lista de comenzi
                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 rounded-xl border border-gray-200 p-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <p className="text-xs font-semibold uppercase text-gray-500">
-                      Status
+                      Schimbă status
                     </p>
                     <select
                       value={selectedStatus}
@@ -443,7 +445,7 @@ export default function AdminOrderDetailsPage() {
                     >
                       {ORDER_STATUS_OPTIONS.map((option) => (
                         <option key={option} value={option}>
-                          {option}
+                          {ORDER_STATUS_LABELS[option]}
                         </option>
                       ))}
                     </select>
@@ -453,67 +455,71 @@ export default function AdminOrderDetailsPage() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold uppercase text-gray-500">
-                      Order status
+                      Status curent
                     </p>
                     <span
                       className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-bold uppercase ${statusBadgeClass(order.status)}`}
                     >
-                      {order.status}
+                      {formatOrderStatus(order.status)}
                     </span>
                   </div>
                   {order.paymentStatus ? (
                     <div>
                       <p className="text-xs font-semibold uppercase text-gray-500">
-                        Payment
+                        Plată
                       </p>
                       <span
                         className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-bold uppercase ${paymentBadgeClass(order.paymentStatus)}`}
                       >
-                        {order.paymentStatus}
+                        {formatPaymentStatus(order.paymentStatus)}
                       </span>
                     </div>
                   ) : null}
                   <DetailField
-                    label="Total quantity"
+                    label="Cantitate totală"
                     value={String(order.quantity)}
                   />
                 </div>
 
                 <div className="rounded-xl border border-gray-200 p-4">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                    Customer
+                    Client
                   </h3>
                   <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <DetailField label="Name" value={order.customerName} />
-                    <DetailField label="Company" value={order.companyName} />
+                    <DetailField label="Nume" value={order.customerName} />
+                    <DetailField label="Companie" value={order.companyName} />
                     <DetailField label="Email" value={order.email} />
-                    <DetailField label="Phone" value={order.phone} />
-                    <DetailField label="City" value={order.city} />
-                    <DetailField label="Country" value={order.country} />
+                    <DetailField label="Telefon" value={order.phone} />
+                    <DetailField label="Oraș" value={order.city} />
+                    <DetailField label="Țară" value={order.country} />
                   </div>
                 </div>
 
                 <div className="rounded-xl border border-gray-200 p-4">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                    Product specification
+                    Specificații produs
                   </h3>
                   <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <DetailField label="Box type" value={order.boxTypeName} />
+                    <DetailField label="Tip cutie" value={order.boxTypeName} />
                     <DetailField
-                      label="Cardboard type"
+                      label="Tip carton"
                       value={order.cardboardType}
                     />
                     <DetailField
-                      label="Cardboard colour"
+                      label="Culoare carton"
                       value={order.cardboardColour}
                     />
-                    <DetailField label="Box print" value={order.boxPrint} />
-                    <DetailField label="Size" value={order.size} />
+                    <DetailField label="Imprimare cutie" value={order.boxPrint} />
+                    <DetailField label="Dimensiune" value={order.size} />
                     <DetailField label="Transport" value={order.transport} />
                     <OrderAttachmentActions
                       orderId={order.id}
                       attachmentName={order.attachmentName}
                       hasAttachment={order.hasAttachment}
+                      label="Atașament"
+                      emptyText="Nu"
+                      openText="Deschide atașamentul"
+                      downloadText="Descarcă"
                     />
                   </div>
                 </div>
@@ -521,7 +527,7 @@ export default function AdminOrderDetailsPage() {
                 {hasDisplayItems ? (
                   <div className="rounded-xl border border-gray-200 p-4">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                      Items ({displayItems.length})
+                      Produse ({displayItems.length})
                     </h3>
                     <div className="mt-4 space-y-3">
                       {displayItems.map((item) => {
@@ -558,7 +564,7 @@ export default function AdminOrderDetailsPage() {
                             </div>
                             <div className="flex flex-row items-center justify-between gap-4 sm:flex-col sm:items-end sm:gap-1">
                               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                Line total
+                                Total linie
                               </p>
                               <p className="text-base font-bold text-gray-900">
                                 {formatCurrency(item.lineTotal)}
@@ -574,7 +580,7 @@ export default function AdminOrderDetailsPage() {
                 {order.priceBreakdown ? (
                   <div className="rounded-xl border border-gray-200 p-4">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                      Order total
+                      Total comandă
                     </h3>
                     <div className="mt-4 space-y-2 text-sm text-gray-700">
                       <div className="flex items-center justify-between">
@@ -585,7 +591,7 @@ export default function AdminOrderDetailsPage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span>
-                          VAT
+                          TVA
                           {order.priceBreakdown.vatPercent != null
                             ? ` (${order.priceBreakdown.vatPercent}%)`
                             : ""}
@@ -596,7 +602,7 @@ export default function AdminOrderDetailsPage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span>
-                          Shipping
+                          Livrare
                           {order.priceBreakdown.shippingMethod
                             ? ` (${order.priceBreakdown.shippingMethod}${
                                 order.priceBreakdown.shippingEta
@@ -624,7 +630,7 @@ export default function AdminOrderDetailsPage() {
                 {cleanCustomerMessage.trim().length > 0 ? (
                   <div className="rounded-xl border border-gray-200 p-4">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                      Customer message
+                      Mesaj client
                     </h3>
                     <div className="mt-3 whitespace-pre-line text-sm text-gray-700">
                       {cleanCustomerMessage}
@@ -635,20 +641,20 @@ export default function AdminOrderDetailsPage() {
                 {showOfferEmail ? (
                   <div className="rounded-xl border border-gray-200 p-4">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                      Send offer email
+                      Trimite email cu ofertă
                     </h3>
                     <p className="mt-2 text-sm text-gray-600">
-                      Sends an offer email to{" "}
+                      Trimite un email cu ofertă către{" "}
                       <span className="font-semibold text-gray-900">
                         {order.email || "—"}
-                      </span>{" "}
-                      with order details included.
+                      </span>
+                      , cu detaliile comenzii incluse.
                     </p>
 
                     {offerSenders.length === 0 ? (
                       <p className="mt-4 text-sm text-amber-700">
-                        No sender addresses configured. Set SMTP and email env
-                        variables in `.env`.
+                        Nu există adrese expeditor configurate. Setează SMTP și
+                        variabilele de email în `.env`.
                       </p>
                     ) : (
                       <div className="mt-4 space-y-4">
@@ -657,7 +663,7 @@ export default function AdminOrderDetailsPage() {
                             htmlFor="offer-sender"
                             className="text-xs font-semibold uppercase tracking-wide text-gray-500"
                           >
-                            Send from
+                            Trimite de la
                           </label>
                           <select
                             id="offer-sender"
@@ -683,7 +689,7 @@ export default function AdminOrderDetailsPage() {
                             htmlFor="offer-message"
                             className="text-xs font-semibold uppercase tracking-wide text-gray-500"
                           >
-                            Message
+                            Mesaj
                           </label>
                           <textarea
                             id="offer-message"
@@ -708,7 +714,9 @@ export default function AdminOrderDetailsPage() {
                             onClick={() => void handleSendOffer()}
                             className="inline-flex h-10 items-center justify-center rounded-md bg-my-red px-5 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            {isSendingOffer ? "Sending..." : "Send offer email"}
+                            {isSendingOffer
+                              ? "Se trimite..."
+                              : "Trimite email cu ofertă"}
                           </button>
                           {offerSuccess ? (
                             <p className="text-sm font-medium text-green-700">

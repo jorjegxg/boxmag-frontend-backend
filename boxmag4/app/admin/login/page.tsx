@@ -12,7 +12,9 @@ function AdminLoginForm() {
 
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(
-    configError ? "Admin password is not configured on the server." : null,
+    configError
+      ? "Parola de admin nu este configurată pe server."
+      : null,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -33,14 +35,16 @@ function AdminLoginForm() {
       };
 
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? "Login failed.");
+        throw new Error(payload.message ?? "Autentificare eșuată.");
       }
 
       router.replace(nextPath.startsWith("/admin") ? nextPath : "/admin");
       router.refresh();
     } catch (submitError) {
       setError(
-        submitError instanceof Error ? submitError.message : "Login failed.",
+        submitError instanceof Error
+          ? submitError.message
+          : "Autentificare eșuată.",
       );
     } finally {
       setIsSubmitting(false);
@@ -53,9 +57,9 @@ function AdminLoginForm() {
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
           Boxmag
         </p>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">Admin access</h1>
+        <h1 className="mt-2 text-2xl font-bold text-gray-900">Acces admin</h1>
         <p className="mt-2 text-sm text-gray-600">
-          Enter the admin password to continue.
+          Introdu parola de admin pentru a continua.
         </p>
 
         <form className="mt-6 space-y-4" onSubmit={(event) => void handleSubmit(event)}>
@@ -64,7 +68,7 @@ function AdminLoginForm() {
               htmlFor="admin-password"
               className="text-xs font-semibold uppercase tracking-wide text-gray-500"
             >
-              Password
+              Parolă
             </label>
             <input
               id="admin-password"
@@ -86,13 +90,13 @@ function AdminLoginForm() {
             disabled={isSubmitting || !password.trim()}
             className="inline-flex h-11 w-full items-center justify-center rounded-md bg-my-red px-5 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSubmitting ? "Signing in..." : "Sign in"}
+            {isSubmitting ? "Se autentifică..." : "Autentificare"}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-600">
           <Link href="/" className="font-medium text-my-red hover:underline">
-            Back to site
+            Înapoi la site
           </Link>
         </p>
       </div>
@@ -105,7 +109,7 @@ export default function AdminLoginPage() {
     <Suspense
       fallback={
         <div className="mx-auto max-w-md px-6 py-16 text-center text-sm text-gray-600">
-          Loading...
+          Se încarcă...
         </div>
       }
     >

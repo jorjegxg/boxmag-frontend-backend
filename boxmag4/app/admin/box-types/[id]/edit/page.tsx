@@ -144,7 +144,7 @@ export default function EditBoxTypePage() {
         setProductsError(
           error instanceof Error
             ? error.message
-            : "Failed to load box type products",
+            : "Nu s-au putut încărca produsele tipului de cutie",
         );
       } finally {
         if (!isCancelled) {
@@ -180,12 +180,12 @@ export default function EditBoxTypePage() {
 
     const trimmedTitle = title.trim();
     if (!trimmedTitle || images.length === 0) {
-      setSaveError("Name and at least one photo are required.");
+      setSaveError("Numele și cel puțin o fotografie sunt obligatorii.");
       return;
     }
     const primaryCount = images.filter((image) => image.isPrimary).length;
     if (primaryCount !== 1) {
-      setSaveError("Exactly one image must be set as primary.");
+      setSaveError("Exact o imagine trebuie setată ca principală.");
       return;
     }
 
@@ -217,7 +217,7 @@ export default function EditBoxTypePage() {
           !Array.isArray(uploadBody.data?.images) ||
           uploadBody.data.images.length === 0
         ) {
-          throw new Error(uploadBody.message ?? "Failed to upload image");
+          throw new Error(uploadBody.message ?? "Încărcarea imaginii a eșuat");
         }
         const startingIndex = nextImages.length;
         const uploaded = uploadBody.data.images
@@ -239,7 +239,7 @@ export default function EditBoxTypePage() {
         nextImages.length === 0 ||
         nextImages.filter((image) => image.isPrimary).length !== 1
       ) {
-        throw new Error("Image gallery must include exactly one primary image");
+        throw new Error("Galeria trebuie să includă exact o imagine principală");
       }
 
       const response = await fetch(
@@ -298,7 +298,9 @@ export default function EditBoxTypePage() {
       }
     } catch (error) {
       setSaveError(
-        error instanceof Error ? error.message : "Failed to save box type",
+        error instanceof Error
+          ? error.message
+          : "Nu s-a putut salva tipul de cutie",
       );
     } finally {
       setIsUploadingImage(false);
@@ -421,35 +423,35 @@ export default function EditBoxTypePage() {
       <section className="w-full bg-white px-6 lg:px-20 pt-6">
         <div className="max-w-7xl mx-auto text-xs lg:text-sm text-gray-500 uppercase tracking-wide">
           <Link href="/" className="hover:underline">
-            Home
+            Acasă
           </Link>{" "}
           <span className="mx-2">→</span>
           <Link href="/admin" className="hover:underline">
             Admin
           </Link>{" "}
           <span className="mx-2">→</span>
-          <span className="text-gray-700 font-semibold">Edit Box Type</span>
+          <span className="text-gray-700 font-semibold">Editare tip cutie</span>
         </div>
       </section>
 
       <section className="w-full bg-white px-6 lg:px-20 py-8">
         <div className="max-w-4xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
           <div className="bg-my-red w-full px-6 py-4 text-my-white">
-            <h1 className="text-lg font-bold">Edit Box Type</h1>
+            <h1 className="text-lg font-bold">Editare tip cutie</h1>
           </div>
 
           <div className="p-6 lg:p-8 space-y-6">
             {!Number.isInteger(boxTypeId) || boxTypeId <= 0 ? (
-              <p className="text-red-600">Invalid box type id.</p>
+              <p className="text-red-600">ID tip cutie invalid.</p>
             ) : null}
             {isLoadingBoxTypes ? (
-              <p className="text-gray-600">Loading box type...</p>
+              <p className="text-gray-600">Se încarcă tipul de cutie...</p>
             ) : null}
             {boxTypesError ? (
-              <p className="text-red-600">Failed to load: {boxTypesError}</p>
+              <p className="text-red-600">Eroare la încărcare: {boxTypesError}</p>
             ) : null}
             {showNotFound ? (
-              <p className="text-red-600">Box type not found.</p>
+              <p className="text-red-600">Tipul de cutie nu a fost găsit.</p>
             ) : null}
 
             {boxType ? (
@@ -462,16 +464,16 @@ export default function EditBoxTypePage() {
                     className="rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isUploadingImage
-                      ? "Uploading image..."
+                      ? "Se încarcă imaginea..."
                       : isSaving
-                        ? "Saving..."
-                        : "Save"}
+                        ? "Se salvează..."
+                        : "Salvează"}
                   </button>
                 </div>
 
                 <label className="flex flex-col gap-1.5">
                   <span className="text-sm font-semibold text-gray-800">
-                    Name
+                    Nume
                   </span>
                   <input
                     type="text"
@@ -492,14 +494,14 @@ export default function EditBoxTypePage() {
                     }
                     className="h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
                   >
-                    <option value="active">Active</option>
-                    <option value="draft">Draft</option>
+                    <option value="active">Activ</option>
+                    <option value="draft">Ciornă</option>
                   </select>
                 </label>
 
                 <label className="flex flex-col gap-1.5">
                   <span className="text-sm font-semibold text-gray-800">
-                    Photo Upload
+                    Încărcare fotografie
                   </span>
                   <input
                     type="file"
@@ -510,8 +512,8 @@ export default function EditBoxTypePage() {
                   />
                   <span className="text-xs text-gray-500">
                     {selectedImageFiles.length > 0
-                      ? `Selected ${selectedImageFiles.length} file(s). Save to upload and append to gallery.`
-                      : "Choose one or more files to append to the gallery."}
+                      ? `${selectedImageFiles.length} fișier(e) selectat(e). Salvează pentru a încărca și adăuga în galerie.`
+                      : "Alege unul sau mai multe fișiere pentru a le adăuga în galerie."}
                   </span>
                 </label>
 
@@ -523,7 +525,7 @@ export default function EditBoxTypePage() {
                     >
                       <img
                         src={image.url}
-                        alt={title || "Box type preview"}
+                        alt={title || "Previzualizare tip cutie"}
                         className="h-24 w-full rounded-md border border-gray-200 object-cover"
                       />
                       <div className="flex gap-2">
@@ -536,14 +538,14 @@ export default function EditBoxTypePage() {
                               : "border-gray-300 text-gray-700"
                           }`}
                         >
-                          {image.isPrimary ? "Primary" : "Set primary"}
+                          {image.isPrimary ? "Principală" : "Setează principală"}
                         </button>
                         <button
                           type="button"
                           onClick={() => removeImage(index)}
                           className="rounded border border-red-300 px-2 py-1 text-xs text-red-700"
                         >
-                          Remove
+                          Elimină
                         </button>
                       </div>
                     </div>
@@ -552,13 +554,13 @@ export default function EditBoxTypePage() {
 
                 <div className="rounded-xl border border-gray-200 p-4 space-y-3">
                   <h2 className="text-sm font-semibold text-gray-900">
-                    Box Type Products and Prices
+                    Produse și prețuri tip cutie
                   </h2>
                   <p className="text-xs text-gray-500">
-                    Save updates all products and prices for this box type.
+                    Salvarea actualizează toate produsele și prețurile pentru acest tip de cutie.
                   </p>
                   {isLoadingProducts ? (
-                    <p className="text-sm text-gray-600">Loading products...</p>
+                    <p className="text-sm text-gray-600">Se încarcă produsele...</p>
                   ) : null}
                   {productsError ? (
                     <p className="text-sm text-red-600">{productsError}</p>
@@ -570,7 +572,7 @@ export default function EditBoxTypePage() {
                     >
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-semibold text-gray-900">
-                          Product #{productIndex + 1}
+                          Produs #{productIndex + 1}
                         </h3>
                         <div className="flex items-center gap-2">
                           <button
@@ -581,7 +583,7 @@ export default function EditBoxTypePage() {
                             disabled={isSaving}
                             className="rounded-md border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
                           >
-                            Remove product
+                            Elimină produs
                           </button>
                         </div>
                       </div>
@@ -589,7 +591,7 @@ export default function EditBoxTypePage() {
                       <div className="rounded-lg border border-blue-200 bg-white p-3 space-y-3">
                         <div className="border-b border-blue-100 pb-2">
                           <h4 className="text-xs font-bold uppercase tracking-wide text-blue-700">
-                            Product details
+                            Detalii produs
                           </h4>
                         </div>
                         <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
@@ -602,7 +604,7 @@ export default function EditBoxTypePage() {
                                 itemNo: event.target.value,
                               }))
                             }
-                            placeholder="Item no"
+                            placeholder="Cod articol"
                             className="h-10 rounded-md border border-gray-300 px-2 text-sm"
                           />
                           <input
@@ -614,7 +616,7 @@ export default function EditBoxTypePage() {
                                 productName: event.target.value,
                               }))
                             }
-                            placeholder="Product name"
+                            placeholder="Nume produs"
                             className="h-10 rounded-md border border-gray-300 px-2 text-sm md:col-span-2"
                           />
                           <input
@@ -626,14 +628,14 @@ export default function EditBoxTypePage() {
                                 qualityCardboard: event.target.value,
                               }))
                             }
-                            placeholder="Quality cardboard"
+                            placeholder="Calitate carton"
                             className="h-10 rounded-md border border-gray-300 px-2 text-sm md:col-span-3"
                           />
                         </div>
 
                         <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
                           <div className="col-span-full -mb-1 mt-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                            Internal Dimensions (mm)
+                            Dimensiuni interne (mm)
                           </div>
                           <NumberField
                             label="L"
@@ -675,7 +677,7 @@ export default function EditBoxTypePage() {
                             }
                           />
                           <NumberField
-                            label="Weight Piece (gr)"
+                            label="Greutate bucată (gr)"
                             value={product.weightPieceGr}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
@@ -685,7 +687,7 @@ export default function EditBoxTypePage() {
                             }
                           />
                           <NumberField
-                            label="Weight Pallet (kg)"
+                            label="Greutate palet (kg)"
                             value={product.weightPalletKg}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
@@ -695,10 +697,10 @@ export default function EditBoxTypePage() {
                             }
                           />
                           <div className="col-span-full -mb-1 mt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                            Pallet Sizes in cm
+                            Dimensiuni palet (cm)
                           </div>
                           <NumberField
-                            label="Pallet L"
+                            label="Palet L"
                             value={product.palletDimensionsCM.l}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
@@ -711,7 +713,7 @@ export default function EditBoxTypePage() {
                             }
                           />
                           <NumberField
-                            label="Pallet W"
+                            label="Palet W"
                             value={product.palletDimensionsCM.w}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
@@ -724,7 +726,7 @@ export default function EditBoxTypePage() {
                             }
                           />
                           <NumberField
-                            label="Pallet H"
+                            label="Palet H"
                             value={product.palletDimensionsCM.h}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
@@ -737,7 +739,7 @@ export default function EditBoxTypePage() {
                             }
                           />
                           <NumberField
-                            label="Pallet pcs"
+                            label="Bucăți pe palet"
                             value={product.palletPcs}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
@@ -752,19 +754,19 @@ export default function EditBoxTypePage() {
                       <div className="rounded-lg border border-amber-200 bg-white overflow-hidden">
                         <div className="border-b border-amber-100 bg-amber-50 px-3 py-2">
                           <h4 className="text-xs font-bold uppercase tracking-wide text-amber-700">
-                            Prices
+                            Prețuri
                           </h4>
                         </div>
                         <table className="min-w-full text-xs">
                           <thead className="bg-amber-50/60">
                             <tr>
                               <th className="w-1 whitespace-nowrap px-2 py-1 text-left">
-                                Price name
+                                Nume preț
                               </th>
                               <th className="px-2 py-1 text-left">
-                                Without tax (EUR)
+                                Fără TVA (EUR)
                               </th>
-                              <th className="px-2 py-1 text-left">{`With tax (EUR, +${taxPercent}% VAT)`}</th>
+                              <th className="px-2 py-1 text-left">{`Cu TVA (EUR, +${taxPercent}%)`}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -819,10 +821,10 @@ export default function EditBoxTypePage() {
                             className="ml-auto rounded-md bg-my-red px-2 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {isUploadingImage
-                              ? "Uploading image..."
+                              ? "Se încarcă imaginea..."
                               : isSaving
-                                ? "Saving..."
-                                : "Save product"}
+                                ? "Se salvează..."
+                                : "Salvează produs"}
                           </button>
                         </div>
                       </div>
@@ -833,7 +835,7 @@ export default function EditBoxTypePage() {
                     onClick={addProduct}
                     className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                   >
-                    Add product
+                    Adaugă produs
                   </button>
                 </div>
 
@@ -847,16 +849,16 @@ export default function EditBoxTypePage() {
                     className="rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isUploadingImage
-                      ? "Uploading image..."
+                      ? "Se încarcă imaginea..."
                       : isSaving
-                        ? "Saving..."
-                        : "Save"}
+                        ? "Se salvează..."
+                        : "Salvează"}
                   </button>
                   <Link
                     href="/admin"
                     className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
                   >
-                    Cancel
+                    Anulează
                   </Link>
                 </div>
               </>
@@ -869,10 +871,10 @@ export default function EditBoxTypePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
             <h2 className="text-base font-semibold text-gray-900">
-              Remove product?
+              Elimini produsul?
             </h2>
             <p className="mt-2 text-sm text-gray-700">
-              Are you sure you want to remove this product?
+              Ești sigur că vrei să elimini acest produs?
             </p>
             <label className="mt-4 flex items-center gap-2 text-sm text-gray-700">
               <input
@@ -882,7 +884,7 @@ export default function EditBoxTypePage() {
                   setDontShowRemoveProductConfirmAgain(event.target.checked)
                 }
               />
-              <span>Don&apos;t show this again</span>
+              <span>Nu mai afișa acest mesaj</span>
             </label>
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
@@ -890,7 +892,7 @@ export default function EditBoxTypePage() {
                 onClick={cancelRemoveProduct}
                 className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
               >
-                Cancel
+                Anulează
               </button>
               <button
                 type="button"
@@ -898,7 +900,7 @@ export default function EditBoxTypePage() {
                 disabled={isSaving}
                 className="rounded-md bg-my-red px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSaving ? "Saving..." : "Remove and save"}
+                {isSaving ? "Se salvează..." : "Elimină și salvează"}
               </button>
             </div>
           </div>

@@ -89,7 +89,10 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
       });
     } catch (error) {
       set({
-        boxTypesError: error instanceof Error ? error.message : "Failed to load box types",
+        boxTypesError:
+          error instanceof Error
+            ? error.message
+            : "Nu s-au putut încărca tipurile de cutii",
         isLoadingBoxTypes: false,
       });
     }
@@ -129,7 +132,10 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
       }));
     } catch (error) {
       set({
-        saveError: error instanceof Error ? error.message : "Failed to create box type",
+        saveError:
+          error instanceof Error
+            ? error.message
+            : "Nu s-a putut crea tipul de cutie",
         isSavingBoxType: false,
       });
     }
@@ -218,7 +224,10 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
 
     } catch (error) {
       set({
-        saveError: error instanceof Error ? error.message : "Failed to update box type",
+        saveError:
+          error instanceof Error
+            ? error.message
+            : "Nu s-a putut actualiza tipul de cutie",
         isSavingBoxType: false,
       });
     }
@@ -248,7 +257,9 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
     } catch (error) {
       set({
         saveError:
-          error instanceof Error ? error.message : "Failed to deactivate box type",
+          error instanceof Error
+            ? error.message
+            : "Nu s-a putut dezactiva tipul de cutie",
         statusUpdatingBoxId: null,
       });
       throw error;
@@ -280,7 +291,9 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
     } catch (error) {
       set({
         saveError:
-          error instanceof Error ? error.message : "Failed to activate box type",
+          error instanceof Error
+            ? error.message
+            : "Nu s-a putut activa tipul de cutie",
         statusUpdatingBoxId: null,
       });
       throw error;

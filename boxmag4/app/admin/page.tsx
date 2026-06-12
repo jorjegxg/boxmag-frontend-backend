@@ -8,6 +8,11 @@ import {
   useAdminBoxTypesStore,
 } from "./use-admin-box-types-store";
 import { useNotification } from "../global/components/notification-center";
+import {
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_OPTIONS,
+  type OrderStatusValue,
+} from "./admin-ro";
 
 function sendDebugLog({
   hypothesisId,
@@ -72,13 +77,6 @@ type AdminShippingMethod = {
   isActive: boolean;
   sortOrder: number;
 };
-type OrderStatusValue = "new" | "in progress" | "completed" | "done";
-const ORDER_STATUS_OPTIONS: OrderStatusValue[] = [
-  "new",
-  "in progress",
-  "completed",
-  "done",
-];
 const ORDERS_PAGE_SIZE = 10;
 
 export default function AdminPage() {
@@ -149,7 +147,7 @@ export default function AdminPage() {
     }> = [];
 
     if (!trimmedTitle) {
-      setFormError("Please fill in Title.");
+      setFormError("Completează titlul.");
       return;
     }
 
@@ -181,7 +179,7 @@ export default function AdminPage() {
           !Array.isArray(uploadBody.data?.images) ||
           uploadBody.data.images.length === 0
         ) {
-          throw new Error(uploadBody.message ?? "Failed to upload image");
+          throw new Error(uploadBody.message ?? "Încărcarea imaginii a eșuat");
         }
 
         uploadedImages = uploadBody.data.images
@@ -201,7 +199,7 @@ export default function AdminPage() {
         setFormError(
           error instanceof Error
             ? error.message
-            : "Failed to upload image. Please try again.",
+            : "Încărcarea imaginii a eșuat. Încearcă din nou.",
         );
         setIsUploadingImage(false);
         return;
@@ -210,7 +208,7 @@ export default function AdminPage() {
     }
 
     if (uploadedImages.length === 0) {
-      setFormError("Please choose a Box Image before adding.");
+      setFormError("Alege o imagine pentru cutie înainte de adăugare.");
       return;
     }
 
@@ -255,7 +253,7 @@ export default function AdminPage() {
         setOrdersPage(1);
       } catch (error) {
         setOrdersError(
-          error instanceof Error ? error.message : "Failed to load orders",
+          error instanceof Error ? error.message : "Nu s-au putut încărca comenzile",
         );
       } finally {
         setIsLoadingOrders(false);
@@ -291,7 +289,7 @@ export default function AdminPage() {
       setShippingMethodsError(
         error instanceof Error
           ? error.message
-          : "Failed to load shipping methods",
+          : "Nu s-au putut încărca metodele de livrare",
       );
     } finally {
       setIsLoadingShippingMethods(false);
@@ -355,7 +353,7 @@ export default function AdminPage() {
       setOrdersError(
         error instanceof Error
           ? error.message
-          : "Failed to update order status",
+          : "Nu s-a putut actualiza statusul comenzii",
       );
     } finally {
       setUpdatingOrderId(null);
@@ -374,7 +372,7 @@ export default function AdminPage() {
       !Number.isFinite(sortOrderValue)
     ) {
       setShippingMethodsError(
-        "Please fill all shipping method fields correctly.",
+        "Completează corect toate câmpurile metodei de livrare.",
       );
       return;
     }
@@ -414,7 +412,7 @@ export default function AdminPage() {
       setShippingMethodsError(
         error instanceof Error
           ? error.message
-          : "Failed to create shipping method",
+          : "Nu s-a putut crea metoda de livrare",
       );
     }
   };
@@ -451,13 +449,13 @@ export default function AdminPage() {
       await loadShippingMethods();
       notify({
         type: "success",
-        message: `Shipping method "${method.name}" saved.`,
+        message: `Metoda de livrare „${method.name}” a fost salvată.`,
       });
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : "Failed to update shipping method";
+          : "Nu s-a putut actualiza metoda de livrare";
       setShippingMethodsError(message);
       notify({ type: "error", message });
     } finally {
@@ -470,7 +468,7 @@ export default function AdminPage() {
     shippingMethodName: string,
   ) => {
     const confirmed = window.confirm(
-      `Delete shipping method "${shippingMethodName}"? This action cannot be undone.`,
+      `Ștergi metoda de livrare „${shippingMethodName}”? Această acțiune nu poate fi anulată.`,
     );
     if (!confirmed) return;
 
@@ -494,13 +492,13 @@ export default function AdminPage() {
       await loadShippingMethods();
       notify({
         type: "success",
-        message: `Shipping method "${shippingMethodName}" deleted.`,
+        message: `Metoda de livrare „${shippingMethodName}” a fost ștearsă.`,
       });
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : "Failed to delete shipping method";
+          : "Nu s-a putut șterge metoda de livrare";
       setShippingMethodsError(message);
       notify({ type: "error", message });
     } finally {
@@ -581,7 +579,7 @@ export default function AdminPage() {
       <section className="w-full bg-white px-6 lg:px-20 pt-6">
         <div className="max-w-7xl mx-auto text-xs lg:text-sm text-gray-500 uppercase tracking-wide">
           <Link href="/" className="hover:underline">
-            Home
+            Acasă
           </Link>{" "}
           <span className="mx-2">→</span>
           <span className="text-gray-700 font-semibold">Admin</span>
@@ -591,8 +589,8 @@ export default function AdminPage() {
       <section className="w-full bg-white px-6 lg:px-20 py-8">
         <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
           <SectionTitle
-            title="Orders"
-            subtitle="Data loaded from orders + contacts"
+            title="Comenzi"
+            subtitle="Date încărcate din comenzi și contacte"
           />
 
           <div className="p-6 lg:p-8 space-y-6">
@@ -602,19 +600,19 @@ export default function AdminPage() {
                   <thead className="bg-my-light-gray2 text-gray-800">
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold">
-                        Order ID
+                        ID comandă
                       </th>
                       <th className="px-4 py-3 text-left font-semibold">
-                        Customer
+                        Client
                       </th>
                       <th className="px-4 py-3 text-left font-semibold">
-                        Company
+                        Companie
                       </th>
                       <th className="px-4 py-3 text-left font-semibold">
-                        Box Type
+                        Tip cutie
                       </th>
                       <th className="px-4 py-3 text-left font-semibold">
-                        Quantity
+                        Cantitate
                       </th>
                       <th className="px-4 py-3 text-left font-semibold">
                         Status
@@ -625,21 +623,21 @@ export default function AdminPage() {
                     {isLoadingOrders ? (
                       <tr className="border-t border-gray-200">
                         <td className="px-4 py-3 text-gray-500" colSpan={6}>
-                          Loading orders...
+                          Se încarcă comenzile...
                         </td>
                       </tr>
                     ) : null}
                     {!isLoadingOrders && ordersError ? (
                       <tr className="border-t border-gray-200">
                         <td className="px-4 py-3 text-red-600" colSpan={6}>
-                          Failed to load orders: {ordersError}
+                          Eroare la încărcarea comenzilor: {ordersError}
                         </td>
                       </tr>
                     ) : null}
                     {!isLoadingOrders && !ordersError && orders.length === 0 ? (
                       <tr className="border-t border-gray-200">
                         <td className="px-4 py-3 text-gray-500" colSpan={6}>
-                          No orders found.
+                          Nu există comenzi.
                         </td>
                       </tr>
                     ) : null}
@@ -680,7 +678,7 @@ export default function AdminPage() {
             {!isLoadingOrders && !ordersError && orders.length > 0 ? (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <span className="text-sm text-gray-600">
-                  Showing{" "}
+                  Afișare{" "}
                   <span className="font-semibold">
                     {(safeOrdersPage - 1) * ORDERS_PAGE_SIZE + 1}
                   </span>
@@ -688,8 +686,8 @@ export default function AdminPage() {
                   <span className="font-semibold">
                     {Math.min(safeOrdersPage * ORDERS_PAGE_SIZE, orders.length)}
                   </span>{" "}
-                  of <span className="font-semibold">{orders.length}</span>{" "}
-                  orders
+                  din <span className="font-semibold">{orders.length}</span>{" "}
+                  comenzi
                 </span>
                 <div className="flex items-center gap-2">
                   <button
@@ -700,11 +698,11 @@ export default function AdminPage() {
                     disabled={safeOrdersPage <= 1}
                     className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Previous
+                    Înapoi
                   </button>
                   <span className="text-sm text-gray-600">
-                    Page <span className="font-semibold">{safeOrdersPage}</span>{" "}
-                    of <span className="font-semibold">{totalOrdersPages}</span>
+                    Pagina <span className="font-semibold">{safeOrdersPage}</span>{" "}
+                    din <span className="font-semibold">{totalOrdersPages}</span>
                   </span>
                   <button
                     type="button"
@@ -716,7 +714,7 @@ export default function AdminPage() {
                     disabled={safeOrdersPage >= totalOrdersPages}
                     className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Next
+                    Înainte
                   </button>
                 </div>
               </div>
@@ -728,8 +726,8 @@ export default function AdminPage() {
       <section className="w-full bg-white px-6 lg:px-20 pb-8">
         <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden mb-8">
           <SectionTitle
-            title="Shipping Methods"
-            subtitle="Checkout methods managed from admin"
+            title="Metode de livrare"
+            subtitle="Metode de checkout gestionate din admin"
             collapsible
             isExpanded={isShippingExpanded}
             onToggle={handleToggleShipping}
@@ -738,31 +736,31 @@ export default function AdminPage() {
             <div className="p-6 lg:p-8 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                 <Field
-                  label="Key"
+                  label="Cheie"
                   placeholder="standard"
                   value={newShippingKey}
                   onChange={setNewShippingKey}
                 />
                 <Field
-                  label="Name"
-                  placeholder="Standard Delivery"
+                  label="Nume"
+                  placeholder="Livrare standard"
                   value={newShippingName}
                   onChange={setNewShippingName}
                 />
                 <Field
-                  label="ETA Text"
-                  placeholder="Estimated 7-10 days"
+                  label="Text ETA"
+                  placeholder="Estimat 7-10 zile"
                   value={newShippingEtaText}
                   onChange={setNewShippingEtaText}
                 />
                 <Field
-                  label="Price"
+                  label="Preț"
                   placeholder="25"
                   value={newShippingPrice}
                   onChange={setNewShippingPrice}
                 />
                 <Field
-                  label="Sort Order"
+                  label="Ordine sortare"
                   placeholder="1"
                   value={newShippingSortOrder}
                   onChange={setNewShippingSortOrder}
@@ -777,7 +775,7 @@ export default function AdminPage() {
                     className="h-4 w-4"
                   />
                   <span className="text-sm font-semibold text-gray-800 pb-2">
-                    Active
+                    Activă
                   </span>
                 </label>
               </div>
@@ -787,7 +785,7 @@ export default function AdminPage() {
                   onClick={() => void handleAddShippingMethod()}
                   className="bg-my-yellow hover:bg-my-yellow-bright text-black font-semibold px-5 py-2.5 rounded-lg transition-colors"
                 >
-                  Add shipping method
+                  Adaugă metodă de livrare
                 </button>
               </div>
               <div className="rounded-xl border border-gray-200 overflow-hidden">
@@ -796,25 +794,25 @@ export default function AdminPage() {
                     <thead className="bg-my-light-gray2 text-gray-800">
                       <tr>
                         <th className="px-4 py-3 text-left font-semibold">
-                          Key
+                          Cheie
                         </th>
                         <th className="px-4 py-3 text-left font-semibold">
-                          Name
+                          Nume
                         </th>
                         <th className="px-4 py-3 text-left font-semibold">
                           ETA
                         </th>
                         <th className="px-4 py-3 text-left font-semibold">
-                          Price
+                          Preț
                         </th>
                         <th className="px-4 py-3 text-left font-semibold">
-                          Sort
+                          Sortare
                         </th>
                         <th className="px-4 py-3 text-left font-semibold">
-                          Active
+                          Activă
                         </th>
                         <th className="px-4 py-3 text-left font-semibold">
-                          Actions
+                          Acțiuni
                         </th>
                       </tr>
                     </thead>
@@ -822,7 +820,7 @@ export default function AdminPage() {
                       {isLoadingShippingMethods ? (
                         <tr className="border-t border-gray-200">
                           <td className="px-4 py-3 text-gray-500" colSpan={7}>
-                            Loading shipping methods...
+                            Se încarcă metodele de livrare...
                           </td>
                         </tr>
                       ) : null}
@@ -830,7 +828,7 @@ export default function AdminPage() {
                       shippingMethods.length === 0 ? (
                         <tr className="border-t border-gray-200">
                           <td className="px-4 py-3 text-gray-500" colSpan={7}>
-                            No shipping methods found.
+                            Nu există metode de livrare.
                           </td>
                         </tr>
                       ) : null}
@@ -962,7 +960,7 @@ export default function AdminPage() {
                                     }
                                     className="rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black hover:bg-my-yellow-bright disabled:opacity-60"
                                   >
-                                    Save
+                                    Salvează
                                   </button>
                                   <button
                                     type="button"
@@ -977,7 +975,7 @@ export default function AdminPage() {
                                     }
                                     className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
                                   >
-                                    Delete
+                                    Șterge
                                   </button>
                                 </div>
                               </td>
@@ -996,7 +994,7 @@ export default function AdminPage() {
         </div>
         <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
           <SectionTitle
-            title="Box Types Management"
+            title="Gestionare tipuri de cutii"
             collapsible
             isExpanded={isBoxTypesExpanded}
             onToggle={handleToggleBoxTypes}
@@ -1006,13 +1004,13 @@ export default function AdminPage() {
             <div className="p-6 lg:p-8 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Field
-                  label="Title"
-                  placeholder="e.g. Boxfix Premium 500"
+                  label="Titlu"
+                  placeholder="ex. Boxfix Premium 500"
                   value={boxTypeTitle}
                   onChange={setBoxTypeTitle}
                 />
                 <ImagePickerField
-                  label="Box Images"
+                  label="Imagini cutie"
                   selectedFiles={selectedBoxImageFiles}
                   onFileChange={setSelectedBoxImageFiles}
                 />
@@ -1030,10 +1028,10 @@ export default function AdminPage() {
                   className="bg-my-yellow hover:bg-my-yellow-bright text-black font-semibold px-5 py-2.5 rounded-lg transition-colors"
                 >
                   {isUploadingImage
-                    ? "Uploading image..."
+                    ? "Se încarcă imaginea..."
                     : isSavingBoxType
-                      ? "Adding..."
-                      : "Add Box Type"}
+                      ? "Se adaugă..."
+                      : "Adaugă tip de cutie"}
                 </button>
               </div>
               {formError ? (
@@ -1049,16 +1047,16 @@ export default function AdminPage() {
                           ID
                         </th>
                         <th className="px-4 py-3 text-left font-semibold">
-                          Title
+                          Titlu
                         </th>
                         <th className="px-4 py-3 text-left font-semibold">
-                          Photo
+                          Fotografie
                         </th>
                         <th className="px-4 py-3 text-left font-semibold">
                           Status
                         </th>
                         <th className="px-4 py-3 text-left font-semibold">
-                          Actions
+                          Acțiuni
                         </th>
                       </tr>
                     </thead>
@@ -1066,14 +1064,14 @@ export default function AdminPage() {
                       {isLoadingBoxTypes ? (
                         <tr className="border-t border-gray-200">
                           <td className="px-4 py-3 text-gray-500" colSpan={5}>
-                            Loading box types...
+                            Se încarcă tipurile de cutii...
                           </td>
                         </tr>
                       ) : null}
                       {!isLoadingBoxTypes && boxTypesError ? (
                         <tr className="border-t border-gray-200">
                           <td className="px-4 py-3 text-red-600" colSpan={5}>
-                            Failed to load box types: {boxTypesError}
+                            Eroare la încărcarea tipurilor de cutii: {boxTypesError}
                           </td>
                         </tr>
                       ) : null}
@@ -1082,7 +1080,7 @@ export default function AdminPage() {
                       boxTypes.length === 0 ? (
                         <tr className="border-t border-gray-200">
                           <td className="px-4 py-3 text-gray-500" colSpan={5}>
-                            No box types found.
+                            Nu există tipuri de cutii.
                           </td>
                         </tr>
                       ) : null}
@@ -1094,7 +1092,7 @@ export default function AdminPage() {
                       {saveError ? (
                         <tr className="border-t border-gray-200">
                           <td className="px-4 py-3 text-red-600" colSpan={5}>
-                            Failed to save box type: {saveError}
+                            Eroare la salvarea tipului de cutie: {saveError}
                           </td>
                         </tr>
                       ) : null}
@@ -1129,7 +1127,7 @@ const BoxTypeRow = memo(function BoxTypeRow({
 
   const handleDelete = async () => {
     const confirmed = window.confirm(
-      `Hide "${boxType.title}" from the shop? The box type will be kept in the database but marked inactive.`,
+      `Ascunzi „${boxType.title}” din magazin? Tipul de cutie rămâne în baza de date, dar va fi marcat ca inactiv.`,
     );
     if (!confirmed) return;
 
@@ -1137,13 +1135,15 @@ const BoxTypeRow = memo(function BoxTypeRow({
       await deactivateBoxType(boxType.id);
       notify({
         type: "success",
-        message: `"${boxType.title}" was hidden from the shop.`,
+        message: `„${boxType.title}” a fost ascuns din magazin.`,
       });
     } catch (error) {
       notify({
         type: "error",
         message:
-          error instanceof Error ? error.message : "Failed to hide box type",
+          error instanceof Error
+            ? error.message
+            : "Nu s-a putut ascunde tipul de cutie",
       });
     }
   };
@@ -1153,7 +1153,7 @@ const BoxTypeRow = memo(function BoxTypeRow({
       await activateBoxType(boxType.id);
       notify({
         type: "success",
-        message: `"${boxType.title}" is active again in the shop.`,
+        message: `„${boxType.title}” este din nou activ în magazin.`,
       });
     } catch (error) {
       notify({
@@ -1161,7 +1161,7 @@ const BoxTypeRow = memo(function BoxTypeRow({
         message:
           error instanceof Error
             ? error.message
-            : "Failed to activate box type",
+            : "Nu s-a putut activa tipul de cutie",
       });
     }
   };
@@ -1190,7 +1190,7 @@ const BoxTypeRow = memo(function BoxTypeRow({
               : "bg-yellow-100 text-yellow-700"
           }`}
         >
-          {boxType.isActive ? "Active" : "Inactive"}
+          {boxType.isActive ? "Activ" : "Inactiv"}
         </span>
       </td>
       <td className="px-4 py-3">
@@ -1202,7 +1202,7 @@ const BoxTypeRow = memo(function BoxTypeRow({
             }}
             className="inline-flex rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-my-yellow-bright"
           >
-            Edit
+            Editează
           </Link>
           {boxType.isActive ? (
             <button
@@ -1211,7 +1211,7 @@ const BoxTypeRow = memo(function BoxTypeRow({
               onClick={() => void handleDelete()}
               className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
             >
-              {isUpdatingStatus ? "Deleting..." : "Delete"}
+              {isUpdatingStatus ? "Se ascunde..." : "Ascunde"}
             </button>
           ) : (
             <button
@@ -1220,7 +1220,7 @@ const BoxTypeRow = memo(function BoxTypeRow({
               onClick={() => void handleActivate()}
               className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-60"
             >
-              {isUpdatingStatus ? "Activating..." : "Activate"}
+              {isUpdatingStatus ? "Se activează..." : "Activează"}
             </button>
           )}
         </div>
@@ -1261,7 +1261,7 @@ function SectionTitle({
         <span className="text-sm sm:text-base">{subtitle}</span>
       ) : collapsible ? (
         <span className="text-sm sm:text-base opacity-90">
-          {isExpanded ? "Click to hide" : "Click to load"}
+          {isExpanded ? "Click pentru a ascunde" : "Click pentru a încărca"}
         </span>
       ) : null}
     </>
@@ -1344,15 +1344,15 @@ function ImagePickerField({
       />
       {selectedFiles.length > 0 ? (
         <span className="text-xs text-gray-600 truncate">
-          {selectedFiles.length} file(s) selected
+          {selectedFiles.length} fișier(e) selectat(e)
         </span>
       ) : (
-        <span className="text-xs text-gray-400">No image selected</span>
+        <span className="text-xs text-gray-400">Nicio imagine selectată</span>
       )}
       {previewUrl ? (
         <img
           src={previewUrl}
-          alt="Selected box preview"
+          alt="Previzualizare cutie selectată"
           className="h-16 w-16 rounded-md border border-gray-200 object-cover"
         />
       ) : null}
@@ -1387,10 +1387,10 @@ function FilePickerInput({
         htmlFor={inputId}
         className="inline-flex h-8 cursor-pointer items-center rounded-md bg-my-light-gray2 px-3 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-200"
       >
-        Choose File
+        Alege fișier
       </label>
       <span className="ml-3 truncate text-sm text-gray-700">
-        {selectedFileName ? selectedFileName : "No file chosen"}
+        {selectedFileName ? selectedFileName : "Niciun fișier ales"}
       </span>
     </div>
   );
@@ -1425,7 +1425,7 @@ function OrderStatusControl({
     >
       {ORDER_STATUS_OPTIONS.map((option) => (
         <option key={option} value={option}>
-          {option}
+          {ORDER_STATUS_LABELS[option]}
         </option>
       ))}
     </select>

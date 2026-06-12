@@ -8,6 +8,9 @@ type OrderAttachmentActionsProps = {
   hasAttachment: boolean;
   ownerEmail?: string;
   label?: string;
+  emptyText?: string;
+  openText?: string;
+  downloadText?: string;
 };
 
 function resolveBackendBaseUrl(): string {
@@ -39,6 +42,9 @@ export function OrderAttachmentActions({
   hasAttachment,
   ownerEmail,
   label = "Attachment",
+  emptyText = "No",
+  openText = "Open attachment",
+  downloadText = "Download",
 }: OrderAttachmentActionsProps) {
   const viewUrl = useMemo(
     () => buildAttachmentUrl(orderId, ownerEmail, false),
@@ -55,7 +61,7 @@ export function OrderAttachmentActions({
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
           {label}
         </p>
-        <p className="mt-1 text-sm font-medium text-gray-900">No</p>
+        <p className="mt-1 text-sm font-medium text-gray-900">{emptyText}</p>
       </div>
     );
   }
@@ -75,13 +81,13 @@ export function OrderAttachmentActions({
           rel="noopener noreferrer"
           className="text-sm font-semibold text-my-red hover:underline"
         >
-          Open attachment
+          {openText}
         </a>
         <a
           href={downloadUrl}
           className="text-sm font-semibold text-gray-700 hover:underline"
         >
-          Download
+          {downloadText}
         </a>
       </div>
     </div>

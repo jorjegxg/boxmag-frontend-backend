@@ -123,7 +123,7 @@ describe("Admin orders", () => {
     cy.visit("/admin");
     cy.wait(["@getBoxTypes", "@getShippingMethodsAdmin", "@getOrders"]);
 
-    cy.contains("Orders").should("exist");
+    cy.contains("Comenzi").should("exist");
     cy.contains("ORD-0042").should("exist");
     cy.contains("Ana Popescu").should("exist");
     cy.contains("Standard Boxes").should("exist");
@@ -174,7 +174,7 @@ describe("Admin orders", () => {
     cy.wait("@getOrderDetails");
     cy.location("pathname").should("eq", "/admin/orders/42");
 
-    cy.contains("Order details").should("exist");
+    cy.contains("Detalii comandă").should("exist");
     cy.contains("ORD-0042").should("exist");
     cy.contains("Ana Popescu").should("exist");
 
@@ -182,6 +182,6 @@ describe("Admin orders", () => {
     cy.wait("@patchOrderStatusDetails").its("request.body").should((body) => {
       expect(body.status).to.eq("completed");
     });
-    cy.contains("span", "completed").should("exist");
+    cy.contains("span", "Finalizată").should("exist");
   });
 });
