@@ -9,6 +9,7 @@ export default defineConfig({
   env: {
     infoEmail: envFromRoot("NEXT_PUBLIC_INFO_EMAIL"),
     b2bEmail: envFromRoot("NEXT_PUBLIC_B2B_EMAIL"),
+    adminPassword: envFromRoot("ADMIN_PASSWORD") || "change-me-admin-password",
   },
   e2e: {
     baseUrl: "http://localhost:3006",

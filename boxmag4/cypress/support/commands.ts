@@ -107,6 +107,7 @@ declare global {
         cartItems?: SeedCartItem[];
       }): Chainable<void>;
       visitCheckoutLoggedOut(options?: { cartItems?: SeedCartItem[] }): Chainable<void>;
+      loginAdmin(): Chainable<void>;
     }
   }
 }
@@ -247,6 +248,11 @@ Cypress.Commands.add("mockCheckoutApis", () => {
       ],
     },
   }).as("getShippingMethods");
+});
+
+Cypress.Commands.add("loginAdmin", () => {
+  const password = String(Cypress.env("adminPassword") ?? "change-me-admin-password");
+  cy.request("POST", "/api/admin/auth", { password }).its("status").should("eq", 200);
 });
 
 Cypress.Commands.add("visitCheckoutLoggedOut", (options: { cartItems?: SeedCartItem[] } = {}) => {

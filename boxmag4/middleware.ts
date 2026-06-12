@@ -1,7 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  ADMIN_COOKIE_NAME,
+  getAdminPassword,
+  isAdminPublicRoute,
+  isAdminRoute,
+  isAdminSessionValid,
+} from "./lib/admin-auth";
 import { applyCorsHeaders, isAllowedCorsOrigin } from "./lib/cors";
 
 const LANG_COOKIE = "boxmag.language";
+
+async function handleAdminAuth(
+  request: NextRequest,
+): Promise<NextResponse | null> {
+  const { pathname } = request.nextUrl;
+  if (!isAdminRoute(pathname)) return null;
+
+  const configuredPassword = getAdminPassword();
+  const sessionToken = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
+  const isAuthenticated = await isAdminSessionValid(
+    sessionToken,
+    configuredPassword,
+  );
+
+  if (isAdminPublicRoute(pathname)) {
+    if (isAuthenticated) {
+      const nextPath = request.nextUrl.searchParams.get("next");
+      const redirectPath =
+        nextPath && nextPath.startsWith("/admin") ? nextPath : "/admin";
+      return NextResponse.redirect(new URL(redirectPath, request.url));
+    }
+    return null;
+  }
+
+  if (!configuredPassword) {
+    const loginUrl = new URL("/admin/login", request.url);
+    loginUrl.searchParams.set("error", "config");
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (!isAuthenticated) {
+    const loginUrl = new URL("/admin/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return null;
+}
 
 function handleApiCors(request: NextRequest): NextResponse | null {
   if (!request.nextUrl.pathname.startsWith("/api")) {
@@ -35,12 +80,17 @@ function isStaticPath(pathname: string) {
   );
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const apiCorsResponse = handleApiCors(request);
   if (apiCorsResponse) {
     return apiCorsResponse;
+  }
+
+  const adminAuthResponse = await handleAdminAuth(request);
+  if (adminAuthResponse) {
+    return adminAuthResponse;
   }
 
   if (isStaticPath(pathname)) {

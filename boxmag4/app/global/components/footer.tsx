@@ -139,6 +139,10 @@ export function Footer() {
       {/* Bottom bar */}
       <div className="w-full bg-[#cf5330] py-3 text-center text-xs lg:text-sm text-white">
         {t("footer.copyright")}© {new Date().getFullYear()} BOXMAG
+        <span className="mx-2 opacity-70">|</span>
+        <Link href="/admin" className="font-semibold hover:underline">
+          {t("footer.admin")}
+        </Link>
       </div>
     </footer>
   );

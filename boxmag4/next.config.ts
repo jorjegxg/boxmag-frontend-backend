@@ -6,6 +6,13 @@ function envFromRoot(key: string, fallback = ""): string {
   return process.env[key] ?? readRootEnvValue(key) ?? fallback;
 }
 
+if (!process.env.ADMIN_PASSWORD) {
+  const adminPassword = readRootEnvValue("ADMIN_PASSWORD");
+  if (adminPassword) {
+    process.env.ADMIN_PASSWORD = adminPassword;
+  }
+}
+
 const corsOriginRaw =
   process.env.CORS_ORIGIN ?? readRootEnvValue("CORS_ORIGIN") ?? "";
 const allowedCorsOrigins = parseCorsOrigins(corsOriginRaw);

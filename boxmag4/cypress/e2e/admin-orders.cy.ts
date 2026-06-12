@@ -109,6 +109,10 @@ const interceptAdminPrerequisites = () => {
 };
 
 describe("Admin orders", () => {
+  beforeEach(() => {
+    cy.loginAdmin();
+  });
+
   it("loads orders table from API", () => {
     interceptAdminPrerequisites();
     cy.intercept("GET", "**/api/orders", {
