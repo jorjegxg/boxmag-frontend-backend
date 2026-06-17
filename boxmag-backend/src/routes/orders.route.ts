@@ -130,6 +130,11 @@ type OrderAttachmentRow = RowDataPacket & {
   attachment_url: string | null;
 };
 
+type OrderOfferSentRow = RowDataPacket & {
+  offer_sent_at: string | null;
+  offer_sent_from: string | null;
+};
+
 type OrderListRow = RowDataPacket & {
   id: number;
   box_type_name: string;
@@ -505,9 +510,7 @@ ordersRouter.post("/:orderId/send-offer", async (req, res) => {
       [offerSentFrom, orderId],
     );
 
-    const [updatedRows] = await mysqlPool.query<
-      RowDataPacket & { offer_sent_at: string | null; offer_sent_from: string | null }
-    >(
+    const [updatedRows] = await mysqlPool.query<OrderOfferSentRow[]>(
       `SELECT offer_sent_at, offer_sent_from FROM orders WHERE id = ? LIMIT 1`,
       [orderId],
     );
