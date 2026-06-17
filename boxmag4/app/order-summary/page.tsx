@@ -15,7 +15,6 @@ import { useLanguage } from "../i18n/language-context";
 import useBusinessOrderStore from "../stores/business_order_store";
 import { useNotification } from "../global/components/notification-center";
 import europeanCountries from "./european-countries.json";
-import { siteEmails } from "../../lib/site-emails";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -72,7 +71,7 @@ export default function OrderSummaryPage() {
     shouldAutofillOrderSummary ? "RO12345678" : "",
   );
   const [email, setEmail] = useState(
-    shouldAutofillOrderSummary ? siteEmails.devAutofill : "",
+    shouldAutofillOrderSummary ? "customer.demo@reko-packaging.com" : "",
   );
   const [phone, setPhone] = useState(
     shouldAutofillOrderSummary ? "+40799111222" : "",

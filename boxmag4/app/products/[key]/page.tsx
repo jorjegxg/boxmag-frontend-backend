@@ -11,6 +11,7 @@ import { MIN_ORDER_QTY } from "../../constants/order";
 import { getMinOrderUnitPrice, getShopPriceTiers } from "../../constants/price-tiers";
 import { FaCheck } from "react-icons/fa";
 import { normalizeImageUrl } from "@/app/utils/normalize-image-url";
+import type { PriceTier } from "../../types/product";
 
 const BOXES_PER_PALLET = 9000;
 const imageRequestCache = new Set<string>();
@@ -66,9 +67,7 @@ function ProductByKeyPageContent() {
   const [itemNo, setItemNo] = useState("");
   const [sizeLabel, setSizeLabel] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>(["/placeholders/box4.png"]);
-  const [selectedProductPrices, setSelectedProductPrices] = useState<
-    Array<{ id: number; name: string; withoutTax: number; withTax: number }>
-  >([]);
+  const [selectedProductPrices, setSelectedProductPrices] = useState<PriceTier[]>([]);
   const [firstWithTax, setFirstWithTax] = useState<number | null>(null);
   const [firstWithoutTax, setFirstWithoutTax] = useState<number | null>(null);
   const [isAddToCartAnimated, setIsAddToCartAnimated] = useState(false);

@@ -57,6 +57,8 @@ type AdminOrderDetails = {
   attachmentName: string | null;
   hasAttachment: boolean;
   createdAt: string;
+  offerSentAt: string | null;
+  offerSentFrom: string | null;
 };
 
 type OfferSenderOption = {
@@ -295,14 +297,30 @@ export default function AdminOrderDetailsPage() {
       const payload = (await response.json()) as {
         ok?: boolean;
         message?: string;
-        data?: { to?: string; from?: string | null };
+        data?: {
+          to?: string;
+          from?: string | null;
+          offerSentAt?: string | null;
+          offerSentFrom?: string | null;
+        };
       };
       if (!response.ok || payload.ok !== true) {
         throw new Error(payload.message ?? "Nu s-a putut trimite emailul cu ofertă");
       }
+      const sentAt = payload.data?.offerSentAt ?? new Date().toISOString();
+      const sentFrom = payload.data?.offerSentFrom ?? payload.data?.from ?? null;
+      setOrder((current) =>
+        current
+          ? {
+              ...current,
+              offerSentAt: sentAt,
+              offerSentFrom: sentFrom,
+            }
+          : current,
+      );
       setOfferSuccess(
         `Ofertă trimisă către ${payload.data?.to ?? order.email}${
-          payload.data?.from ? ` de la ${payload.data.from}` : ""
+          sentFrom ? ` de la ${sentFrom}` : ""
         }.`,
       );
     } catch (error) {
@@ -651,6 +669,22 @@ export default function AdminOrderDetailsPage() {
                       , cu detaliile comenzii incluse.
                     </p>
 
+                    {order.offerSentAt ? (
+                      <div
+                        role="status"
+                        className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800"
+                      >
+                        <p className="font-semibold">Ofertă deja trimisă</p>
+                        <p className="mt-1">
+                          Trimisă pe {formatAdminDate(order.offerSentAt)}
+                          {order.offerSentFrom
+                            ? ` de la ${order.offerSentFrom}`
+                            : ""}{" "}
+                          către {order.email || "—"}.
+                        </p>
+                      </div>
+                    ) : null}
+
                     {offerSenders.length === 0 ? (
                       <p className="mt-4 text-sm text-amber-700">
                         Nu există adrese expeditor configurate. Setează SMTP și
@@ -716,7 +750,9 @@ export default function AdminOrderDetailsPage() {
                           >
                             {isSendingOffer
                               ? "Se trimite..."
-                              : "Trimite email cu ofertă"}
+                              : order.offerSentAt
+                                ? "Retrimite email cu ofertă"
+                                : "Trimite email cu ofertă"}
                           </button>
                           {offerSuccess ? (
                             <p className="text-sm font-medium text-green-700">

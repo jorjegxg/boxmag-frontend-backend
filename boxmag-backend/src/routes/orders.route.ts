@@ -157,6 +157,8 @@ type OrderListRow = RowDataPacket & {
   shipping_cents: number | null;
   shipping_method: string | null;
   shipping_eta: string | null;
+  offer_sent_at: string | null;
+  offer_sent_from: string | null;
   currency: string | null;
   created_at: string;
   first_name: string;
@@ -308,7 +310,7 @@ async function loadOrderRowById(
             o.message, o.items_json, o.status,
             o.payment_status, o.total_amount_cents, o.subtotal_cents,
             o.vat_percent, o.vat_cents, o.shipping_cents, o.shipping_method,
-            o.shipping_eta, o.currency, o.created_at,
+            o.shipping_eta, o.offer_sent_at, o.offer_sent_from, o.currency, o.created_at,
             c.first_name, c.surname, c.company_name, c.vat_number, c.email, c.phone,
             c.address, c.postcode, c.city, c.country,
             c.create_account, c.consent_phone, c.consent_email
@@ -495,12 +497,30 @@ ordersRouter.post("/:orderId/send-offer", async (req, res) => {
     });
 
     const selectedSender = senderOptions.find((option) => option.key === fromKey);
+    const offerSentFrom = selectedSender?.email ?? null;
+    await mysqlPool.execute(
+      `UPDATE orders
+       SET offer_sent_at = CURRENT_TIMESTAMP, offer_sent_from = ?
+       WHERE id = ?`,
+      [offerSentFrom, orderId],
+    );
+
+    const [updatedRows] = await mysqlPool.query<
+      RowDataPacket & { offer_sent_at: string | null; offer_sent_from: string | null }
+    >(
+      `SELECT offer_sent_at, offer_sent_from FROM orders WHERE id = ? LIMIT 1`,
+      [orderId],
+    );
+    const offerSentAt = updatedRows[0]?.offer_sent_at ?? null;
+
     res.json({
       ok: true,
       data: {
         orderId,
         to: customerEmail,
-        from: selectedSender?.email ?? null,
+        from: offerSentFrom,
+        offerSentAt,
+        offerSentFrom: updatedRows[0]?.offer_sent_from ?? offerSentFrom,
       },
     });
   } catch (error) {
@@ -638,7 +658,7 @@ ordersRouter.get("/:orderId", async (req, res) => {
               o.message, o.items_json, o.status,
               o.payment_status, o.total_amount_cents, o.subtotal_cents,
               o.vat_percent, o.vat_cents, o.shipping_cents, o.shipping_method,
-              o.shipping_eta, o.currency, o.created_at,
+              o.shipping_eta, o.offer_sent_at, o.offer_sent_from, o.currency, o.created_at,
               c.first_name, c.surname, c.company_name, c.email, c.phone, c.city, c.country
        FROM orders o
        LEFT JOIN contacts c ON c.order_id = o.id
@@ -702,6 +722,8 @@ ordersRouter.get("/:orderId", async (req, res) => {
         city: row.city,
         country: row.country,
         createdAt: row.created_at,
+        offerSentAt: row.offer_sent_at ?? null,
+        offerSentFrom: row.offer_sent_from ?? null,
       },
     });
   } catch (error) {
