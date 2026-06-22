@@ -13,6 +13,7 @@ import {
   paymentsRouter,
   stripeWebhookHandler,
 } from "./routes/payments.route";
+import { exchangeRateRouter } from "./routes/exchange-rate.route";
 
 export const app = express();
 
@@ -62,4 +63,5 @@ app.use("/api/newsletter", newsletterRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/shipping-methods", shippingMethodsRouter);
 app.use("/api/payments", paymentsRouter);
+app.use("/api/exchange-rate", exchangeRateRouter);
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "../i18n/language-context";
+import { useCurrency } from "../currency/currency-context";
 import { FaCheck, FaShoppingCart } from "react-icons/fa";
 import { useCartStore } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
@@ -52,6 +53,7 @@ function resolvePrimaryImageUrl(
 
 function ShopPageContent() {
   const { t } = useLanguage();
+  const { formatPrice } = useCurrency();
   const addCartItem = useCartStore((s) => s.addItem);
   const searchParams = useSearchParams();
   const [boxTypes, setBoxTypes] = useState<BoxType[]>([]);
@@ -310,7 +312,9 @@ function ShopPageContent() {
                       </p>
                       <div className="mt-auto pt-3">
                         <p className="text-sm font-semibold text-black">
-                          {firstPrice ? `de la € ${firstPrice.withTax.toFixed(2)}` : "Pret la cerere"}
+                          {firstPrice
+                            ? `de la ${formatPrice(firstPrice.withTax)}`
+                            : "Pret la cerere"}
                         </p>
                         <button
                           type="button"

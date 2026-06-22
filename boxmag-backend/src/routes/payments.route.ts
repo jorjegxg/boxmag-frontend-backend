@@ -17,6 +17,11 @@ import {
   MAX_ORDER_ATTACHMENT_MB,
 } from "../config/uploads";
 import { uploadOrderAttachmentToMinio } from "../services/minio";
+import {
+  convertEurToRon,
+  getEurRonRate,
+  roundMoney,
+} from "../services/exchange-rate.service";
 
 type CartItemPayload = {
   itemNo: string;
@@ -37,9 +42,12 @@ type AddressPayload = {
   country: string;
 };
 
+type CheckoutCurrency = "eur" | "ron";
+
 type CreateCheckoutSessionPayload = {
   email?: unknown;
   cartItems?: unknown;
+  currency?: unknown;
   shipping?: {
     name?: unknown;
     etaText?: unknown;
@@ -95,6 +103,15 @@ function toPositiveInt(value: unknown): number | null {
   if (parsed == null) return null;
   const rounded = Math.floor(parsed);
   return rounded > 0 ? rounded : null;
+}
+
+function parseCheckoutCurrency(value: unknown): CheckoutCurrency {
+  if (typeof value !== "string") {
+    return (env.stripeCurrency || "eur").toLowerCase() === "ron" ? "ron" : "eur";
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "ron") return "ron";
+  return "eur";
 }
 
 function toCents(amount: number): number {
@@ -289,26 +306,64 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
     (sum, item) => sum + item.quantity,
     0,
   );
-  const subtotal = +cartItems
+  const subtotalEur = +cartItems
     .reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
     .toFixed(2);
-  const vatAmount = +((subtotal * vatPercent) / 100).toFixed(2);
-  const total = +(subtotal + vatAmount + shippingPrice).toFixed(2);
-  const currency = (env.stripeCurrency || "eur").toLowerCase();
+  const vatAmountEur = +((subtotalEur * vatPercent) / 100).toFixed(2);
+  const shippingPriceEur = +shippingPrice.toFixed(2);
+  const totalEur = +(subtotalEur + vatAmountEur + shippingPriceEur).toFixed(2);
+
+  const checkoutCurrency = parseCheckoutCurrency(payload.currency);
+  let chargeCurrency: CheckoutCurrency = checkoutCurrency;
+  let eurRonRate: number | null = null;
+
+  if (checkoutCurrency === "ron") {
+    try {
+      const rateData = await getEurRonRate();
+      eurRonRate = rateData.rate;
+    } catch (rateError) {
+      console.error("Failed to load EUR/RON rate for checkout", rateError);
+      res.status(503).json({
+        ok: false,
+        message: "Failed to load EUR/RON exchange rate for checkout.",
+      });
+      return;
+    }
+  }
+
+  const convertForCharge = (amountEur: number): number =>
+    chargeCurrency === "ron" && eurRonRate != null
+      ? convertEurToRon(amountEur, eurRonRate)
+      : roundMoney(amountEur);
+
+  const chargedCartItems = cartItems.map((item) => ({
+    ...item,
+    unitPrice: convertForCharge(item.unitPrice),
+    lineTotal: convertForCharge(item.unitPrice * item.quantity),
+  }));
+
+  const subtotal = convertForCharge(subtotalEur);
+  const vatAmount = convertForCharge(vatAmountEur);
+  const shippingPriceCharged = convertForCharge(shippingPriceEur);
+  const total = convertForCharge(totalEur);
+  const currency = chargeCurrency;
 
   const orderMessageLines = [
     "Stripe checkout cart order",
     "",
     "Items:",
-    ...cartItems.map(
+    ...chargedCartItems.map(
       (item) =>
-        `- ${item.itemNo} | ${item.name} | qty ${item.quantity} | unit ${item.unitPrice.toFixed(2)} | line ${(item.unitPrice * item.quantity).toFixed(2)}`,
+        `- ${item.itemNo} | ${item.name} | qty ${item.quantity} | unit ${item.unitPrice.toFixed(2)} | line ${item.lineTotal.toFixed(2)}`,
     ),
     "",
     `Shipping method: ${shippingName} (${shippingEta})`,
+    ...(eurRonRate != null
+      ? [`Exchange rate EUR/RON: ${eurRonRate.toFixed(4)}`, ""]
+      : []),
     `Subtotal: ${subtotal.toFixed(2)} ${currency.toUpperCase()}`,
     `VAT (${vatPercent}%): ${vatAmount.toFixed(2)} ${currency.toUpperCase()}`,
-    `Shipping: ${shippingPrice.toFixed(2)} ${currency.toUpperCase()}`,
+    `Shipping: ${shippingPriceCharged.toFixed(2)} ${currency.toUpperCase()}`,
     `Total: ${total.toFixed(2)} ${currency.toUpperCase()}`,
   ];
 
@@ -358,12 +413,12 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
     await conn.beginTransaction();
 
     const itemsJson = JSON.stringify(
-      cartItems.map((item) => ({
+      chargedCartItems.map((item) => ({
         itemNo: item.itemNo,
         name: item.name,
         unitPrice: item.unitPrice,
         quantity: item.quantity,
-        lineTotal: +(item.unitPrice * item.quantity).toFixed(2),
+        lineTotal: item.lineTotal,
         imageUrl: item.imageUrl ?? null,
       })),
     );
@@ -397,7 +452,7 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
         toCents(subtotal),
         vatPercent,
         toCents(vatAmount),
-        toCents(shippingPrice),
+        toCents(shippingPriceCharged),
         shippingName,
         shippingEta,
         currency,
@@ -450,7 +505,7 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
   }
 
   const stripe = getStripeClient();
-  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = cartItems.map(
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = chargedCartItems.map(
     (item) => {
       const imagesArr = item.imageUrl?.startsWith("http")
         ? [item.imageUrl]
@@ -483,12 +538,12 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
     });
   }
 
-  if (shippingPrice > 0) {
+  if (shippingPriceCharged > 0) {
     lineItems.push({
       quantity: 1,
       price_data: {
         currency,
-        unit_amount: toCents(shippingPrice),
+        unit_amount: toCents(shippingPriceCharged),
         product_data: {
           name: `Shipping - ${shippingName}`,
           ...(shippingEta ? { description: shippingEta } : {}),
@@ -508,10 +563,18 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
       metadata: {
         order_id: String(createdOrderId),
         cart_total_quantity: String(totalQuantity),
+        charge_currency: currency,
+        ...(eurRonRate != null
+          ? { eur_ron_rate: eurRonRate.toFixed(4) }
+          : {}),
       },
       payment_intent_data: {
         metadata: {
           order_id: String(createdOrderId),
+          charge_currency: currency,
+          ...(eurRonRate != null
+            ? { eur_ron_rate: eurRonRate.toFixed(4) }
+            : {}),
         },
       },
     });

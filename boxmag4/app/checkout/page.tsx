@@ -10,6 +10,7 @@ import { ServicesSection } from "../global/components/services-section";
 import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { useLanguage } from "../i18n/language-context";
+import { useCurrency } from "../currency/currency-context";
 import { useCartStore, type CartItem } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
 import { FaTrashAlt } from "react-icons/fa";
@@ -114,6 +115,7 @@ function isDpdCarrierMethod(methodKey: string): boolean {
 
 export default function CheckoutPage() {
   const { t } = useLanguage();
+  const { currency, formatPrice } = useCurrency();
   const [addressType, setAddressType] = useState<"company" | "another">(
     "company",
   );
@@ -405,6 +407,7 @@ export default function CheckoutPage() {
           },
           body: JSON.stringify({
             email: checkoutEmail,
+            currency,
             cartItems: cartItems.map((item) => ({
               itemNo: item.itemNo,
               name: item.name,
@@ -519,6 +522,7 @@ export default function CheckoutPage() {
           setCartItemQuantity={setCartItemQuantity}
           removeCartItem={removeCartItem}
           restoreCartItem={restoreCartItem}
+          formatPrice={formatPrice}
           t={t}
         />
         <BottomPadding />
@@ -576,7 +580,7 @@ export default function CheckoutPage() {
           subtotal={cartSubtotal}
           vatPercent={taxPercent}
           shipping={orderShipping}
-          currency="€"
+          formatPrice={formatPrice}
           onContinueHref="/boxesfetco"
           onPlaceOrder={() => void handlePlaceOrder()}
           isSubmittingOrder={isSubmittingOrder}
@@ -591,15 +595,11 @@ export default function CheckoutPage() {
     </div>
   );
 
-  function money(value: number, currency: string) {
-    return `${currency} ${value.toFixed(2)}`;
-  }
-
   function CheckoutSummaryBar({
     subtotal,
     vatPercent,
     shipping,
-    currency = "€",
+    formatPrice,
     onContinueHref = "/boxesfetco",
     onPlaceOrder,
     isSubmittingOrder,
@@ -608,7 +608,7 @@ export default function CheckoutPage() {
     subtotal: number;
     vatPercent: number;
     shipping: number;
-    currency?: string;
+    formatPrice: (amountEur: number) => string;
     onContinueHref?: string;
     onPlaceOrder: () => void;
     isSubmittingOrder: boolean;
@@ -635,15 +635,15 @@ export default function CheckoutPage() {
               <div className="font-semibold tracking-wide">
                 {t("checkout.subtotal")}
               </div>
-              <div className="text-my-gray">{money(subtotal, currency)}</div>
+              <div className="text-my-gray">{formatPrice(subtotal)}</div>
               <div className="font-semibold tracking-wide">
                 {t("checkout.vatTax")} ({vatPercent}%)
               </div>
-              <div className="text-my-gray">{money(vat, currency)}</div>
+              <div className="text-my-gray">{formatPrice(vat)}</div>
               <div className="font-semibold tracking-wide">
                 {t("checkout.shipping")}
               </div>
-              <div className="text-my-gray">{money(shipping, currency)}</div>
+              <div className="text-my-gray">{formatPrice(shipping)}</div>
             </div>
             <div className="mt-6">
               <div className="inline-flex items-center gap-2 rounded-full border-2 border-my-red px-6 py-3">
@@ -651,7 +651,7 @@ export default function CheckoutPage() {
                   {t("checkout.total")}
                 </span>
                 <span className="text-base font-bold">
-                  {money(total, currency)}
+                  {formatPrice(total)}
                 </span>
               </div>
               <div className="mt-3">
@@ -805,7 +805,7 @@ export default function CheckoutPage() {
                   </div>
                 ) : null}
                 <p className="font-bold text-black mt-2">
-                  € {method.price.toFixed(2)}
+                  {formatPrice(method.price)}
                 </p>
               </div>
             </button>
@@ -1003,12 +1003,14 @@ function CheckoutProductDetails({
   setCartItemQuantity,
   removeCartItem,
   restoreCartItem,
+  formatPrice,
   t,
 }: {
   cartItems: CartItem[];
   setCartItemQuantity: (itemNo: string, quantity: number) => void;
   removeCartItem: (itemNo: string) => void;
   restoreCartItem: (item: CartItem) => void;
+  formatPrice: (amountEur: number) => string;
   t: (key: string) => string;
 }) {
   const [removedItem, setRemovedItem] = useState<CartItem | null>(null);
@@ -1106,7 +1108,7 @@ function CheckoutProductDetails({
               name1={t("checkout.product.netWeight")}
               value1="-"
               name2={t("checkout.product.priceWithoutTax")}
-              value2={`€ ${(item.unitPrice * item.quantity).toFixed(2)}`}
+              value2={formatPrice(item.unitPrice * item.quantity)}
             />
           </div>
           <div className="flex flex-col items-end gap-3">

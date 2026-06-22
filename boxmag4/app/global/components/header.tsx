@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaBars, FaSearch, FaTimes } from "react-icons/fa";
 import { useLanguage } from "../../i18n/language-context";
+import { useCurrency } from "../../currency/currency-context";
 import { useCartStore } from "../../stores/cart_store";
 
 type BoxType = {
@@ -32,6 +33,7 @@ function buildProductDetailsHref(product: BoxTypeProduct): string {
 
 export function Header() {
   const { t } = useLanguage();
+  const { formatPrice } = useCurrency();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const distinctItemTypes = useCartStore((s) => s.items.length);
   const subtotal = useCartStore((s) => s.subtotal);
@@ -436,7 +438,7 @@ export function Header() {
             <span className="text-xs font-medium text-black">
               {t("header.cart")}
             </span>
-            <span className="text-xs font-bold text-black">€ {subtotal.toFixed(2)}</span>
+            <span className="text-xs font-bold text-black">{formatPrice(subtotal)}</span>
           </Link>
 
           {/* User */}

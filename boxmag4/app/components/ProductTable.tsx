@@ -4,6 +4,7 @@ import { FaCheck, FaMinus, FaPlus, FaShoppingCart } from "react-icons/fa";
 import useTableEComStore from "../stores/table_e_commerce_store";
 import { Product } from "../types/product";
 import { useLanguage } from "../i18n/language-context";
+import { useCurrency } from "../currency/currency-context";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCartStore } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
@@ -18,6 +19,7 @@ const TABLE_COLUMN_COUNT = 14;
 
 export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
   const { t } = useLanguage();
+  const { formatPrice } = useCurrency();
   const products = useTableEComStore((s) => s.products);
   const isLoading = useTableEComStore((s) => s.isLoading);
   const loadError = useTableEComStore((s) => s.loadError);
@@ -176,8 +178,8 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                       >
                         {price ? (
                           <>
-                            <div>{price.withoutTax} €</div>
-                            <div className="font-semibold">{price.withTax} €</div>
+                            <div>{formatPrice(price.withoutTax)}</div>
+                            <div className="font-semibold">{formatPrice(price.withTax)}</div>
                           </>
                         ) : (
                           <span className="text-gray-400">—</span>

@@ -4,6 +4,7 @@ import { Minus, Plus } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useLanguage } from "../../i18n/language-context";
+import { useCurrency } from "../../currency/currency-context";
 import { B2b } from "../../global/components/b2b";
 import { NewsletterSubscribe } from "../../global/components/newsletter-subscribe";
 import { useCartStore } from "../../stores/cart_store";
@@ -52,6 +53,7 @@ function ProductByKeyPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const { t } = useLanguage();
+  const { formatPrice } = useCurrency();
   const keyParam = typeof params.key === "string" ? params.key : "";
   const itemNoQuery = searchParams.get("itemNo")?.trim() ?? "";
 
@@ -211,11 +213,11 @@ function ProductByKeyPageContent() {
 
   const displayGrossPrice =
     firstWithTax != null && Number.isFinite(firstWithTax)
-      ? `${(firstWithTax * quantity).toFixed(2)} euro`
+      ? formatPrice(firstWithTax * quantity)
       : "—";
   const displayNetPrice =
     firstWithoutTax != null && Number.isFinite(firstWithoutTax)
-      ? `${(firstWithoutTax * quantity).toFixed(2)} euro ${t("productDemo.withoutVat")}`
+      ? `${formatPrice(firstWithoutTax * quantity)} ${t("productDemo.withoutVat")}`
       : `— ${t("productDemo.withoutVat")}`;
 
   const galleryWithProduct = useMemo(() => imageUrls, [imageUrls]);
@@ -234,10 +236,10 @@ function ProductByKeyPageContent() {
     () =>
       selectedProductPrices.map((price) => ({
         qty: price.name,
-        gross: `${price.withTax.toFixed(2)} euro`,
-        net: `${price.withoutTax.toFixed(2)} euro`,
+        gross: formatPrice(price.withTax),
+        net: formatPrice(price.withoutTax),
       })),
-    [selectedProductPrices],
+    [selectedProductPrices, formatPrice],
   );
   const imageUrlForCurrentBoxType = imageUrls;
 

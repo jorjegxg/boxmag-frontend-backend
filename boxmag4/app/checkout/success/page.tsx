@@ -9,6 +9,7 @@ import { ServicesSection } from "../../global/components/services-section";
 import { HaveAQuestion } from "../../global/components/have-a-question";
 import { NewsletterSubscribe } from "../../global/components/newsletter-subscribe";
 import { useCartStore } from "../../stores/cart_store";
+import { formatMoneyAmount } from "../../../lib/format-price";
 
 type OrderInfo = {
   id: number;
@@ -105,8 +106,12 @@ function CheckoutSuccessPageContent() {
     data?.paymentStatus === "no_payment_required";
   const totalCents =
     data?.amountTotal ?? data?.order?.totalAmountCents ?? null;
+  const orderCurrency =
+    data?.order?.currency?.trim().toLowerCase() === "ron" ? "ron" : "eur";
   const totalDisplay =
-    totalCents != null ? `€${(totalCents / 100).toFixed(2)}` : null;
+    totalCents != null
+      ? formatMoneyAmount(totalCents / 100, orderCurrency)
+      : null;
 
   return (
     <div>

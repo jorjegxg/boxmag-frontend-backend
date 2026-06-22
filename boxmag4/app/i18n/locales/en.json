@@ -4,6 +4,7 @@
   "topBar.individual": "Individual",
   "topBar.language": "Language",
   "topBar.shippingTo": "Shipping to",
+  "topBar.currency": "Currency",
   "header.searchPlaceholder": "Search products...",
   "header.searchAria": "Search products",
   "header.cart": "Cart",

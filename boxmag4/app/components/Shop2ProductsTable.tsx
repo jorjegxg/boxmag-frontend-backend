@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaShoppingCart } from "react-icons/fa";
 import { useCartStore } from "../stores/cart_store";
+import { useCurrency } from "../currency/currency-context";
 import { MIN_ORDER_QTY } from "../constants/order";
 
 type Shop2Row = {
@@ -28,6 +29,7 @@ type Shop2Row = {
 };
 
 export function Shop2ProductsTable() {
+  const { formatPrice } = useCurrency();
   const [rows, setRows] = useState<Shop2Row[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -215,8 +217,8 @@ export function Shop2ProductsTable() {
                     key={priceName}
                     className="border border-[#d9d9d9] px-2 py-3 text-center whitespace-nowrap"
                   >
-                    <div>{price ? `${price.withoutTax.toFixed(2)} €` : "-"}</div>
-                    <div className="font-semibold">{price ? `${price.withTax.toFixed(2)} €` : "-"}</div>
+                    <div>{price ? formatPrice(price.withoutTax) : "-"}</div>
+                    <div className="font-semibold">{price ? formatPrice(price.withTax) : "-"}</div>
                   </td>
                 );
               })}

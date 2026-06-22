@@ -3,17 +3,19 @@
 import { useEffect, useState } from "react";
 import { FaEnvelope, FaPhoneAlt, FaFax } from "react-icons/fa";
 import { useLanguage } from "../../i18n/language-context";
+import { useCurrency } from "../../currency/currency-context";
 import { siteEmails } from "../../../lib/site-emails";
 import type { Language } from "../../i18n/translations";
+import type { DisplayCurrency } from "../../../lib/format-price";
 
 export function TopBar() {
   const { language, setLanguage, t } = useLanguage();
+  const { currency, setCurrency } = useCurrency();
   const [shippingTo, setShippingTo] = useState("RO");
 
   useEffect(() => {
     const savedShipping = localStorage.getItem("boxmag.shippingTo");
     if (savedShipping) setShippingTo(savedShipping);
-    localStorage.removeItem("boxmag.currency");
   }, []);
 
   useEffect(() => {
@@ -76,6 +78,17 @@ export function TopBar() {
             value={shippingTo}
             options={["RO", "BG", "HU", "PL", "DE"]}
             onChange={setShippingTo}
+          />
+          <Selector
+            label={t("topBar.currency")}
+            value={currency.toUpperCase()}
+            options={["EUR", "RON"]}
+            onChange={(value) => {
+              const next = value.toLowerCase() as DisplayCurrency;
+              if (next === "eur" || next === "ron") {
+                setCurrency(next);
+              }
+            }}
           />
         </div>
       </div>
