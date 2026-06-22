@@ -1,12 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useLanguage } from "../../i18n/language-context";
 import {
   CheckoutAddressMap,
   type MapAddressInput,
 } from "./checkout-address-map";
+
+const VAT_NUMBER_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
+
+function normalizeVatNumber(value: string): string {
+  return value.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+const lockedInputClass =
+  "w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600 cursor-not-allowed focus:outline-none";
 
 export type CheckoutUserAddress = {
   id: number;
@@ -54,6 +63,7 @@ type CheckoutShippingInformationProps = {
   vatNumberError: boolean;
   vatFormatError: boolean;
   onVatNumberChange: (value: string) => void;
+  onVatLookupStateChange?: (isLookingUp: boolean) => void;
 };
 
 export function CheckoutShippingInformation({
@@ -74,10 +84,81 @@ export function CheckoutShippingInformation({
   vatNumberError,
   vatFormatError,
   onVatNumberChange,
+  onVatLookupStateChange,
 }: CheckoutShippingInformationProps) {
   const { t } = useLanguage();
+  const [isLookingUpVat, setIsLookingUpVat] = useState(false);
+  const [vatLookupError, setVatLookupError] = useState<string | null>(null);
   const hasSavedAddresses = addresses.length > 0;
   const useManualAddressForm = !hasSavedAddresses || addressType === "another";
+  const displayCompanyName =
+    manualAddress.companyName.trim() ||
+    selectedAddress?.companyName.trim() ||
+    "";
+
+  useEffect(() => {
+    onVatLookupStateChange?.(isLookingUpVat);
+  }, [isLookingUpVat, onVatLookupStateChange]);
+
+  useEffect(() => {
+    const normalizedVat = normalizeVatNumber(vatNumber);
+    if (!VAT_NUMBER_REGEX.test(normalizedVat)) {
+      setManualAddress((prev) => ({ ...prev, companyName: "" }));
+      setVatLookupError(null);
+      return;
+    }
+
+    let isCancelled = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      setIsLookingUpVat(true);
+      setVatLookupError(null);
+
+      try {
+        const response = await fetch(
+          `/api/vat-lookup?vat=${encodeURIComponent(normalizedVat)}`,
+          { signal: controller.signal },
+        );
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          companyName?: string;
+          message?: string;
+        };
+
+        if (isCancelled) return;
+
+        if (!response.ok || payload.ok !== true || !payload.companyName) {
+          setManualAddress((prev) => ({ ...prev, companyName: "" }));
+          setVatLookupError(
+            payload.message ?? t("contact.vatLookupFailed"),
+          );
+          return;
+        }
+
+        setManualAddress((prev) => ({
+          ...prev,
+          companyName: payload.companyName ?? "",
+        }));
+        setVatLookupError(null);
+      } catch (error) {
+        if (isCancelled || (error instanceof DOMException && error.name === "AbortError")) {
+          return;
+        }
+        setManualAddress((prev) => ({ ...prev, companyName: "" }));
+        setVatLookupError(t("contact.vatLookupFailed"));
+      } finally {
+        if (!isCancelled) {
+          setIsLookingUpVat(false);
+        }
+      }
+    }, 600);
+
+    return () => {
+      isCancelled = true;
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [vatNumber, t, setManualAddress]);
 
   const mapAddress: MapAddressInput | null = useMemo(() => {
     if (useManualAddressForm) {
@@ -125,8 +206,8 @@ export function CheckoutShippingInformation({
                     .join(" ")
                     .trim() || t("checkout.address.newAddress")}
                 </p>
-                {manualAddress.companyName ? (
-                  <p className="text-gray-600 text-sm mt-1">{manualAddress.companyName}</p>
+                {displayCompanyName ? (
+                  <p className="text-gray-600 text-sm mt-1">{displayCompanyName}</p>
                 ) : null}
                 {manualAddress.addressLine1 ? (
                   <p className="text-gray-600 text-sm mt-1">{manualAddress.addressLine1}</p>
@@ -166,8 +247,8 @@ export function CheckoutShippingInformation({
                     .filter(Boolean)
                     .join(" ")}
                 </p>
-                {selectedAddress.companyName ? (
-                  <p className="text-gray-600 text-sm mt-1">{selectedAddress.companyName}</p>
+                {displayCompanyName ? (
+                  <p className="text-gray-600 text-sm mt-1">{displayCompanyName}</p>
                 ) : null}
                 <p className="text-gray-600 text-sm mt-1">{selectedAddress.addressLine1}</p>
                 {selectedAddress.addressLine2 ? (
@@ -202,16 +283,22 @@ export function CheckoutShippingInformation({
             id="checkout-vatNumber"
             type="text"
             value={vatNumber}
-            onChange={(e) => onVatNumberChange(e.target.value)}
+            onChange={(e) => onVatNumberChange(e.target.value.toUpperCase())}
             className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red ${
-              vatNumberError || vatFormatError
+              vatNumberError || vatFormatError || vatLookupError
                 ? "border-red-500 bg-red-50"
                 : "border-gray-300"
             }`}
             placeholder={t("checkout.placeholder.vatNumber")}
             autoComplete="off"
             required
+            aria-describedby={vatLookupError ? "checkout-vatNumber-error" : undefined}
           />
+          {isLookingUpVat ? (
+            <p className="mt-1 text-sm text-gray-500">
+              {t("contact.vatLookupLoading")}
+            </p>
+          ) : null}
           {vatNumberError ? (
             <p className="mt-1 text-sm text-red-600">
               {t("checkout.error.vatNumberRequired")}
@@ -222,6 +309,32 @@ export function CheckoutShippingInformation({
               {t("checkout.error.vatNumberInvalid")}
             </p>
           ) : null}
+          {!vatNumberError && !vatFormatError && !isLookingUpVat && vatLookupError ? (
+            <p id="checkout-vatNumber-error" className="mt-1 text-sm text-red-600">
+              {vatLookupError}
+            </p>
+          ) : null}
+        </div>
+        <div>
+          <label
+            htmlFor="checkout-companyName"
+            className="mb-1 block text-sm font-semibold text-gray-800"
+          >
+            {t("contact.companyName")}
+          </label>
+          <input
+            id="checkout-companyName"
+            type="text"
+            readOnly
+            value={manualAddress.companyName}
+            placeholder={
+              isLookingUpVat
+                ? t("contact.vatLookupLoading")
+                : t("contact.companyNameAuto")
+            }
+            className={lockedInputClass}
+            aria-busy={isLookingUpVat}
+          />
         </div>
         {!isLoggedIn ? (
           <div>
@@ -261,15 +374,6 @@ export function CheckoutShippingInformation({
               }
               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
               placeholder={t("checkout.placeholder.lastName")}
-            />
-            <input
-              type="text"
-              value={manualAddress.companyName}
-              onChange={(e) =>
-                setManualAddress((prev) => ({ ...prev, companyName: e.target.value }))
-              }
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red sm:col-span-2"
-              placeholder={t("checkout.placeholder.companyName")}
             />
             <input
               type="text"

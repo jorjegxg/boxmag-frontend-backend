@@ -133,6 +133,7 @@ export default function CheckoutPage() {
   const [vatNumber, setVatNumber] = useState("");
   const [vatNumberError, setVatNumberError] = useState(false);
   const [vatFormatError, setVatFormatError] = useState(false);
+  const [isVatLookupInProgress, setIsVatLookupInProgress] = useState(false);
   const [manualAddress, setManualAddress] = useState<ManualAddress>({
     firstName: "",
     lastName: "",
@@ -357,7 +358,10 @@ export default function CheckoutPage() {
         : {
             firstName: selectedAddress?.firstName.trim() ?? "",
             lastName: selectedAddress?.lastName.trim() ?? "",
-            companyName: selectedAddress?.companyName.trim() ?? "",
+            companyName:
+              manualAddress.companyName.trim() ||
+              selectedAddress?.companyName.trim() ||
+              "",
             phone: selectedAddress?.phone.trim() ?? "",
             addressLine1: selectedAddress?.addressLine1.trim() ?? "",
             postcode: selectedAddress?.postcode.trim() ?? "",
@@ -378,6 +382,10 @@ export default function CheckoutPage() {
     }
 
     const normalizedVat = normalizeVatNumber(vatNumber);
+    if (isVatLookupInProgress) {
+      setSubmitOrderMessage(t("contact.vatLookupInProgress"));
+      return;
+    }
     if (!normalizedVat) {
       setVatNumberError(true);
       setVatFormatError(false);
@@ -392,6 +400,11 @@ export default function CheckoutPage() {
     }
     setVatNumberError(false);
     setVatFormatError(false);
+
+    if (!activeAddress.companyName) {
+      setSubmitOrderMessage(t("contact.vatLookupFailed"));
+      return;
+    }
 
     const shippingDisplay = getShippingMethodDisplay(selectedShippingMethod, t);
 
@@ -550,6 +563,7 @@ export default function CheckoutPage() {
               setVatFormatError(false);
             }
           }}
+          onVatLookupStateChange={setIsVatLookupInProgress}
         />
         <BottomPadding />
         <ShippingMethod
