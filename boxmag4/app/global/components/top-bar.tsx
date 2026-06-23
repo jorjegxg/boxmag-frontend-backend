@@ -76,7 +76,7 @@ export function TopBar() {
           <Selector
             label={t("topBar.shippingTo")}
             value={shippingTo}
-            options={["RO", "BG", "HU", "PL", "DE"]}
+            options={["RO", "BG", "HU", "PL", "DE", "AT", "CZ", "GR"]}
             onChange={setShippingTo}
           />
           <Selector
