@@ -29,9 +29,25 @@ function normalizeVatNumber(value: string): string {
 const MAX_ATTACHMENT_MB = 10;
 const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_MB * 1024 * 1024;
 const MAX_ATTACHMENTS = 5;
+const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
+const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
+const AUTH_CHANGED_EVENT = "boxmag-auth-changed";
 const shouldAutofillContactForm = ["dev", "development"].includes(
   process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() ?? "",
 );
+
+function getLoggedInEmail(): string {
+  if (typeof window === "undefined") return "";
+  const isLoggedIn = localStorage.getItem(AUTH_STORAGE_KEY) === "true";
+  const email = localStorage.getItem(AUTH_EMAIL_STORAGE_KEY)?.trim() ?? "";
+  return isLoggedIn && email ? email : "";
+}
+
+function getDefaultContactEmail(): string {
+  const loggedInEmail = getLoggedInEmail();
+  if (loggedInEmail) return loggedInEmail;
+  return shouldAutofillContactForm ? siteEmails.devAutofill : "";
+}
 
 export default function ContactUsPage() {
   const { t } = useLanguage();
@@ -64,6 +80,23 @@ export default function ContactUsPage() {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const syncLoggedInEmail = () => {
+      const loggedInEmail = getLoggedInEmail();
+      if (loggedInEmail) {
+        setEmail(loggedInEmail);
+      }
+    };
+
+    syncLoggedInEmail();
+    window.addEventListener(AUTH_CHANGED_EVENT, syncLoggedInEmail);
+    window.addEventListener("storage", syncLoggedInEmail);
+    return () => {
+      window.removeEventListener(AUTH_CHANGED_EVENT, syncLoggedInEmail);
+      window.removeEventListener("storage", syncLoggedInEmail);
+    };
+  }, []);
 
   useEffect(() => {
     const normalizedVat = normalizeVatNumber(vatNumber);
@@ -260,7 +293,7 @@ export default function ContactUsPage() {
       setSurname("");
       setCompanyName("");
       setVatNumber("");
-      setEmail("");
+      setEmail(getDefaultContactEmail());
       setPhone("");
       setCountry("");
       setMessage("");
