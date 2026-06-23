@@ -7,6 +7,10 @@ import {
   CheckoutAddressMap,
   type MapAddressInput,
 } from "./checkout-address-map";
+import {
+  mergeVatLookupFields,
+  type VatLookupAddressFields,
+} from "../../../lib/parse-vat-address";
 
 const VAT_NUMBER_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
 
@@ -122,6 +126,12 @@ export function CheckoutShippingInformation({
         const payload = (await response.json()) as {
           ok?: boolean;
           companyName?: string;
+          addressLine1?: string | null;
+          addressLine2?: string | null;
+          city?: string | null;
+          postcode?: string | null;
+          country?: string | null;
+          phone?: string | null;
           message?: string;
         };
 
@@ -135,10 +145,27 @@ export function CheckoutShippingInformation({
           return;
         }
 
-        setManualAddress((prev) => ({
-          ...prev,
-          companyName: payload.companyName ?? "",
-        }));
+        const lookupFields: VatLookupAddressFields = {
+          companyName: payload.companyName,
+          addressLine1: payload.addressLine1,
+          addressLine2: payload.addressLine2,
+          city: payload.city,
+          postcode: payload.postcode,
+          country: payload.country,
+          phone: payload.phone,
+        };
+
+        setManualAddress((prev) =>
+          mergeVatLookupFields(prev, lookupFields, {
+            companyName: "companyName",
+            addressLine1: "addressLine1",
+            addressLine2: "addressLine2",
+            city: "city",
+            postcode: "postcode",
+            country: "country",
+            phone: "phone",
+          }),
+        );
         setVatLookupError(null);
       } catch (error) {
         if (isCancelled || (error instanceof DOMException && error.name === "AbortError")) {
