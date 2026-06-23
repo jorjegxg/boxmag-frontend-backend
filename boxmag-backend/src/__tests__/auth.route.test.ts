@@ -51,4 +51,53 @@ describe("auth routes", () => {
     expect(response.body.ok).toBe(false);
     expect(response.body.message).toContain("Invalid registration payload");
   });
+
+  it("returns 400 when profile update payload is missing email", async () => {
+    const response = await request(app).put("/api/auth/profile").send({
+      firstName: "Jane",
+      lastName: "Doe",
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(response.body.message).toContain("Email is required");
+  });
+
+  it("returns 404 when profile update user is not found", async () => {
+    executeMock.mockResolvedValueOnce([[]]);
+
+    const response = await request(app).put("/api/auth/profile").send({
+      email: "missing@example.com",
+      firstName: "Jane",
+      lastName: "Doe",
+      phone: "+40700000000",
+    });
+
+    expect(response.status).toBe(404);
+    expect(response.body.ok).toBe(false);
+    expect(response.body.message).toContain("User not found");
+  });
+
+  it("updates profile when user exists", async () => {
+    executeMock
+      .mockResolvedValueOnce([[{ id: 42 }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+    const response = await request(app).put("/api/auth/profile").send({
+      email: "customer@example.com",
+      firstName: "Jane",
+      lastName: "Doe",
+      phone: "+40700000000",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data).toEqual({
+      email: "customer@example.com",
+      firstName: "Jane",
+      lastName: "Doe",
+      phone: "+40700000000",
+    });
+    expect(executeMock).toHaveBeenCalledTimes(2);
+  });
 });

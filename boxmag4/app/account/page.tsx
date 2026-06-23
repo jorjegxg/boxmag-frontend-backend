@@ -20,6 +20,13 @@ import { siteEmails } from "../../lib/site-emails";
 
 type Tab = "account" | "address" | "orders";
 
+const TAB_HASHES: Tab[] = ["account", "address", "orders"];
+
+function tabFromHash(hash: string): Tab | null {
+  const normalized = hash.replace(/^#/, "").toLowerCase();
+  return TAB_HASHES.includes(normalized as Tab) ? (normalized as Tab) : null;
+}
+
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
 
@@ -33,8 +40,14 @@ const saveBtnClass =
 const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const AUTH_CHANGED_EVENT = "boxmag-auth-changed";
-const ACCOUNT_PROFILE_STORAGE_KEY = "boxmag.account.profile.v1";
 const isDevelopment = process.env.NODE_ENV === "development";
+
+function getBackendBaseUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
+    "http://localhost:3005"
+  );
+}
 
 type UserProfile = {
   firstName: string;
@@ -210,13 +223,15 @@ function LoginRequiredView({
 function MyAccountTab({
   t,
   profile,
-  storageEmailKey,
-  onProfileSaved,
+  onSaveProfile,
 }: {
   t: (key: string) => string;
   profile: UserProfile;
-  storageEmailKey: string;
-  onProfileSaved: (next: UserProfile) => void;
+  onSaveProfile: (payload: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+  }) => Promise<void>;
 }) {
   const [firstName, setFirstName] = useState(profile.firstName);
   const [lastName, setLastName] = useState(profile.lastName);
@@ -240,7 +255,7 @@ function MyAccountTab({
   }, [saveSuccess]);
 
   const handleSave = async () => {
-    if (!storageEmailKey) {
+    if (!profile.email) {
       setSaveError("Missing account email.");
       setSaveSuccess(null);
       return;
@@ -250,22 +265,16 @@ function MyAccountTab({
     setSaveError(null);
     setSaveSuccess(null);
     try {
-      const nextProfile: UserProfile = {
+      await onSaveProfile({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: phone.trim(),
-        email: profile.email,
-      };
-
-      const raw = localStorage.getItem(ACCOUNT_PROFILE_STORAGE_KEY);
-      const parsed = raw ? (JSON.parse(raw) as Record<string, UserProfile>) : {};
-      parsed[storageEmailKey] = nextProfile;
-      localStorage.setItem(ACCOUNT_PROFILE_STORAGE_KEY, JSON.stringify(parsed));
-
-      onProfileSaved(nextProfile);
+      });
       setSaveSuccess("Details saved");
-    } catch {
-      setSaveError("Failed to save profile.");
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : "Failed to save profile.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -340,21 +349,15 @@ function MyAccountTab({
           >
             {t("account.phone")}
           </label>
-          <div className="flex gap-2">
-            <span className="shrink-0 flex items-center px-3 rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-600 font-medium">
-              RO +40
-            </span>
-            <input
-              id="acc-phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-              placeholder="123 456 789"
-              className={inputClass}
-              inputMode="numeric"
-              pattern="[0-9]*"
-            />
-          </div>
+          <input
+            id="acc-phone"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+40 700 000 000"
+            className={inputClass}
+            autoComplete="tel"
+          />
         </div>
         <button type="button" className={saveBtnClass} onClick={() => void handleSave()} disabled={isSaving}>
           {isSaving ? "Saving..." : t("account.save")}
@@ -931,6 +934,37 @@ export default function AccountPage() {
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
 
+  const selectTab = (tab: Tab) => {
+    setActiveTab(tab);
+    router.replace(`/account#${tab}`, { scroll: false });
+  };
+
+  useEffect(() => {
+    const syncTabFromHash = () => {
+      const tab = tabFromHash(window.location.hash);
+      if (tab) {
+        setActiveTab(tab);
+      }
+    };
+
+    syncTabFromHash();
+    window.addEventListener("hashchange", syncTabFromHash);
+    return () => window.removeEventListener("hashchange", syncTabFromHash);
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const tab = tabFromHash(window.location.hash);
+    if (tab) {
+      setActiveTab(tab);
+      return;
+    }
+
+    setActiveTab("account");
+    router.replace("/account#account", { scroll: false });
+  }, [isLoggedIn, router]);
+
   useEffect(() => {
     const storedStatus = localStorage.getItem(AUTH_STORAGE_KEY);
     const storedEmail = localStorage.getItem(AUTH_EMAIL_STORAGE_KEY);
@@ -976,24 +1010,6 @@ export default function AccountPage() {
           phone: payload.data.phone ?? "",
           email: payload.data.email ?? loggedInEmail,
         });
-
-        try {
-          const raw = localStorage.getItem(ACCOUNT_PROFILE_STORAGE_KEY);
-          if (raw) {
-            const parsed = JSON.parse(raw) as Record<string, UserProfile>;
-            const localProfile = parsed[loggedInEmail];
-            if (localProfile) {
-              setAccountProfile({
-                firstName: localProfile.firstName ?? payload.data.firstName ?? "",
-                lastName: localProfile.lastName ?? payload.data.lastName ?? "",
-                phone: localProfile.phone ?? payload.data.phone ?? "",
-                email: payload.data.email ?? loggedInEmail,
-              });
-            }
-          }
-        } catch {
-          // ignore invalid localStorage payload
-        }
       } catch (error) {
         if (controller.signal.aborted) return;
         setAccountProfile({
@@ -1100,6 +1116,47 @@ export default function AccountPage() {
     void loadAddresses();
     return () => controller.abort();
   }, [isLoggedIn, loggedInEmail]);
+
+  const saveProfile = async (payload: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+  }) => {
+    if (!loggedInEmail) {
+      throw new Error("Missing account email.");
+    }
+
+    const response = await fetch(`${getBackendBaseUrl()}/api/auth/profile`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: loggedInEmail,
+        ...payload,
+      }),
+    });
+    const json = (await response.json()) as {
+      ok?: boolean;
+      message?: string;
+      data?: {
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+        email?: string;
+      };
+    };
+    if (!response.ok || json.ok !== true || !json.data) {
+      throw new Error(json.message ?? "Failed to save profile");
+    }
+
+    setAccountProfile({
+      firstName: json.data.firstName ?? "",
+      lastName: json.data.lastName ?? "",
+      phone: json.data.phone ?? "",
+      email: json.data.email ?? loggedInEmail,
+    });
+  };
 
   const createAddress = async (payload: {
     label: string;
@@ -1310,7 +1367,7 @@ export default function AccountPage() {
                   <button
                     key={item.key}
                     type="button"
-                    onClick={() => setActiveTab(item.key)}
+                    onClick={() => selectTab(item.key)}
                     className={`w-full flex items-center gap-3 px-5 py-3.5 text-sm font-bold uppercase tracking-wide transition-colors border-b border-gray-100 last:border-b-0 ${
                       activeTab === item.key
                         ? "bg-my-red text-white"
@@ -1341,7 +1398,7 @@ export default function AccountPage() {
                       email: "",
                     });
                     setActiveTab("account");
-                    router.push("/account");
+                    router.push("/account#account");
                   }}
                   className="w-full flex items-center gap-3 px-5 py-3.5 text-sm font-bold uppercase tracking-wide text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
                 >
@@ -1362,8 +1419,7 @@ export default function AccountPage() {
                 <MyAccountTab
                   t={t}
                   profile={accountProfile}
-                  storageEmailKey={loggedInEmail}
-                  onProfileSaved={(next) => setAccountProfile(next)}
+                  onSaveProfile={saveProfile}
                 />
               ) : null}
               {activeTab === "address" ? (

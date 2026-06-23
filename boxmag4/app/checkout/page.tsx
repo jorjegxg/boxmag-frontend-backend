@@ -51,6 +51,9 @@ const SHIPPING_METHODS_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 const CART_QTY_STEP = 10;
 const MAX_ATTACHMENT_BYTES = 18 * 1024 * 1024;
 const VAT_NUMBER_REGEX = /^([A-Z]{2})?[A-Z0-9]{2,12}$/i;
+const shouldAutofillCheckout = ["dev", "development"].includes(
+  process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() ?? "",
+);
 
 function normalizeVatNumber(value: string): string {
   return value.trim().toUpperCase().replace(/\s+/g, "");
@@ -130,7 +133,9 @@ export default function CheckoutPage() {
   );
   const [accountEmail, setAccountEmail] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
-  const [vatNumber, setVatNumber] = useState("");
+  const [vatNumber, setVatNumber] = useState(
+    shouldAutofillCheckout ? "RO4534966" : "",
+  );
   const [vatNumberError, setVatNumberError] = useState(false);
   const [vatFormatError, setVatFormatError] = useState(false);
   const [isVatLookupInProgress, setIsVatLookupInProgress] = useState(false);

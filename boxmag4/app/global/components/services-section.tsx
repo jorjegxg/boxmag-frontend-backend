@@ -37,7 +37,7 @@ export function ServicesSection() {
               >
                 <Icon className="w-8 h-8 text-white" />
               </div>
-              <h3 className="font-bold text-black text-lg uppercase mb-2">
+              <h3 className="font-bold text-black text-lg mb-2">
                 {title}
               </h3>
               <p className="text-gray-600 text-sm leading-relaxed max-w-xs">

@@ -125,8 +125,10 @@ describe("/account – tab My Account (logat)", () => {
       .should("have.length", 3);
   });
 
-  it("afișează prefixul telefon RO +40", () => {
-    cy.contains("RO +40").should("exist");
+  it("permite introducerea numărului de telefon complet", () => {
+    cy.get("#acc-phone").should("exist");
+    cy.get("#acc-phone").clear().type("+40721234567");
+    cy.get("#acc-phone").should("have.value", "+40721234567");
   });
 
   it("populează profilul din API", () => {

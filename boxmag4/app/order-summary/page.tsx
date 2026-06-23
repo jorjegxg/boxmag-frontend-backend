@@ -15,6 +15,7 @@ import { useLanguage } from "../i18n/language-context";
 import useBusinessOrderStore from "../stores/business_order_store";
 import { useNotification } from "../global/components/notification-center";
 import europeanCountries from "./european-countries.json";
+import type { VatLookupAddressFields } from "../../lib/parse-vat-address";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -23,9 +24,12 @@ const lockedInputClass =
 const invalidInputClass =
   "w-full rounded-lg border border-red-500 bg-red-50 px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500";
 const VAT_NUMBER_REGEX = /^([A-Z]{2})?[A-Z0-9]{2,12}$/i;
-const shouldAutofillOrderSummary = ["dev", "development"].includes(
-  process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() ?? "",
-);
+const VAT_LOOKUP_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
+
+function normalizeVatNumber(value: string): string {
+  return value.trim().toUpperCase().replace(/\s+/g, "");
+}
+
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
 const EUROPEAN_COUNTRY_CODES = new Set(
@@ -62,31 +66,23 @@ export default function OrderSummaryPage() {
   const { t } = useLanguage();
   const router = useRouter();
   const { notify } = useNotification();
-  const [firstName, setFirstName] = useState(shouldAutofillOrderSummary ? "John" : "");
-  const [surname, setSurname] = useState(shouldAutofillOrderSummary ? "Doe" : "");
-  const [companyName, setCompanyName] = useState(
-    shouldAutofillOrderSummary ? "Boxmag Test SRL" : "",
-  );
-  const [vatNumber, setVatNumber] = useState(
-    shouldAutofillOrderSummary ? "RO12345678" : "",
-  );
-  const [email, setEmail] = useState(
-    shouldAutofillOrderSummary ? "customer.demo@reko-packaging.com" : "",
-  );
-  const [phone, setPhone] = useState(
-    shouldAutofillOrderSummary ? "+40799111222" : "",
-  );
-  const [address, setAddress] = useState(
-    shouldAutofillOrderSummary ? "Stefan cel Mare 131" : "",
-  );
-  const [postcode, setPostcode] = useState(shouldAutofillOrderSummary ? "725400" : "");
-  const [city, setCity] = useState(shouldAutofillOrderSummary ? "Radauti" : "");
-  const [country, setCountry] = useState(shouldAutofillOrderSummary ? "RO" : "");
+  const [firstName, setFirstName] = useState("");
+  const [surname, setSurname] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [vatNumber, setVatNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [postcode, setPostcode] = useState("");
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("");
   const [consentPhone, setConsentPhone] = useState(true);
   const [consentEmail, setConsentEmail] = useState(true);
   const [consentPhoneError, setConsentPhoneError] = useState("");
   const [consentEmailError, setConsentEmailError] = useState("");
   const [vatFormatError, setVatFormatError] = useState(false);
+  const [isLookingUpVat, setIsLookingUpVat] = useState(false);
+  const [vatLookupError, setVatLookupError] = useState<string | null>(null);
   const [requiredFieldErrors, setRequiredFieldErrors] = useState<Record<RequiredFieldKey, boolean>>({
     firstName: false,
     surname: false,
@@ -190,6 +186,7 @@ export default function OrderSummaryPage() {
             postcode?: string;
             city?: string;
             country?: string;
+            phone?: string;
             isDefaultShipping?: boolean;
             isDefaultBilling?: boolean;
           }>;
@@ -215,17 +212,17 @@ export default function OrderSummaryPage() {
         };
 
         if (profileResponse.ok && profilePayload.ok === true && profilePayload.data) {
-          setFirstName((prev) => prev || String(profilePayload.data?.firstName ?? ""));
-          setSurname((prev) => prev || String(profilePayload.data?.lastName ?? ""));
-          setPhone((prev) => prev || String(profilePayload.data?.phone ?? ""));
           setEmail(loggedInEmail);
           setVatNumber((prev) => prev || String(profilePayload.data?.vatNumber ?? ""));
+          const profilePhone = String(profilePayload.data?.phone ?? "").trim();
+          if (profilePhone) {
+            setPhone(profilePhone);
+          }
         } else {
           setEmail(loggedInEmail);
         }
 
         if (defaultAddress) {
-          setCompanyName((prev) => prev || String(defaultAddress.companyName ?? ""));
           setAddress((prev) =>
             prev ||
             [defaultAddress.addressLine1, defaultAddress.addressLine2]
@@ -235,6 +232,10 @@ export default function OrderSummaryPage() {
           setPostcode((prev) => prev || String(defaultAddress.postcode ?? ""));
           setCity((prev) => prev || String(defaultAddress.city ?? ""));
           setCountry((prev) => prev || normalizeCountry(defaultAddress.country));
+          const addressPhone = String(defaultAddress.phone ?? "").trim();
+          if (addressPhone) {
+            setPhone((prev) => prev.trim() || addressPhone);
+          }
         }
       } catch (_error) {
         if (!isCancelled) {
@@ -252,6 +253,93 @@ export default function OrderSummaryPage() {
       isCancelled = true;
     };
   }, [backendBaseUrl, hasLoadedAccountDefaults]);
+
+  useEffect(() => {
+    const normalizedVat = normalizeVatNumber(vatNumber);
+    if (!VAT_LOOKUP_REGEX.test(normalizedVat)) {
+      setCompanyName("");
+      setVatLookupError(null);
+      return;
+    }
+
+    let isCancelled = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      setIsLookingUpVat(true);
+      setVatLookupError(null);
+
+      try {
+        const response = await fetch(
+          `/api/vat-lookup?vat=${encodeURIComponent(normalizedVat)}`,
+          { signal: controller.signal },
+        );
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          companyName?: string;
+          addressLine1?: string | null;
+          addressLine2?: string | null;
+          city?: string | null;
+          postcode?: string | null;
+          country?: string | null;
+          phone?: string | null;
+          message?: string;
+        };
+
+        if (isCancelled) return;
+
+        if (!response.ok || payload.ok !== true || !payload.companyName) {
+          setCompanyName("");
+          setVatLookupError(payload.message ?? t("contact.vatLookupFailed"));
+          return;
+        }
+
+        const lookupFields: VatLookupAddressFields = {
+          companyName: payload.companyName,
+          addressLine1: payload.addressLine1,
+          addressLine2: payload.addressLine2,
+          city: payload.city,
+          postcode: payload.postcode,
+          country: payload.country,
+          phone: payload.phone,
+        };
+        const addressFromLookup = [lookupFields.addressLine1, lookupFields.addressLine2]
+          .filter(Boolean)
+          .join(", ");
+        const lookupCountry = lookupFields.country?.trim().toUpperCase() ?? "";
+
+        setCompanyName(
+          (prev) => prev.trim() || lookupFields.companyName?.trim() || "",
+        );
+        setAddress((prev) => prev.trim() || addressFromLookup || prev);
+        setPostcode((prev) => prev.trim() || lookupFields.postcode?.trim() || prev);
+        setCity((prev) => prev.trim() || lookupFields.city?.trim() || prev);
+        setCountry((prev) => {
+          if (prev.trim()) return prev;
+          if (lookupCountry && EUROPEAN_COUNTRY_CODES.has(lookupCountry)) {
+            return lookupCountry;
+          }
+          return lookupFields.country?.trim() || prev;
+        });
+        setVatLookupError(null);
+      } catch (error) {
+        if (isCancelled || (error instanceof DOMException && error.name === "AbortError")) {
+          return;
+        }
+        setCompanyName("");
+        setVatLookupError(t("contact.vatLookupFailed"));
+      } finally {
+        if (!isCancelled) {
+          setIsLookingUpVat(false);
+        }
+      }
+    }, 600);
+
+    return () => {
+      isCancelled = true;
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [vatNumber, t]);
 
   useEffect(() => {
     if (!hasRequiredOrderData) {
@@ -323,6 +411,14 @@ export default function OrderSummaryPage() {
     );
     setRequiredFieldErrors(nextRequiredFieldErrors);
 
+    if (isLookingUpVat) {
+      notify({
+        type: "error",
+        message: t("contact.vatLookupInProgress"),
+      });
+      return;
+    }
+
     if (Object.values(nextRequiredFieldErrors).some(Boolean)) {
       notify({
         type: "error",
@@ -336,6 +432,14 @@ export default function OrderSummaryPage() {
       notify({
         type: "error",
         message: "Codul TVA trebuie sa fie in format valid (ex: RO12345678, DE123456789).",
+      });
+      return;
+    }
+
+    if (!companyName.trim()) {
+      notify({
+        type: "error",
+        message: vatLookupError ?? t("contact.vatLookupFailed"),
       });
       return;
     }
@@ -518,17 +622,7 @@ export default function OrderSummaryPage() {
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="os-companyName" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.companyName")}</label>
-                <input id="os-companyName" type="text" value={companyName} onChange={(e) => {
-                  setCompanyName(e.target.value);
-                  if (e.target.value.trim().length > 0 && requiredFieldErrors.companyName) {
-                    setRequiredFieldErrors((prev) => ({ ...prev, companyName: false }));
-                  }
-                }} placeholder={t("orderSummary.companyName")} className={requiredFieldErrors.companyName ? invalidInputClass : inputClass} />
-                {requiredFieldErrors.companyName ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.companyNameRequired")}</p> : null}
-              </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label htmlFor="os-vatNumber" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.vatNumber")}</label>
                 <input id="os-vatNumber" type="text" value={vatNumber} onChange={(e) => {
                   const nextValue = e.target.value.toUpperCase();
@@ -539,9 +633,33 @@ export default function OrderSummaryPage() {
                   if (VAT_NUMBER_REGEX.test(nextValue.trim()) && vatFormatError) {
                     setVatFormatError(false);
                   }
-                }} placeholder={t("orderSummary.vatNumber")} pattern="^([A-Z]{2})?[A-Z0-9]{2,12}$" title="Format valid: RO12345678, DE123456789 sau 12345678" className={requiredFieldErrors.vatNumber || vatFormatError ? invalidInputClass : inputClass} />
+                }} placeholder={t("orderSummary.vatNumber")} pattern="^([A-Z]{2})?[A-Z0-9]{2,12}$" title="Format valid: RO12345678, DE123456789 sau 12345678" className={requiredFieldErrors.vatNumber || vatFormatError || vatLookupError ? invalidInputClass : inputClass} autoComplete="off" required />
+                {isLookingUpVat ? (
+                  <p className="mt-1 text-sm text-gray-500">{t("contact.vatLookupLoading")}</p>
+                ) : null}
                 {requiredFieldErrors.vatNumber ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.vatNumberRequired")}</p> : null}
                 {!requiredFieldErrors.vatNumber && vatFormatError ? <p className="mt-1 text-sm text-red-600">Format invalid. Exemple valide: RO12345678, DE123456789, FRAB12345</p> : null}
+                {!requiredFieldErrors.vatNumber && !vatFormatError && !isLookingUpVat && vatLookupError ? (
+                  <p className="mt-1 text-sm text-red-600">{vatLookupError}</p>
+                ) : null}
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="os-companyName" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.companyName")}</label>
+                <input
+                  id="os-companyName"
+                  type="text"
+                  readOnly
+                  value={companyName}
+                  placeholder={
+                    isLookingUpVat
+                      ? t("contact.vatLookupLoading")
+                      : t("contact.companyNameAuto")
+                  }
+                  className={lockedInputClass}
+                  aria-busy={isLookingUpVat}
+                  required
+                />
+                {requiredFieldErrors.companyName ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.companyNameRequired")}</p> : null}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

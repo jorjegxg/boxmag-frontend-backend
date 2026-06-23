@@ -24,6 +24,13 @@ type LoginPayload = {
   password?: unknown;
 };
 
+type UpdateProfilePayload = {
+  email?: unknown;
+  firstName?: unknown;
+  lastName?: unknown;
+  phone?: unknown;
+};
+
 type ExistingUserRow = RowDataPacket & {
   id: number;
 };
@@ -226,6 +233,63 @@ authRouter.get("/profile", async (req, res) => {
     res.status(500).json({
       ok: false,
       message: "Failed to load user profile",
+    });
+  }
+});
+
+authRouter.put("/profile", async (req, res) => {
+  const payload = (req.body ?? {}) as UpdateProfilePayload;
+  const emailRaw = toOptionalString(payload.email);
+  if (!emailRaw) {
+    res.status(400).json({
+      ok: false,
+      message: "Email is required",
+    });
+    return;
+  }
+
+  const normalizedEmail = emailRaw.toLowerCase();
+  const firstName = toOptionalString(payload.firstName);
+  const lastName = toOptionalString(payload.lastName);
+  const phone = toOptionalString(payload.phone);
+
+  try {
+    const [rows] = await mysqlPool.execute<ExistingUserRow[]>(
+      `SELECT id FROM users WHERE email = ? LIMIT 1`,
+      [normalizedEmail]
+    );
+
+    if (rows.length === 0) {
+      res.status(404).json({
+        ok: false,
+        message: "User not found",
+      });
+      return;
+    }
+
+    const userId = rows[0]!.id;
+    await mysqlPool.execute(
+      `UPDATE users
+       SET first_name = ?, last_name = ?, phone = ?
+       WHERE id = ?`,
+      [firstName, lastName, phone, userId]
+    );
+
+    res.status(200).json({
+      ok: true,
+      data: {
+        email: normalizedEmail,
+        firstName: firstName ?? "",
+        lastName: lastName ?? "",
+        phone: phone ?? "",
+      },
+      message: "Profile updated",
+    });
+  } catch (error) {
+    console.error("Failed to update user profile", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to update user profile",
     });
   }
 });
