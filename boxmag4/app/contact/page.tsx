@@ -20,8 +20,11 @@ import { siteEmails } from "../../lib/site-emails";
 import {
   fetchVatLookup,
   getCachedVatCompany,
-  rememberVatCompany,
 } from "../../lib/vat-company";
+import {
+  normalizeContactCountry,
+  VAT_SUPPORTED_COUNTRIES,
+} from "../../lib/vat-countries";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -38,18 +41,6 @@ const MAX_ATTACHMENTS = 5;
 const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const AUTH_CHANGED_EVENT = "boxmag-auth-changed";
-const CONTACT_COUNTRY_CODES = new Set([
-  "RO",
-  "DE",
-  "FR",
-  "IT",
-  "ES",
-  "NL",
-  "BE",
-  "PL",
-  "AT",
-  "HU",
-]);
 const shouldAutofillContactForm = isDevelopmentAppEnv();
 
 function getBackendBaseUrl(): string {
@@ -70,13 +61,6 @@ function getDefaultContactEmail(): string {
   const loggedInEmail = getLoggedInEmail();
   if (loggedInEmail) return loggedInEmail;
   return shouldAutofillContactForm ? siteEmails.devAutofill : "";
-}
-
-function normalizeContactCountry(value: string | undefined): string {
-  const normalized = (value ?? "").trim().toUpperCase();
-  if (CONTACT_COUNTRY_CODES.has(normalized)) return normalized;
-  if (normalized) return "OTHER";
-  return "";
 }
 
 type LoggedInContactDefaults = {
@@ -145,10 +129,6 @@ async function fetchLoggedInContactDefaults(
   const profileCompany =
     String(profile?.companyName ?? "").trim() ||
     String(defaultAddress?.companyName ?? "").trim();
-
-  if (profileVat && profileCompany) {
-    rememberVatCompany(profileVat, profileCompany);
-  }
 
   return {
     firstName: String(profile?.firstName ?? "").trim(),
@@ -643,16 +623,11 @@ export default function ContactUsPage() {
                 className={inputClass}
               >
                 <option value="">{t("contact.country")}</option>
-                <option value="RO">Romania</option>
-                <option value="DE">Germany</option>
-                <option value="FR">France</option>
-                <option value="IT">Italy</option>
-                <option value="ES">Spain</option>
-                <option value="NL">Netherlands</option>
-                <option value="BE">Belgium</option>
-                <option value="PL">Poland</option>
-                <option value="AT">Austria</option>
-                <option value="HU">Hungary</option>
+                {VAT_SUPPORTED_COUNTRIES.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.name}
+                  </option>
+                ))}
                 <option value="OTHER">Other</option>
               </select>
             </div>

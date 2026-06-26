@@ -36,7 +36,7 @@ function readCache(): Record<string, string> {
 /**
  * Remember the company name resolved for a VAT number so other pages
  * (contact, checkout, business) can reuse it without calling /api/vat-lookup.
- * Seeded from the logged-in account profile.
+ * Only written after a successful /api/vat-lookup or saving on Account post-lookup.
  */
 export function rememberVatCompany(
   vatNumber: string,
@@ -62,6 +62,31 @@ export function getCachedVatCompany(vatNumber: string): string | null {
   if (!vat) return null;
   const cached = readCache()[vat];
   return cached && cached.trim() ? cached : null;
+}
+
+/** Remove one VAT entry from the browser cache (e.g. after a bad seed). */
+export function forgetCachedVatCompany(vatNumber: string): void {
+  if (typeof window === "undefined") return;
+  const vat = normalizeVatNumber(vatNumber);
+  if (!vat) return;
+  try {
+    const cache = readCache();
+    if (!(vat in cache)) return;
+    delete cache[vat];
+    window.localStorage.setItem(VAT_COMPANY_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+/** Clear all cached VAT → company pairs. */
+export function clearVatCompanyCache(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(VAT_COMPANY_CACHE_KEY);
+  } catch {
+    /* storage unavailable */
+  }
 }
 
 /**

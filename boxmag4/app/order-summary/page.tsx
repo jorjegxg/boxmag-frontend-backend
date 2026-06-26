@@ -19,7 +19,6 @@ import type { VatLookupAddressFields } from "../../lib/parse-vat-address";
 import {
   fetchVatLookup,
   getCachedVatCompany,
-  rememberVatCompany,
 } from "../../lib/vat-company";
 
 const inputClass =
@@ -219,14 +218,18 @@ export default function OrderSummaryPage() {
 
         if (profileResponse.ok && profilePayload.ok === true && profilePayload.data) {
           setEmail(loggedInEmail);
+          const profileFirstName = String(profilePayload.data?.firstName ?? "").trim();
+          const profileLastName = String(profilePayload.data?.lastName ?? "").trim();
+          setFirstName((prev) => prev || profileFirstName);
+          setSurname((prev) => prev || profileLastName);
           const profileVat = String(profilePayload.data?.vatNumber ?? "").trim();
           const profileCompany =
             String(profilePayload.data?.companyName ?? "").trim() ||
             String(defaultAddress?.companyName ?? "").trim();
-          if (profileVat && profileCompany) {
-            rememberVatCompany(profileVat, profileCompany);
-          }
           setVatNumber((prev) => prev || profileVat);
+          if (profileCompany) {
+            setCompanyName((prev) => prev.trim() || profileCompany);
+          }
           const profilePhone = String(profilePayload.data?.phone ?? "").trim();
           if (profilePhone) {
             setPhone(profilePhone);

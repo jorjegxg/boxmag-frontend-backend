@@ -269,9 +269,6 @@ function MyAccountTab({
     setPhone(profile.phone);
     setCompanyName(profile.companyName);
     setVatNumber(profile.vatNumber);
-    if (profile.vatNumber && profile.companyName) {
-      rememberVatCompany(profile.vatNumber, profile.companyName);
-    }
   }, [profile]);
 
   useEffect(() => {

@@ -7,6 +7,7 @@ import { useCurrency } from "../../currency/currency-context";
 import { siteEmails } from "../../../lib/site-emails";
 import type { Language } from "../../i18n/translations";
 import type { DisplayCurrency } from "../../../lib/format-price";
+import { SHIPPING_TO_COUNTRY_CODES } from "../../../lib/vat-countries";
 
 export function TopBar() {
   const { language, setLanguage, t } = useLanguage();
@@ -76,7 +77,7 @@ export function TopBar() {
           <Selector
             label={t("topBar.shippingTo")}
             value={shippingTo}
-            options={["RO", "BG", "HU", "PL", "DE", "AT", "CZ", "GR"]}
+            options={[...SHIPPING_TO_COUNTRY_CODES]}
             onChange={setShippingTo}
           />
           <Selector

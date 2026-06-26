@@ -1,23 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseViesAddress, type VatLookupAddressFields } from "@/lib/parse-vat-address";
+import {
+  isVatLookupSupportedCountry,
+  normalizeVatCountryPrefix,
+  toViesCountryCode,
+} from "@/lib/vat-countries";
 
 const VIES_API_URL =
   "https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number";
 const ANAF_API_URL =
   "https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva";
-
-const EU_COUNTRY_CODES = new Set([
-  "RO",
-  "DE",
-  "FR",
-  "IT",
-  "ES",
-  "NL",
-  "BE",
-  "PL",
-  "AT",
-  "HU",
-]);
 
 type ViesResponse = {
   isValid?: boolean;
@@ -54,7 +46,9 @@ function parseVatNumber(
   const normalized = raw.trim().toUpperCase().replace(/\s+/g, "");
   const match = normalized.match(/^([A-Z]{2})([A-Z0-9]{2,12})$/);
   if (!match) return null;
-  return { countryCode: match[1], vatNumber: match[2] };
+  const countryCode = normalizeVatCountryPrefix(match[1]);
+  if (!isVatLookupSupportedCountry(countryCode)) return null;
+  return { countryCode, vatNumber: match[2] };
 }
 
 function normalizeCompanyName(name: string | undefined): string | null {
@@ -104,13 +98,14 @@ async function lookupWithVies(
   countryCode: string,
   vatNumber: string,
 ): Promise<ViesLookupResult | null> {
+  const viesCountryCode = toViesCountryCode(countryCode);
   const response = await fetch(VIES_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
     },
-    body: JSON.stringify({ countryCode, vatNumber }),
+    body: JSON.stringify({ countryCode: viesCountryCode, vatNumber }),
     signal: AbortSignal.timeout(10000),
   });
 
@@ -219,7 +214,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (!EU_COUNTRY_CODES.has(parsed.countryCode)) {
+  if (!isVatLookupSupportedCountry(parsed.countryCode)) {
     return NextResponse.json(
       { ok: false, message: "VAT lookup is not supported for this country" },
       { status: 400 },
