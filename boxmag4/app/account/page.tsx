@@ -18,6 +18,11 @@ import {
 } from "react-icons/fa";
 import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { siteEmails } from "../../lib/site-emails";
+import {
+  fetchVatLookup,
+  getCachedVatCompany,
+  rememberVatCompany,
+} from "../../lib/vat-company";
 
 type Tab = "account" | "address" | "orders";
 
@@ -31,12 +36,21 @@ function tabFromHash(hash: string): Tab | null {
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
 
+const lockedInputClass =
+  "w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-3 text-gray-600 cursor-not-allowed focus:outline-none";
+
 const sectionTitleClass = "text-lg font-bold text-gray-900 mb-1";
 
 const sectionSubtitleClass = "text-sm text-gray-500 mb-5";
 
 const saveBtnClass =
   "px-6 py-2.5 rounded-lg bg-my-red text-white font-semibold text-sm hover:bg-my-red/90 transition-colors";
+
+const VAT_NUMBER_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
+
+function normalizeVatNumber(value: string): string {
+  return value.trim().toUpperCase().replace(/\s+/g, "");
+}
 
 const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
@@ -55,6 +69,8 @@ type UserProfile = {
   lastName: string;
   phone: string;
   email: string;
+  companyName: string;
+  vatNumber: string;
 };
 
 type UserAddress = {
@@ -232,11 +248,17 @@ function MyAccountTab({
     firstName: string;
     lastName: string;
     phone: string;
+    companyName: string;
+    vatNumber: string;
   }) => Promise<void>;
 }) {
   const [firstName, setFirstName] = useState(profile.firstName);
   const [lastName, setLastName] = useState(profile.lastName);
   const [phone, setPhone] = useState(profile.phone);
+  const [companyName, setCompanyName] = useState(profile.companyName);
+  const [vatNumber, setVatNumber] = useState(profile.vatNumber);
+  const [isLookingUpVat, setIsLookingUpVat] = useState(false);
+  const [vatLookupError, setVatLookupError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -245,6 +267,11 @@ function MyAccountTab({
     setFirstName(profile.firstName);
     setLastName(profile.lastName);
     setPhone(profile.phone);
+    setCompanyName(profile.companyName);
+    setVatNumber(profile.vatNumber);
+    if (profile.vatNumber && profile.companyName) {
+      rememberVatCompany(profile.vatNumber, profile.companyName);
+    }
   }, [profile]);
 
   useEffect(() => {
@@ -255,12 +282,81 @@ function MyAccountTab({
     return () => window.clearTimeout(timer);
   }, [saveSuccess]);
 
+  useEffect(() => {
+    const normalizedVat = normalizeVatNumber(vatNumber);
+    if (!VAT_NUMBER_REGEX.test(normalizedVat)) {
+      setCompanyName("");
+      setVatLookupError(null);
+      return;
+    }
+
+    const cachedCompany = getCachedVatCompany(normalizedVat);
+    if (cachedCompany) {
+      setCompanyName(cachedCompany);
+      setVatLookupError(null);
+      setIsLookingUpVat(false);
+      return;
+    }
+
+    let isCancelled = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      setIsLookingUpVat(true);
+      setVatLookupError(null);
+
+      try {
+        const payload = await fetchVatLookup(normalizedVat, controller.signal);
+
+        if (isCancelled) return;
+
+        if (payload.ok !== true || !payload.companyName) {
+          setCompanyName("");
+          setVatLookupError(
+            payload.message ?? t("contact.vatLookupFailed"),
+          );
+          return;
+        }
+
+        setCompanyName(payload.companyName);
+        setVatLookupError(null);
+      } catch (error) {
+        if (
+          isCancelled ||
+          (error instanceof DOMException && error.name === "AbortError")
+        ) {
+          return;
+        }
+        setCompanyName("");
+        setVatLookupError(t("contact.vatLookupFailed"));
+      } finally {
+        if (!isCancelled) {
+          setIsLookingUpVat(false);
+        }
+      }
+    }, 600);
+
+    return () => {
+      isCancelled = true;
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [vatNumber, t]);
+
   const handleSave = async () => {
     if (!profile.email) {
       setSaveError("Missing account email.");
       setSaveSuccess(null);
       return;
     }
+
+    if (isLookingUpVat) {
+      setSaveError(t("contact.vatLookupInProgress"));
+      setSaveSuccess(null);
+      return;
+    }
+
+    const normalizedVat = normalizeVatNumber(vatNumber);
+    const trimmedCompany = companyName.trim();
 
     setIsSaving(true);
     setSaveError(null);
@@ -270,7 +366,12 @@ function MyAccountTab({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: phone.trim(),
+        companyName: trimmedCompany,
+        vatNumber: normalizedVat,
       });
+      if (normalizedVat && trimmedCompany) {
+        rememberVatCompany(normalizedVat, trimmedCompany);
+      }
       setSaveSuccess("Details saved");
     } catch (error) {
       setSaveError(
@@ -334,6 +435,67 @@ function MyAccountTab({
           </div>
         </div>
         <button type="button" className={saveBtnClass} onClick={() => void handleSave()} disabled={isSaving}>
+          {isSaving ? "Saving..." : t("account.save")}
+        </button>
+      </div>
+
+      {/* Business */}
+      <div className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-4">
+        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+          {t("account.businessSection")}
+        </h3>
+        <div>
+          <label
+            htmlFor="acc-vat"
+            className="block text-xs font-semibold text-gray-500 mb-1 uppercase"
+          >
+            {t("contact.vatNumber")}
+          </label>
+          <input
+            id="acc-vat"
+            type="text"
+            value={vatNumber}
+            onChange={(e) => setVatNumber(e.target.value.toUpperCase())}
+            placeholder={t("contact.vatNumber")}
+            pattern="[A-Za-z]{2}\s?[A-Za-z0-9]{2,12}"
+            title="Use country code plus 2-12 letters/digits (e.g. RO12345678 or RO 12345678)"
+            className={inputClass}
+            aria-describedby={vatLookupError ? "acc-vat-error" : undefined}
+            aria-busy={isLookingUpVat}
+          />
+          {isLookingUpVat ? (
+            <p className="mt-1 text-sm text-gray-500">
+              {t("contact.vatLookupLoading")}
+            </p>
+          ) : null}
+          {!isLookingUpVat && vatLookupError ? (
+            <p id="acc-vat-error" className="mt-1 text-sm text-red-600">
+              {vatLookupError}
+            </p>
+          ) : null}
+        </div>
+        <div>
+          <label
+            htmlFor="acc-company"
+            className="block text-xs font-semibold text-gray-500 mb-1 uppercase"
+          >
+            {t("contact.companyName")}
+          </label>
+          <input
+            id="acc-company"
+            type="text"
+            value={companyName}
+            readOnly
+            placeholder={
+              isLookingUpVat
+                ? t("contact.vatLookupLoading")
+                : t("contact.companyNameAuto")
+            }
+            className={lockedInputClass}
+            aria-busy={isLookingUpVat}
+          />
+        </div>
+        <button type="button" className={saveBtnClass} onClick={() => void handleSave()} disabled={isSaving || isLookingUpVat}>
           {isSaving ? "Saving..." : t("account.save")}
         </button>
       </div>
@@ -928,6 +1090,8 @@ export default function AccountPage() {
     lastName: "",
     phone: "",
     email: "",
+    companyName: "",
+    vatNumber: "",
   });
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
@@ -999,6 +1163,8 @@ export default function AccountPage() {
             lastName?: string;
             phone?: string;
             email?: string;
+            companyName?: string;
+            vatNumber?: string;
           };
         };
         if (!response.ok || payload.ok !== true || !payload.data) {
@@ -1010,6 +1176,8 @@ export default function AccountPage() {
           lastName: payload.data.lastName ?? "",
           phone: payload.data.phone ?? "",
           email: payload.data.email ?? loggedInEmail,
+          companyName: payload.data.companyName ?? "",
+          vatNumber: payload.data.vatNumber ?? "",
         });
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -1018,6 +1186,8 @@ export default function AccountPage() {
           lastName: "",
           phone: "",
           email: loggedInEmail,
+          companyName: "",
+          vatNumber: "",
         });
       } finally {
         if (!controller.signal.aborted) {
@@ -1122,6 +1292,8 @@ export default function AccountPage() {
     firstName: string;
     lastName: string;
     phone: string;
+    companyName: string;
+    vatNumber: string;
   }) => {
     if (!loggedInEmail) {
       throw new Error("Missing account email.");
@@ -1145,6 +1317,8 @@ export default function AccountPage() {
         lastName?: string;
         phone?: string;
         email?: string;
+        companyName?: string;
+        vatNumber?: string;
       };
     };
     if (!response.ok || json.ok !== true || !json.data) {
@@ -1156,6 +1330,8 @@ export default function AccountPage() {
       lastName: json.data.lastName ?? "",
       phone: json.data.phone ?? "",
       email: json.data.email ?? loggedInEmail,
+      companyName: json.data.companyName ?? "",
+      vatNumber: json.data.vatNumber ?? "",
     });
   };
 
@@ -1397,6 +1573,8 @@ export default function AccountPage() {
                       lastName: "",
                       phone: "",
                       email: "",
+                      companyName: "",
+                      vatNumber: "",
                     });
                     setActiveTab("account");
                     router.push("/account#account");

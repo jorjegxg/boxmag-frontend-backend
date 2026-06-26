@@ -29,6 +29,8 @@ type UpdateProfilePayload = {
   firstName?: unknown;
   lastName?: unknown;
   phone?: unknown;
+  companyName?: unknown;
+  vatNumber?: unknown;
 };
 
 type ExistingUserRow = RowDataPacket & {
@@ -51,6 +53,7 @@ type UserProfileRow = RowDataPacket & {
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
+  company_name: string | null;
   vat_number: string | null;
 };
 
@@ -70,6 +73,12 @@ function toOptionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeVatNumber(value: string | null): string | null {
+  if (!value) return null;
+  const normalized = value.toUpperCase().replace(/\s+/g, "");
+  return normalized.length > 0 ? normalized : null;
 }
 
 function isValidEmail(value: string): boolean {
@@ -202,7 +211,7 @@ authRouter.get("/profile", async (req, res) => {
 
   try {
     const [rows] = await mysqlPool.execute<UserProfileRow[]>(
-      `SELECT email, first_name, last_name, phone, vat_number
+      `SELECT email, first_name, last_name, phone, company_name, vat_number
        FROM users
        WHERE email = ?
        LIMIT 1`,
@@ -225,6 +234,7 @@ authRouter.get("/profile", async (req, res) => {
         firstName: user.first_name ?? "",
         lastName: user.last_name ?? "",
         phone: user.phone ?? "",
+        companyName: user.company_name ?? "",
         vatNumber: user.vat_number ?? "",
       },
     });
@@ -252,6 +262,8 @@ authRouter.put("/profile", async (req, res) => {
   const firstName = toOptionalString(payload.firstName);
   const lastName = toOptionalString(payload.lastName);
   const phone = toOptionalString(payload.phone);
+  const companyName = toOptionalString(payload.companyName);
+  const vatNumber = normalizeVatNumber(toOptionalString(payload.vatNumber));
 
   try {
     const [rows] = await mysqlPool.execute<ExistingUserRow[]>(
@@ -270,9 +282,9 @@ authRouter.put("/profile", async (req, res) => {
     const userId = rows[0]!.id;
     await mysqlPool.execute(
       `UPDATE users
-       SET first_name = ?, last_name = ?, phone = ?
+       SET first_name = ?, last_name = ?, phone = ?, company_name = ?, vat_number = ?
        WHERE id = ?`,
-      [firstName, lastName, phone, userId]
+      [firstName, lastName, phone, companyName, vatNumber, userId]
     );
 
     res.status(200).json({
@@ -282,6 +294,8 @@ authRouter.put("/profile", async (req, res) => {
         firstName: firstName ?? "",
         lastName: lastName ?? "",
         phone: phone ?? "",
+        companyName: companyName ?? "",
+        vatNumber: vatNumber ?? "",
       },
       message: "Profile updated",
     });

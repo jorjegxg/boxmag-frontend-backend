@@ -17,6 +17,11 @@ import { useLanguage } from "../i18n/language-context";
 import { useNotification } from "../global/components/notification-center";
 import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { siteEmails } from "../../lib/site-emails";
+import {
+  fetchVatLookup,
+  getCachedVatCompany,
+  rememberVatCompany,
+} from "../../lib/vat-company";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -110,6 +115,7 @@ async function fetchLoggedInContactDefaults(
       phone?: string;
       email?: string;
       vatNumber?: string;
+      companyName?: string;
     };
   };
   const addressesPayload = (await addressesResponse.json()) as {
@@ -135,14 +141,22 @@ async function fetchLoggedInContactDefaults(
   const profile = profilePayload.ok === true ? profilePayload.data : undefined;
   const profilePhone = String(profile?.phone ?? "").trim();
   const addressPhone = String(defaultAddress?.phone ?? "").trim();
+  const profileVat = String(profile?.vatNumber ?? "").trim();
+  const profileCompany =
+    String(profile?.companyName ?? "").trim() ||
+    String(defaultAddress?.companyName ?? "").trim();
+
+  if (profileVat && profileCompany) {
+    rememberVatCompany(profileVat, profileCompany);
+  }
 
   return {
     firstName: String(profile?.firstName ?? "").trim(),
     surname: String(profile?.lastName ?? "").trim(),
     email: loggedInEmail,
     phone: profilePhone || addressPhone,
-    vatNumber: String(profile?.vatNumber ?? "").trim(),
-    companyName: String(defaultAddress?.companyName ?? "").trim(),
+    vatNumber: profileVat,
+    companyName: profileCompany,
     country: normalizeContactCountry(defaultAddress?.country),
   };
 }
@@ -246,6 +260,14 @@ export default function ContactUsPage() {
       return;
     }
 
+    const cachedCompany = getCachedVatCompany(normalizedVat);
+    if (cachedCompany) {
+      setCompanyName(cachedCompany);
+      setVatLookupError(null);
+      setIsLookingUpVat(false);
+      return;
+    }
+
     let isCancelled = false;
     const controller = new AbortController();
     const timeoutId = window.setTimeout(async () => {
@@ -253,19 +275,11 @@ export default function ContactUsPage() {
       setVatLookupError(null);
 
       try {
-        const response = await fetch(
-          `/api/vat-lookup?vat=${encodeURIComponent(normalizedVat)}`,
-          { signal: controller.signal },
-        );
-        const payload = (await response.json()) as {
-          ok?: boolean;
-          companyName?: string;
-          message?: string;
-        };
+        const payload = await fetchVatLookup(normalizedVat, controller.signal);
 
         if (isCancelled) return;
 
-        if (!response.ok || payload.ok !== true || !payload.companyName) {
+        if (payload.ok !== true || !payload.companyName) {
           setCompanyName("");
           setVatLookupError(
             payload.message ?? t("contact.vatLookupFailed"),

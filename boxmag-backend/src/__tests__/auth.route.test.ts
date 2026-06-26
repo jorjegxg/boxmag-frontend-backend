@@ -88,6 +88,8 @@ describe("auth routes", () => {
       firstName: "Jane",
       lastName: "Doe",
       phone: "+40700000000",
+      companyName: "Boxmag SRL",
+      vatNumber: "RO12345678",
     });
 
     expect(response.status).toBe(200);
@@ -97,6 +99,8 @@ describe("auth routes", () => {
       firstName: "Jane",
       lastName: "Doe",
       phone: "+40700000000",
+      companyName: "Boxmag SRL",
+      vatNumber: "RO12345678",
     });
     expect(executeMock).toHaveBeenCalledTimes(2);
   });

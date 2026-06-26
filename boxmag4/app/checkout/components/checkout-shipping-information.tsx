@@ -11,6 +11,11 @@ import {
   mergeVatLookupFields,
   type VatLookupAddressFields,
 } from "../../../lib/parse-vat-address";
+import {
+  fetchVatLookup,
+  getCachedVatCompany,
+  vatPayloadToAddressFields,
+} from "../../../lib/vat-company";
 
 const VAT_NUMBER_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
 
@@ -112,6 +117,14 @@ export function CheckoutShippingInformation({
       return;
     }
 
+    const cachedCompany = getCachedVatCompany(normalizedVat);
+    if (cachedCompany) {
+      setManualAddress((prev) => ({ ...prev, companyName: cachedCompany }));
+      setVatLookupError(null);
+      setIsLookingUpVat(false);
+      return;
+    }
+
     let isCancelled = false;
     const controller = new AbortController();
     const timeoutId = window.setTimeout(async () => {
@@ -119,25 +132,11 @@ export function CheckoutShippingInformation({
       setVatLookupError(null);
 
       try {
-        const response = await fetch(
-          `/api/vat-lookup?vat=${encodeURIComponent(normalizedVat)}`,
-          { signal: controller.signal },
-        );
-        const payload = (await response.json()) as {
-          ok?: boolean;
-          companyName?: string;
-          addressLine1?: string | null;
-          addressLine2?: string | null;
-          city?: string | null;
-          postcode?: string | null;
-          country?: string | null;
-          phone?: string | null;
-          message?: string;
-        };
+        const payload = await fetchVatLookup(normalizedVat, controller.signal);
 
         if (isCancelled) return;
 
-        if (!response.ok || payload.ok !== true || !payload.companyName) {
+        if (payload.ok !== true || !payload.companyName) {
           setManualAddress((prev) => ({ ...prev, companyName: "" }));
           setVatLookupError(
             payload.message ?? t("contact.vatLookupFailed"),
@@ -145,15 +144,8 @@ export function CheckoutShippingInformation({
           return;
         }
 
-        const lookupFields: VatLookupAddressFields = {
-          companyName: payload.companyName,
-          addressLine1: payload.addressLine1,
-          addressLine2: payload.addressLine2,
-          city: payload.city,
-          postcode: payload.postcode,
-          country: payload.country,
-          phone: payload.phone,
-        };
+        const lookupFields: VatLookupAddressFields =
+          vatPayloadToAddressFields(payload);
 
         setManualAddress((prev) =>
           mergeVatLookupFields(prev, lookupFields, {

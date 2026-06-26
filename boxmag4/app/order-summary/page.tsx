@@ -16,6 +16,11 @@ import useBusinessOrderStore from "../stores/business_order_store";
 import { useNotification } from "../global/components/notification-center";
 import europeanCountries from "./european-countries.json";
 import type { VatLookupAddressFields } from "../../lib/parse-vat-address";
+import {
+  fetchVatLookup,
+  getCachedVatCompany,
+  rememberVatCompany,
+} from "../../lib/vat-company";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -175,6 +180,7 @@ export default function OrderSummaryPage() {
             phone?: string;
             email?: string;
             vatNumber?: string;
+            companyName?: string;
           };
         };
         const addressesPayload = (await addressesResponse.json()) as {
@@ -213,7 +219,14 @@ export default function OrderSummaryPage() {
 
         if (profileResponse.ok && profilePayload.ok === true && profilePayload.data) {
           setEmail(loggedInEmail);
-          setVatNumber((prev) => prev || String(profilePayload.data?.vatNumber ?? ""));
+          const profileVat = String(profilePayload.data?.vatNumber ?? "").trim();
+          const profileCompany =
+            String(profilePayload.data?.companyName ?? "").trim() ||
+            String(defaultAddress?.companyName ?? "").trim();
+          if (profileVat && profileCompany) {
+            rememberVatCompany(profileVat, profileCompany);
+          }
+          setVatNumber((prev) => prev || profileVat);
           const profilePhone = String(profilePayload.data?.phone ?? "").trim();
           if (profilePhone) {
             setPhone(profilePhone);
@@ -262,6 +275,14 @@ export default function OrderSummaryPage() {
       return;
     }
 
+    const cachedCompany = getCachedVatCompany(normalizedVat);
+    if (cachedCompany) {
+      setCompanyName((prev) => prev.trim() || cachedCompany);
+      setVatLookupError(null);
+      setIsLookingUpVat(false);
+      return;
+    }
+
     let isCancelled = false;
     const controller = new AbortController();
     const timeoutId = window.setTimeout(async () => {
@@ -269,25 +290,11 @@ export default function OrderSummaryPage() {
       setVatLookupError(null);
 
       try {
-        const response = await fetch(
-          `/api/vat-lookup?vat=${encodeURIComponent(normalizedVat)}`,
-          { signal: controller.signal },
-        );
-        const payload = (await response.json()) as {
-          ok?: boolean;
-          companyName?: string;
-          addressLine1?: string | null;
-          addressLine2?: string | null;
-          city?: string | null;
-          postcode?: string | null;
-          country?: string | null;
-          phone?: string | null;
-          message?: string;
-        };
+        const payload = await fetchVatLookup(normalizedVat, controller.signal);
 
         if (isCancelled) return;
 
-        if (!response.ok || payload.ok !== true || !payload.companyName) {
+        if (payload.ok !== true || !payload.companyName) {
           setCompanyName("");
           setVatLookupError(payload.message ?? t("contact.vatLookupFailed"));
           return;
