@@ -14,6 +14,7 @@ import {
   formatOfferStatus,
   formatPaymentStatus,
   offerBadgeClass,
+  orderNeedsManualOfferResponse,
   paymentBadgeClass,
   type OrderStatusValue,
 } from "./admin-ro";
@@ -672,11 +673,15 @@ export default function AdminPage() {
                             <td className="px-4 py-3">{order.boxTypeName}</td>
                             <td className="px-4 py-3">{order.quantity}</td>
                             <td className="px-4 py-3">
-                              <span
-                                className={`inline-block rounded-full px-2.5 py-1 text-xs font-bold ${offerBadgeClass(order.offerSentAt)}`}
-                              >
-                                {formatOfferStatus(order.offerSentAt)}
-                              </span>
+                              {orderNeedsManualOfferResponse(order) ? (
+                                <span
+                                  className={`inline-block rounded-full px-2.5 py-1 text-xs font-bold ${offerBadgeClass(order.offerSentAt)}`}
+                                >
+                                  {formatOfferStatus(order.offerSentAt)}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
                             </td>
                             <td className="px-4 py-3">
                               {order.stripeSessionId && order.paymentStatus ? (

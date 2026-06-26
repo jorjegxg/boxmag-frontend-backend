@@ -40,6 +40,16 @@ export function formatOfferStatus(offerSentAt: string | null): string {
   return offerSentAt ? "Răspuns trimis" : "Așteaptă răspuns";
 }
 
+export function orderNeedsManualOfferResponse(order: {
+  stripeSessionId: string | null;
+  paymentStatus: string | null;
+}): boolean {
+  const isStripePaid =
+    Boolean(order.stripeSessionId?.trim()) &&
+    order.paymentStatus?.trim().toLowerCase() === "paid";
+  return !isStripePaid;
+}
+
 export function offerBadgeClass(offerSentAt: string | null): string {
   return offerSentAt
     ? "text-green-700 bg-green-50"
