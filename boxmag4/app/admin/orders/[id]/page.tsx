@@ -236,6 +236,7 @@ export default function AdminOrderDetailsPage() {
         const payload = (await response.json()) as {
           ok?: boolean;
           data?: OfferSenderOption[];
+          defaultKey?: OfferSenderOption["key"];
         };
         if (!response.ok || payload.ok !== true || !Array.isArray(payload.data)) {
           return;
@@ -243,8 +244,14 @@ export default function AdminOrderDetailsPage() {
         setOfferSenders(payload.data);
         setSelectedSenderKey((current) => {
           if (current) return current;
-          const ordersSender = payload.data?.find((sender) => sender.key === "orders");
-          return ordersSender?.key ?? payload.data?.[0]?.key ?? "";
+          const defaultKey = payload.defaultKey;
+          if (
+            defaultKey &&
+            payload.data?.some((sender) => sender.key === defaultKey)
+          ) {
+            return defaultKey;
+          }
+          return payload.data?.[0]?.key ?? "";
         });
       } catch (error) {
         if (controller.signal.aborted) return;

@@ -41,7 +41,11 @@ export const env = {
   emailFrom: process.env.EMAIL_FROM ?? process.env.SMTP_USER ?? "",
   contactTo: process.env.CONTACT_TO ?? "",
   emailOrdersFrom: process.env.EMAIL_ORDERS_FROM ?? "",
+  emailOrdersSmtpUser: process.env.EMAIL_ORDERS_SMTP_USER ?? "",
+  emailOrdersSmtpPass: process.env.EMAIL_ORDERS_SMTP_PASS ?? "",
   ordersNotificationTo: process.env.ORDERS_NOTIFICATION_TO ?? "",
+  /** Default offer email sender key: orders | info | b2b */
+  emailOfferDefaultFromKey: process.env.EMAIL_OFFER_DEFAULT_FROM_KEY ?? "orders",
   infoEmail: process.env.NEXT_PUBLIC_INFO_EMAIL ?? "",
   b2bEmail: process.env.NEXT_PUBLIC_B2B_EMAIL ?? "",
   verificationExpiresMinutes: toNumber(process.env.VERIFICATION_EXPIRES_MINUTES, 60),

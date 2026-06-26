@@ -1,20 +1,60 @@
 import nodemailer from "nodemailer";
+import type Mail from "nodemailer/lib/mailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { env } from "../config/env";
 import type { CartLineItem } from "../utils/cart-items";
 import { getObjectBufferFromMinio } from "./minio";
 
-const transporter = nodemailer.createTransport({
-  host: env.smtpHost,
-  port: env.smtpPort,
-  secure: env.smtpPort === 465,
-  auth:
-    env.smtpUser && env.smtpPass
-      ? {
-          user: env.smtpUser,
-          pass: env.smtpPass,
-        }
-      : undefined,
-});
+type MailTransporter = Mail<SMTPTransport.SentMessageInfo>;
+
+function createMailTransporter(user: string, pass: string): MailTransporter {
+  const smtpUser = user.trim();
+  const smtpPass = pass.trim();
+  return nodemailer.createTransport({
+    host: env.smtpHost,
+    port: env.smtpPort,
+    secure: env.smtpPort === 465,
+    auth:
+      smtpUser && smtpPass
+        ? {
+            user: smtpUser,
+            pass: smtpPass,
+          }
+        : undefined,
+  });
+}
+
+const transporter = createMailTransporter(
+  env.smtpUser,
+  env.smtpPass,
+);
+
+let ordersTransporter: MailTransporter | null = null;
+
+function getOrdersSmtpUser(): string {
+  return env.emailOrdersSmtpUser.trim() || env.emailOrdersFrom.trim();
+}
+
+function isOrdersMailboxSmtpConfigured(): boolean {
+  return Boolean(
+    env.emailOrdersFrom.trim() &&
+      getOrdersSmtpUser() &&
+      env.emailOrdersSmtpPass.trim(),
+  );
+}
+
+function getOrdersMailTransporter(): MailTransporter {
+  if (!isOrdersMailboxSmtpConfigured()) {
+    return transporter;
+  }
+  if (!ordersTransporter) {
+    ordersTransporter = createMailTransporter(
+      getOrdersSmtpUser(),
+      env.emailOrdersSmtpPass,
+    );
+  }
+  return ordersTransporter;
+}
 
 export type OrderEmailPriceBreakdown = {
   subtotal: number | null;
@@ -234,11 +274,45 @@ export function isEmailTransportConfigured(): boolean {
 }
 
 export function isOrderEmailTransportConfigured(): boolean {
+  if (isOrdersMailboxSmtpConfigured()) {
+    return true;
+  }
   return Boolean(env.smtpUser && env.smtpPass && env.emailOrdersFrom);
 }
 
 function resolveAuthenticatedSmtpFromAddress(): string {
   return env.smtpUser.trim() || env.emailFrom.trim();
+}
+
+function buildOrdersMailboxHeaders(senderName = "Boxmag"): {
+  from: string;
+  replyTo: string;
+} {
+  const fromAddress = env.emailOrdersFrom.trim();
+  return {
+    from: `"${senderName}" <${fromAddress}>`,
+    replyTo: fromAddress,
+  };
+}
+
+function getOrderCustomerMailDelivery(senderName = "Boxmag"): {
+  transport: MailTransporter;
+  headers: { from: string; replyTo: string };
+} {
+  if (isOrdersMailboxSmtpConfigured()) {
+    return {
+      transport: getOrdersMailTransporter(),
+      headers: buildOrdersMailboxHeaders(senderName),
+    };
+  }
+
+  return {
+    transport: transporter,
+    headers: buildCustomerMailHeaders({
+      replyTo: env.emailOrdersFrom,
+      senderName,
+    }),
+  };
 }
 
 /** Use the authenticated SMTP mailbox as From; department address as Reply-To. */
@@ -660,12 +734,9 @@ export async function sendNewOrderNotificationEmail(
     : "";
 
   const attachments = await buildEmailAttachments(params);
-  const mailHeaders = buildCustomerMailHeaders({
-    replyTo: env.emailOrdersFrom,
-    senderName: "Boxmag Comenzi",
-  });
-  await transporter.sendMail({
-    ...mailHeaders,
+  const { transport, headers } = getOrderCustomerMailDelivery("Boxmag Comenzi");
+  await transport.sendMail({
+    ...headers,
     to: env.ordersNotificationTo,
     subject: isQuoteRequest
       ? `Cerere oferta noua ${orderNumber}`
@@ -754,12 +825,9 @@ export async function sendBusinessOrderConfirmationEmailToCustomer(
   } = buildOrderEmailContent(params, { includeLinePricing: false });
 
   const attachments = await buildEmailAttachments(params);
-  const mailHeaders = buildCustomerMailHeaders({
-    replyTo: env.emailOrdersFrom,
-    senderName: "Boxmag",
-  });
-  await transporter.sendMail({
-    ...mailHeaders,
+  const { transport, headers } = getOrderCustomerMailDelivery();
+  await transport.sendMail({
+    ...headers,
     to: params.customerEmail,
     subject: `Confirmare cerere oferta ${orderNumber}`,
     text: [
@@ -875,12 +943,9 @@ export async function sendOrderConfirmationEmailToCustomer(
   } = buildOrderEmailContent(params);
 
   const attachments = await buildEmailAttachments(params);
-  const mailHeaders = buildCustomerMailHeaders({
-    replyTo: env.emailOrdersFrom,
-    senderName: "Boxmag",
-  });
-  await transporter.sendMail({
-    ...mailHeaders,
+  const { transport, headers } = getOrderCustomerMailDelivery();
+  await transport.sendMail({
+    ...headers,
     to: params.customerEmail,
     subject: `Confirmare comanda ${orderNumber}`,
     text: [
@@ -974,6 +1039,47 @@ export function getOrderOfferSenderOptions(): Array<{
   return options;
 }
 
+export function resolveDefaultOrderOfferFromKey(
+  options: Array<{ key: OrderOfferFromKey }> = getOrderOfferSenderOptions(),
+): OrderOfferFromKey {
+  const configured = env.emailOfferDefaultFromKey.trim().toLowerCase();
+  const allowedKeys: OrderOfferFromKey[] = ["orders", "info", "b2b"];
+  const preferred = allowedKeys.includes(configured as OrderOfferFromKey)
+    ? (configured as OrderOfferFromKey)
+    : "orders";
+
+  if (options.some((option) => option.key === preferred)) {
+    return preferred;
+  }
+
+  return options[0]?.key ?? "orders";
+}
+
+function getOfferMailDelivery(fromKey: OrderOfferFromKey): {
+  transport: MailTransporter;
+  headers: { from: string; replyTo: string };
+} {
+  const fromAddress = resolveOrderOfferFromAddress(fromKey);
+  if (!fromAddress) {
+    throw new Error("Selected sender address is not configured");
+  }
+
+  if (fromKey === "orders" && isOrdersMailboxSmtpConfigured()) {
+    return {
+      transport: getOrdersMailTransporter(),
+      headers: buildOrdersMailboxHeaders("Boxmag"),
+    };
+  }
+
+  return {
+    transport: transporter,
+    headers: buildCustomerMailHeaders({
+      replyTo: fromAddress,
+      senderName: "Boxmag",
+    }),
+  };
+}
+
 export async function sendOrderOfferEmailToCustomer(
   params: NewOrderEmailParams & {
     fromKey: OrderOfferFromKey;
@@ -1003,12 +1109,9 @@ export async function sendOrderOfferEmailToCustomer(
   const defaultOfferText =
     "Va transmitem oferta pentru cererea dumneavoastra. Mai jos regasiti detaliile comenzii.";
 
-  const mailHeaders = buildCustomerMailHeaders({
-    replyTo: fromAddress,
-    senderName: "Boxmag",
-  });
-  await transporter.sendMail({
-    ...mailHeaders,
+  const { transport, headers } = getOfferMailDelivery(params.fromKey);
+  await transport.sendMail({
+    ...headers,
     to: params.customerEmail,
     subject: `Oferta ${orderNumber}`,
     text: [

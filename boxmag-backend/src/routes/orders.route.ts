@@ -9,6 +9,7 @@ import {
 import {
   getOrderOfferSenderOptions,
   isOrderEmailTransportConfigured,
+  resolveDefaultOrderOfferFromKey,
   type NewOrderEmailParams,
   type OrderOfferFromKey,
   sendBusinessOrderConfirmationEmailToCustomer,
@@ -431,9 +432,11 @@ ordersRouter.get("/", async (req, res) => {
 });
 
 ordersRouter.get("/offer-senders", (_req, res) => {
+  const senders = getOrderOfferSenderOptions();
   res.json({
     ok: true,
-    data: getOrderOfferSenderOptions(),
+    data: senders,
+    defaultKey: resolveDefaultOrderOfferFromKey(senders),
   });
 });
 
