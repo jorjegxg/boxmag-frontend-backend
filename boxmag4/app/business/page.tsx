@@ -23,21 +23,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import useBusinessStore from "./store/business_store";
 import useBusinessOrderStore from "../stores/business_order_store";
 import { useNotification } from "../global/components/notification-center";
+import { getAppEnv, isDevelopmentAppEnv } from "../../lib/app-env";
 import { siteEmails } from "../../lib/site-emails";
 import { useLanguage } from "../i18n/language-context";
 
 const MAX_ATTACHMENT_BYTES = 18 * 1024 * 1024;
 
 const BussinessPage = () => {
-  const publicAppEnv = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase();
-  const effectiveEnv =
-    publicAppEnv === "development" ||
-    publicAppEnv === "production" ||
-    publicAppEnv === "dev"
-      ? publicAppEnv
-      : "unknown";
-  const isDevelopment =
-    effectiveEnv === "development" || effectiveEnv === "dev";
+  const isDevelopment = isDevelopmentAppEnv();
   const router = useRouter();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -83,7 +76,7 @@ const BussinessPage = () => {
 
   useEffect(() => {
     console.log(
-      `[BusinessPage] Environment mode: ${effectiveEnv} (NEXT_PUBLIC_APP_ENV=${publicAppEnv ?? "undefined"})`,
+      `[BusinessPage] Environment mode: ${getAppEnv() || "unknown"} (NEXT_PUBLIC_APP_ENV=${process.env.NEXT_PUBLIC_APP_ENV ?? "undefined"})`,
     );
   }, []);
 

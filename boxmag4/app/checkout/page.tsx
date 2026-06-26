@@ -14,6 +14,7 @@ import { useCurrency } from "../currency/currency-context";
 import { useCartStore, type CartItem } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
 import { FaTrashAlt } from "react-icons/fa";
+import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { CheckoutShippingInformation } from "./components/checkout-shipping-information";
 
 type UserAddress = {
@@ -51,9 +52,7 @@ const SHIPPING_METHODS_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 const CART_QTY_STEP = 10;
 const MAX_ATTACHMENT_BYTES = 18 * 1024 * 1024;
 const VAT_NUMBER_REGEX = /^([A-Z]{2})?[A-Z0-9]{2,12}$/i;
-const shouldAutofillCheckout = ["dev", "development"].includes(
-  process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() ?? "",
-);
+const shouldAutofillCheckout = isDevelopmentAppEnv();
 
 function normalizeVatNumber(value: string): string {
   return value.trim().toUpperCase().replace(/\s+/g, "");

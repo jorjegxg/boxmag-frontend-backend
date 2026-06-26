@@ -15,6 +15,7 @@ import {
 import { checkVAT, countries } from "jsvat";
 import { useLanguage } from "../i18n/language-context";
 import { useNotification } from "../global/components/notification-center";
+import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { siteEmails } from "../../lib/site-emails";
 
 const inputClass =
@@ -32,9 +33,26 @@ const MAX_ATTACHMENTS = 5;
 const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const AUTH_CHANGED_EVENT = "boxmag-auth-changed";
-const shouldAutofillContactForm = ["dev", "development"].includes(
-  process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() ?? "",
-);
+const CONTACT_COUNTRY_CODES = new Set([
+  "RO",
+  "DE",
+  "FR",
+  "IT",
+  "ES",
+  "NL",
+  "BE",
+  "PL",
+  "AT",
+  "HU",
+]);
+const shouldAutofillContactForm = isDevelopmentAppEnv();
+
+function getBackendBaseUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
+    "http://localhost:3005"
+  );
+}
 
 function getLoggedInEmail(): string {
   if (typeof window === "undefined") return "";
@@ -47,6 +65,86 @@ function getDefaultContactEmail(): string {
   const loggedInEmail = getLoggedInEmail();
   if (loggedInEmail) return loggedInEmail;
   return shouldAutofillContactForm ? siteEmails.devAutofill : "";
+}
+
+function normalizeContactCountry(value: string | undefined): string {
+  const normalized = (value ?? "").trim().toUpperCase();
+  if (CONTACT_COUNTRY_CODES.has(normalized)) return normalized;
+  if (normalized) return "OTHER";
+  return "";
+}
+
+type LoggedInContactDefaults = {
+  firstName: string;
+  surname: string;
+  email: string;
+  phone: string;
+  vatNumber: string;
+  companyName: string;
+  country: string;
+};
+
+async function fetchLoggedInContactDefaults(
+  signal?: AbortSignal,
+): Promise<LoggedInContactDefaults | null> {
+  const loggedInEmail = getLoggedInEmail();
+  if (!loggedInEmail) return null;
+
+  const backendBaseUrl = getBackendBaseUrl();
+  const [profileResponse, addressesResponse] = await Promise.all([
+    fetch(
+      `${backendBaseUrl}/api/auth/profile?email=${encodeURIComponent(loggedInEmail)}`,
+      { signal },
+    ),
+    fetch(
+      `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
+      { signal },
+    ),
+  ]);
+
+  const profilePayload = (await profileResponse.json()) as {
+    ok?: boolean;
+    data?: {
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      email?: string;
+      vatNumber?: string;
+    };
+  };
+  const addressesPayload = (await addressesResponse.json()) as {
+    ok?: boolean;
+    data?: Array<{
+      companyName?: string;
+      phone?: string;
+      country?: string;
+      isDefaultShipping?: boolean;
+      isDefaultBilling?: boolean;
+    }>;
+  };
+
+  const addresses = Array.isArray(addressesPayload.data)
+    ? addressesPayload.data
+    : [];
+  const defaultAddress =
+    addresses.find((entry) => entry.isDefaultShipping) ??
+    addresses.find((entry) => entry.isDefaultBilling) ??
+    addresses[0] ??
+    null;
+
+  const profile = profilePayload.ok === true ? profilePayload.data : undefined;
+  const profilePhone = String(profile?.phone ?? "").trim();
+  const addressPhone = String(defaultAddress?.phone ?? "").trim();
+
+  return {
+    firstName: String(profile?.firstName ?? "").trim(),
+    surname: String(profile?.lastName ?? "").trim(),
+    email: loggedInEmail,
+    phone: profilePhone || addressPhone,
+    vatNumber: String(profile?.vatNumber ?? "").trim(),
+    companyName: String(defaultAddress?.companyName ?? "").trim(),
+    country: normalizeContactCountry(defaultAddress?.country),
+  };
 }
 
 export default function ContactUsPage() {
@@ -64,9 +162,7 @@ export default function ContactUsPage() {
   );
   const [isLookingUpVat, setIsLookingUpVat] = useState(false);
   const [vatLookupError, setVatLookupError] = useState<string | null>(null);
-  const [email, setEmail] = useState(
-    shouldAutofillContactForm ? siteEmails.devAutofill : "",
-  );
+  const [email, setEmail] = useState(getDefaultContactEmail);
   const [phone, setPhone] = useState(
     shouldAutofillContactForm ? "+40799111222" : "",
   );
@@ -81,20 +177,64 @@ export default function ContactUsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const applyLoggedInContactDefaults = (defaults: LoggedInContactDefaults) => {
+    setFirstName(defaults.firstName);
+    setSurname(defaults.surname);
+    setEmail(defaults.email);
+    setPhone(defaults.phone);
+    if (defaults.vatNumber) {
+      setVatNumber(defaults.vatNumber);
+    } else {
+      setCompanyName(defaults.companyName);
+    }
+    if (defaults.country) {
+      setCountry(defaults.country);
+    }
+  };
+
+  const resetContactFormFields = () => {
+    setFirstName(shouldAutofillContactForm ? "John" : "");
+    setSurname(shouldAutofillContactForm ? "Doe" : "");
+    setCompanyName("");
+    setVatNumber(shouldAutofillContactForm ? "RO4534966" : "");
+    setEmail(getDefaultContactEmail());
+    setPhone(shouldAutofillContactForm ? "+40799111222" : "");
+    setCountry(shouldAutofillContactForm ? "RO" : "");
+    setMessage(
+      shouldAutofillContactForm
+        ? "Hello! This is a test message generated in dev mode."
+        : "",
+    );
+    setAcceptTerms(shouldAutofillContactForm);
+  };
+
   useEffect(() => {
-    const syncLoggedInEmail = () => {
-      const loggedInEmail = getLoggedInEmail();
-      if (loggedInEmail) {
-        setEmail(loggedInEmail);
+    const controller = new AbortController();
+
+    const loadLoggedInDefaults = async () => {
+      try {
+        const defaults = await fetchLoggedInContactDefaults(controller.signal);
+        if (!defaults || controller.signal.aborted) return;
+        applyLoggedInContactDefaults(defaults);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        const loggedInEmail = getLoggedInEmail();
+        if (loggedInEmail) {
+          setEmail(loggedInEmail);
+        }
       }
     };
 
-    syncLoggedInEmail();
-    window.addEventListener(AUTH_CHANGED_EVENT, syncLoggedInEmail);
-    window.addEventListener("storage", syncLoggedInEmail);
+    void loadLoggedInDefaults();
+    window.addEventListener(AUTH_CHANGED_EVENT, loadLoggedInDefaults);
+    window.addEventListener("storage", loadLoggedInDefaults);
     return () => {
-      window.removeEventListener(AUTH_CHANGED_EVENT, syncLoggedInEmail);
-      window.removeEventListener("storage", syncLoggedInEmail);
+      controller.abort();
+      window.removeEventListener(AUTH_CHANGED_EVENT, loadLoggedInDefaults);
+      window.removeEventListener("storage", loadLoggedInDefaults);
     };
   }, []);
 
@@ -289,18 +429,23 @@ export default function ContactUsPage() {
         type: "success",
         message: data.message ?? "Message sent successfully.",
       });
-      setFirstName("");
-      setSurname("");
-      setCompanyName("");
-      setVatNumber("");
-      setEmail(getDefaultContactEmail());
-      setPhone("");
-      setCountry("");
       setMessage("");
       setAcceptTerms(false);
       setAttachments([]);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
+      }
+      if (getLoggedInEmail()) {
+        try {
+          const defaults = await fetchLoggedInContactDefaults();
+          if (defaults) {
+            applyLoggedInContactDefaults(defaults);
+          }
+        } catch {
+          setEmail(getDefaultContactEmail());
+        }
+      } else {
+        resetContactFormFields();
       }
     } catch {
       notify({

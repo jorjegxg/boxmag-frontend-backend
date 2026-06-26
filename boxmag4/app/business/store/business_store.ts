@@ -1,16 +1,10 @@
 import { create } from "zustand";
+import { isDevelopmentAppEnv } from "../../../lib/app-env";
 import { Box, BoxColorOption, BoxPrint, BoxSize, BoxState, CarboardTypeState, TransportOption, TypeOfSize } from "./data/types";
 import { boxColorOptions, boxPrintOptions, boxSizes, carboarbonTypeOptions, transportOptions, typeOfSizes } from "./data/boxes";
 
 export type PageWithState = Box & BoxState;
-const publicAppEnv = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase();
-const effectiveEnv =
-    publicAppEnv === "development" ||
-    publicAppEnv === "production" ||
-    publicAppEnv === "dev"
-        ? publicAppEnv
-        : "unknown";
-const isDevelopment = effectiveEnv === "development" || effectiveEnv === "dev";
+const isDevelopment = isDevelopmentAppEnv();
 
 type BusinessState = {
     boxes: PageWithState[];

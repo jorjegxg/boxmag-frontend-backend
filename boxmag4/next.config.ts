@@ -42,8 +42,8 @@ const nextConfig: NextConfig = {
     CORS_ORIGIN: corsOriginEnv,
     NEXT_PUBLIC_APP_ENV:
       process.env.NEXT_PUBLIC_APP_ENV ??
-      readRootEnvValue("NODE_ENV") ??
-      "development",
+      readRootEnvValue("NEXT_PUBLIC_APP_ENV") ??
+      (process.env.NODE_ENV === "production" ? "production" : "development"),
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:
       process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ??
       readRootEnvValue("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY") ??

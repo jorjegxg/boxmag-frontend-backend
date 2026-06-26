@@ -16,6 +16,7 @@ import {
   FaEye,
   FaEyeSlash,
 } from "react-icons/fa";
+import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { siteEmails } from "../../lib/site-emails";
 
 type Tab = "account" | "address" | "orders";
@@ -40,7 +41,7 @@ const saveBtnClass =
 const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const AUTH_CHANGED_EVENT = "boxmag-auth-changed";
-const isDevelopment = process.env.NODE_ENV === "development";
+const isDevelopment = isDevelopmentAppEnv();
 
 function getBackendBaseUrl(): string {
   return (

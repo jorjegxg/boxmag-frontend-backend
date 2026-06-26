@@ -8,12 +8,13 @@ import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { FaCheckCircle, FaUserPlus } from "react-icons/fa";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { siteEmails } from "../../lib/site-emails";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
 
-const isDevelopment = process.env.NODE_ENV === "development";
+const isDevelopment = isDevelopmentAppEnv();
 
 export default function RegistrationPage() {
   const [email, setEmail] = useState(
