@@ -71,6 +71,15 @@ const FALLBACK_PRODUCT_IMAGE = "/b2b/boxes/box.png";
 const DEFAULT_OFFER_MESSAGE =
   "Va transmitem oferta pentru cererea dumneavoastra. Mai jos regasiti detaliile comenzii.";
 
+function isLikelyDemoCustomerEmail(email: string): boolean {
+  const normalized = email.trim().toLowerCase();
+  return (
+    normalized.includes("customer.demo@") ||
+    normalized.endsWith("@example.com") ||
+    normalized.endsWith("@test.com")
+  );
+}
+
 function statusBadgeClass(status: string): string {
   const normalized = status.trim().toLowerCase();
   if (normalized === "processing" || normalized === "in progress") {
@@ -668,6 +677,16 @@ export default function AdminOrderDetailsPage() {
                       </span>
                       , cu detaliile comenzii incluse.
                     </p>
+                    {order.email && isLikelyDemoCustomerEmail(order.email) ? (
+                      <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        Această comandă folosește o adresă de test (
+                        <span className="font-semibold">{order.email}</span>
+                        ). Emailul se trimite la această adresă, nu la un inbox
+                        personal. Pentru testare reală, plasează o comandă cu
+                        emailul clientului sau actualizează adresa în baza de
+                        date.
+                      </p>
+                    ) : null}
 
                     {order.offerSentAt ? (
                       <div

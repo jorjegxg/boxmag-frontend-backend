@@ -532,9 +532,14 @@ ordersRouter.post("/:orderId/send-offer", async (req, res) => {
     });
   } catch (error) {
     console.error("Failed to send order offer email", error);
+    const detail =
+      error instanceof Error ? error.message.trim() : "Failed to send offer email";
     res.status(500).json({
       ok: false,
-      message: "Failed to send offer email",
+      message:
+        detail && detail !== "Failed to send offer email"
+          ? `Nu s-a putut trimite emailul: ${detail}`
+          : "Nu s-a putut trimite emailul cu ofertă. Verifică setările SMTP.",
     });
   }
 });

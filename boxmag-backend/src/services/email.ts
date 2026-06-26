@@ -237,6 +237,28 @@ export function isOrderEmailTransportConfigured(): boolean {
   return Boolean(env.smtpUser && env.smtpPass && env.emailOrdersFrom);
 }
 
+function resolveAuthenticatedSmtpFromAddress(): string {
+  return env.smtpUser.trim() || env.emailFrom.trim();
+}
+
+/** Use the authenticated SMTP mailbox as From; department address as Reply-To. */
+function buildCustomerMailHeaders(params: {
+  replyTo: string;
+  senderName?: string;
+}): {
+  from: string;
+  replyTo: string;
+} {
+  const replyTo = params.replyTo.trim();
+  const authenticatedFrom = resolveAuthenticatedSmtpFromAddress() || replyTo;
+  const senderName = params.senderName?.trim() || "Boxmag";
+
+  return {
+    from: `"${senderName}" <${authenticatedFrom}>`,
+    replyTo,
+  };
+}
+
 type NewsletterLocale = "ro" | "en" | "de";
 
 function resolveNewsletterLocale(locale: string | null | undefined): NewsletterLocale {
@@ -638,8 +660,12 @@ export async function sendNewOrderNotificationEmail(
     : "";
 
   const attachments = await buildEmailAttachments(params);
+  const mailHeaders = buildCustomerMailHeaders({
+    replyTo: env.emailOrdersFrom,
+    senderName: "Boxmag Comenzi",
+  });
   await transporter.sendMail({
-    from: env.emailOrdersFrom,
+    ...mailHeaders,
     to: env.ordersNotificationTo,
     subject: isQuoteRequest
       ? `Cerere oferta noua ${orderNumber}`
@@ -728,8 +754,12 @@ export async function sendBusinessOrderConfirmationEmailToCustomer(
   } = buildOrderEmailContent(params, { includeLinePricing: false });
 
   const attachments = await buildEmailAttachments(params);
+  const mailHeaders = buildCustomerMailHeaders({
+    replyTo: env.emailOrdersFrom,
+    senderName: "Boxmag",
+  });
   await transporter.sendMail({
-    from: env.emailOrdersFrom,
+    ...mailHeaders,
     to: params.customerEmail,
     subject: `Confirmare cerere oferta ${orderNumber}`,
     text: [
@@ -845,8 +875,12 @@ export async function sendOrderConfirmationEmailToCustomer(
   } = buildOrderEmailContent(params);
 
   const attachments = await buildEmailAttachments(params);
+  const mailHeaders = buildCustomerMailHeaders({
+    replyTo: env.emailOrdersFrom,
+    senderName: "Boxmag",
+  });
   await transporter.sendMail({
-    from: env.emailOrdersFrom,
+    ...mailHeaders,
     to: params.customerEmail,
     subject: `Confirmare comanda ${orderNumber}`,
     text: [
@@ -969,9 +1003,12 @@ export async function sendOrderOfferEmailToCustomer(
   const defaultOfferText =
     "Va transmitem oferta pentru cererea dumneavoastra. Mai jos regasiti detaliile comenzii.";
 
-  await transporter.sendMail({
-    from: `"Boxmag" <${fromAddress}>`,
+  const mailHeaders = buildCustomerMailHeaders({
     replyTo: fromAddress,
+    senderName: "Boxmag",
+  });
+  await transporter.sendMail({
+    ...mailHeaders,
     to: params.customerEmail,
     subject: `Oferta ${orderNumber}`,
     text: [
