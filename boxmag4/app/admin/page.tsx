@@ -11,6 +11,10 @@ import { useNotification } from "../global/components/notification-center";
 import {
   ORDER_STATUS_LABELS,
   ORDER_STATUS_OPTIONS,
+  formatOfferStatus,
+  formatPaymentStatus,
+  offerBadgeClass,
+  paymentBadgeClass,
   type OrderStatusValue,
 } from "./admin-ro";
 
@@ -62,6 +66,10 @@ type AdminOrder = {
   attachmentName: string | null;
   message: string;
   status: string;
+  paymentStatus: string | null;
+  stripeSessionId: string | null;
+  offerSentAt: string | null;
+  offerSentFrom: string | null;
   email: string;
   phone: string;
   city: string;
@@ -615,6 +623,12 @@ export default function AdminPage() {
                         Cantitate
                       </th>
                       <th className="px-4 py-3 text-left font-semibold">
+                        Răspuns
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Plată Stripe
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
                         Status
                       </th>
                     </tr>
@@ -622,21 +636,21 @@ export default function AdminPage() {
                   <tbody>
                     {isLoadingOrders ? (
                       <tr className="border-t border-gray-200">
-                        <td className="px-4 py-3 text-gray-500" colSpan={6}>
+                        <td className="px-4 py-3 text-gray-500" colSpan={8}>
                           Se încarcă comenzile...
                         </td>
                       </tr>
                     ) : null}
                     {!isLoadingOrders && ordersError ? (
                       <tr className="border-t border-gray-200">
-                        <td className="px-4 py-3 text-red-600" colSpan={6}>
+                        <td className="px-4 py-3 text-red-600" colSpan={8}>
                           Eroare la încărcarea comenzilor: {ordersError}
                         </td>
                       </tr>
                     ) : null}
                     {!isLoadingOrders && !ordersError && orders.length === 0 ? (
                       <tr className="border-t border-gray-200">
-                        <td className="px-4 py-3 text-gray-500" colSpan={6}>
+                        <td className="px-4 py-3 text-gray-500" colSpan={8}>
                           Nu există comenzi.
                         </td>
                       </tr>
@@ -657,6 +671,24 @@ export default function AdminPage() {
                             <td className="px-4 py-3">{order.companyName}</td>
                             <td className="px-4 py-3">{order.boxTypeName}</td>
                             <td className="px-4 py-3">{order.quantity}</td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`inline-block rounded-full px-2.5 py-1 text-xs font-bold ${offerBadgeClass(order.offerSentAt)}`}
+                              >
+                                {formatOfferStatus(order.offerSentAt)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              {order.stripeSessionId && order.paymentStatus ? (
+                                <span
+                                  className={`inline-block rounded-full px-2.5 py-1 text-xs font-bold uppercase ${paymentBadgeClass(order.paymentStatus)}`}
+                                >
+                                  {formatPaymentStatus(order.paymentStatus)}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </td>
                             <td
                               className="px-4 py-3"
                               onClick={(event) => event.stopPropagation()}

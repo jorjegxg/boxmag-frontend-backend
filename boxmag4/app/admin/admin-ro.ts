@@ -36,6 +36,24 @@ export function formatPaymentStatus(status: string): string {
   return labels[status.trim().toLowerCase()] ?? status;
 }
 
+export function formatOfferStatus(offerSentAt: string | null): string {
+  return offerSentAt ? "Răspuns trimis" : "Așteaptă răspuns";
+}
+
+export function offerBadgeClass(offerSentAt: string | null): string {
+  return offerSentAt
+    ? "text-green-700 bg-green-50"
+    : "text-amber-700 bg-amber-50";
+}
+
+export function paymentBadgeClass(status: string): string {
+  const normalized = status.trim().toLowerCase();
+  if (normalized === "paid") return "text-green-700 bg-green-50";
+  if (normalized === "pending") return "text-yellow-700 bg-yellow-50";
+  if (normalized === "failed") return "text-red-700 bg-red-50";
+  return "text-gray-600 bg-gray-50";
+}
+
 export function formatAdminDate(value: string): string {
   return new Date(value).toLocaleString("ro-RO");
 }

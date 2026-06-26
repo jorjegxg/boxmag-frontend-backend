@@ -155,6 +155,7 @@ type OrderListRow = RowDataPacket & {
   items_json: string | null;
   status: string;
   payment_status: string | null;
+  stripe_session_id: string | null;
   total_amount_cents: number | null;
   subtotal_cents: number | null;
   vat_percent: string | number | null;
@@ -365,9 +366,9 @@ ordersRouter.get("/", async (req, res) => {
               o.length_mm, o.width_mm, o.height_mm, o.size_type, o.transport,
               o.quantity, o.attachment_name, o.attachment_object_name, o.attachment_url,
               o.message, o.items_json, o.status,
-              o.payment_status, o.total_amount_cents, o.subtotal_cents,
+              o.payment_status, o.stripe_session_id, o.total_amount_cents, o.subtotal_cents,
               o.vat_percent, o.vat_cents, o.shipping_cents, o.shipping_method,
-              o.shipping_eta, o.currency, o.created_at,
+              o.shipping_eta, o.offer_sent_at, o.offer_sent_from, o.currency, o.created_at,
               c.first_name, c.surname, c.company_name, c.email, c.phone, c.city, c.country
        FROM orders o
        LEFT JOIN contacts c ON c.order_id = o.id
@@ -409,6 +410,9 @@ ordersRouter.get("/", async (req, res) => {
         items: parseCartItemsJson(row.items_json),
         priceBreakdown: buildPriceBreakdown(row),
         paymentStatus: row.payment_status ?? null,
+        stripeSessionId: row.stripe_session_id ?? null,
+        offerSentAt: row.offer_sent_at ?? null,
+        offerSentFrom: row.offer_sent_from ?? null,
         status: row.status,
         email: row.email,
         phone: row.phone,
