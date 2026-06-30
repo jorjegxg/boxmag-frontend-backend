@@ -11,7 +11,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatusValue, string> = {
   new: "Nouă",
   "in progress": "În lucru",
   completed: "Finalizată",
-  done: "Finalizată",
+  done: "Încheiată",
 };
 
 const EXTRA_ORDER_STATUS_LABELS: Record<string, string> = {
@@ -35,6 +35,14 @@ export function formatPaymentStatus(status: string): string {
   };
   return labels[status.trim().toLowerCase()] ?? status;
 }
+
+export type PaymentStatusValue = "pending" | "paid" | "failed";
+
+export const PAYMENT_STATUS_OPTIONS: PaymentStatusValue[] = [
+  "pending",
+  "paid",
+  "failed",
+];
 
 export function formatOfferStatus(offerSentAt: string | null): string {
   return offerSentAt ? "Răspuns trimis" : "Așteaptă răspuns";

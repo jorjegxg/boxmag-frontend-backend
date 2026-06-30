@@ -123,6 +123,7 @@ const ALLOWED_ORDER_STATUSES = new Set([
   "completed",
   "done",
 ]);
+const ALLOWED_PAYMENT_STATUSES = new Set(["pending", "paid", "failed"]);
 
 type OrderAttachmentRow = RowDataPacket & {
   id: number;
@@ -671,7 +672,7 @@ ordersRouter.get("/:orderId", async (req, res) => {
               o.length_mm, o.width_mm, o.height_mm, o.size_type, o.transport,
               o.quantity, o.attachment_name, o.attachment_object_name, o.attachment_url,
               o.message, o.items_json, o.status,
-              o.payment_status, o.total_amount_cents, o.subtotal_cents,
+              o.payment_status, o.stripe_session_id, o.total_amount_cents, o.subtotal_cents,
               o.vat_percent, o.vat_cents, o.shipping_cents, o.shipping_method,
               o.shipping_eta, o.offer_sent_at, o.offer_sent_from, o.currency, o.created_at,
               c.first_name, c.surname, c.company_name, c.email, c.phone, c.city, c.country
@@ -731,6 +732,7 @@ ordersRouter.get("/:orderId", async (req, res) => {
         items: parseCartItemsJson(row.items_json),
         priceBreakdown: buildPriceBreakdown(row),
         paymentStatus: row.payment_status ?? null,
+        stripeSessionId: row.stripe_session_id ?? null,
         status: row.status,
         email: row.email,
         phone: row.phone,
@@ -999,6 +1001,78 @@ ordersRouter.post("/", async (req, res) => {
     });
   } finally {
     connection?.release();
+  }
+});
+
+ordersRouter.patch("/:orderId/payment-status", async (req, res) => {
+  const orderId = Number(req.params.orderId);
+  const nextStatusRaw = toRequiredString((req.body ?? {}).paymentStatus);
+  const nextStatus = nextStatusRaw?.toLowerCase() ?? null;
+
+  if (!Number.isInteger(orderId) || orderId <= 0 || !nextStatus) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid payment status payload",
+    });
+    return;
+  }
+
+  if (!ALLOWED_PAYMENT_STATUSES.has(nextStatus)) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid payment status value",
+    });
+    return;
+  }
+
+  try {
+    const [rows] = await mysqlPool.query<
+      Array<RowDataPacket & { stripe_session_id: string | null }>
+    >(`SELECT stripe_session_id FROM orders WHERE id = ? LIMIT 1`, [orderId]);
+
+    if (rows.length === 0) {
+      res.status(404).json({
+        ok: false,
+        message: "Order not found",
+      });
+      return;
+    }
+
+    if (rows[0]?.stripe_session_id?.trim()) {
+      res.status(400).json({
+        ok: false,
+        message:
+          "Statusul plății pentru comenzile Stripe se actualizează automat",
+      });
+      return;
+    }
+
+    const [result] = await mysqlPool.execute<ResultSetHeader>(
+      `UPDATE orders SET payment_status = ? WHERE id = ?`,
+      [nextStatus, orderId],
+    );
+
+    if (result.affectedRows === 0) {
+      res.status(404).json({
+        ok: false,
+        message: "Order not found",
+      });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      data: {
+        id: orderId,
+        paymentStatus: nextStatus,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to update order payment status", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to update payment status",
+    });
   }
 });
 

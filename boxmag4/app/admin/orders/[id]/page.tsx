@@ -7,10 +7,12 @@ import { OrderAttachmentActions } from "../../../global/components/order-attachm
 import {
   ORDER_STATUS_LABELS,
   ORDER_STATUS_OPTIONS,
+  PAYMENT_STATUS_OPTIONS,
   formatAdminDate,
   formatOrderStatus,
   formatPaymentStatus,
   type OrderStatusValue,
+  type PaymentStatusValue,
 } from "../../admin-ro";
 
 type OrderItem = {
@@ -45,6 +47,7 @@ type AdminOrderDetails = {
   size: string;
   status: string;
   paymentStatus: string | null;
+  stripeSessionId: string | null;
   companyName: string;
   customerName: string;
   email: string;
@@ -163,6 +166,10 @@ export default function AdminOrderDetailsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [isUpdatingPaymentStatus, setIsUpdatingPaymentStatus] = useState(false);
+  const [paymentStatusError, setPaymentStatusError] = useState<string | null>(
+    null,
+  );
   const [offerSenders, setOfferSenders] = useState<OfferSenderOption[]>([]);
   const [selectedSenderKey, setSelectedSenderKey] = useState<
     OfferSenderOption["key"] | ""
@@ -350,6 +357,42 @@ export default function AdminOrderDetailsPage() {
     }
   };
 
+  const handlePaymentStatusChange = async (nextStatus: PaymentStatusValue) => {
+    if (!order) return;
+    setIsUpdatingPaymentStatus(true);
+    setPaymentStatusError(null);
+    try {
+      const response = await fetch(
+        `${backendBaseUrl}/api/orders/${order.id}/payment-status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentStatus: nextStatus }),
+        },
+      );
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+      };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(
+          payload.message ?? `Failed with status ${response.status}`,
+        );
+      }
+      setOrder((prev) =>
+        prev ? { ...prev, paymentStatus: nextStatus } : prev,
+      );
+    } catch (error) {
+      setPaymentStatusError(
+        error instanceof Error
+          ? error.message
+          : "Nu s-a putut actualiza statusul plății",
+      );
+    } finally {
+      setIsUpdatingPaymentStatus(false);
+    }
+  };
+
   const handleStatusChange = async (nextStatus: OrderStatusValue) => {
     if (!order) return;
     setIsUpdatingStatus(true);
@@ -389,6 +432,13 @@ export default function AdminOrderDetailsPage() {
   )
     ? ((order?.status ?? "").toLowerCase() as OrderStatusValue)
     : "new";
+
+  const isStripeOrder = Boolean(order?.stripeSessionId?.trim());
+  const selectedPaymentStatus = PAYMENT_STATUS_OPTIONS.includes(
+    (order?.paymentStatus ?? "").toLowerCase() as PaymentStatusValue,
+  )
+    ? ((order?.paymentStatus ?? "").toLowerCase() as PaymentStatusValue)
+    : "pending";
 
   return (
     <div>
@@ -497,16 +547,42 @@ export default function AdminOrderDetailsPage() {
                       {formatOrderStatus(order.status)}
                     </span>
                   </div>
-                  {order.paymentStatus ? (
+                  {order.paymentStatus || !isStripeOrder ? (
                     <div>
                       <p className="text-xs font-semibold uppercase text-gray-500">
-                        Plată
+                        {isStripeOrder ? "Plată Stripe" : "Schimbă status plată"}
                       </p>
-                      <span
-                        className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-bold uppercase ${paymentBadgeClass(order.paymentStatus)}`}
-                      >
-                        {formatPaymentStatus(order.paymentStatus)}
-                      </span>
+                      {isStripeOrder ? (
+                        <span
+                          className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-bold uppercase ${paymentBadgeClass(order.paymentStatus ?? "pending")}`}
+                        >
+                          {formatPaymentStatus(order.paymentStatus ?? "pending")}
+                        </span>
+                      ) : (
+                        <>
+                          <select
+                            value={selectedPaymentStatus}
+                            disabled={isUpdatingPaymentStatus}
+                            onChange={(event) =>
+                              void handlePaymentStatusChange(
+                                event.target.value as PaymentStatusValue,
+                              )
+                            }
+                            className="mt-2 h-9 w-full rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-900 focus:border-my-red focus:outline-none focus:ring-2 focus:ring-my-red disabled:bg-gray-100"
+                          >
+                            {PAYMENT_STATUS_OPTIONS.map((option) => (
+                              <option key={option} value={option}>
+                                {formatPaymentStatus(option)}
+                              </option>
+                            ))}
+                          </select>
+                          {paymentStatusError ? (
+                            <p className="mt-1 text-xs text-red-600">
+                              {paymentStatusError}
+                            </p>
+                          ) : null}
+                        </>
+                      )}
                     </div>
                   ) : null}
                   <DetailField
