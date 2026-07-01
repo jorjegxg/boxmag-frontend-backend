@@ -1,5 +1,10 @@
 import type { MetadataRoute } from "next";
-import { getBackendBaseUrl, getSiteBaseUrl } from "@/lib/site-url";
+import { getSiteBaseUrl, getSitemapBackendBaseUrl } from "@/lib/site-url";
+
+export const runtime = "nodejs";
+export const revalidate = 3600;
+
+const FETCH_TIMEOUT_MS = 8_000;
 
 type BoxTypeApi = {
   id: number;
@@ -30,87 +35,103 @@ const STATIC_PAGES: Array<{
   { path: "/complaints-and-returns", changeFrequency: "yearly", priority: 0.3 },
 ];
 
-async function fetchProductUrls(siteUrl: string): Promise<MetadataRoute.Sitemap> {
-  const backendBaseUrl = getBackendBaseUrl();
-
-  try {
-    const boxTypesResponse = await fetch(`${backendBaseUrl}/api/box-types`, {
-      next: { revalidate: 3600 },
-    });
-    const boxTypesPayload = (await boxTypesResponse.json()) as {
-      ok?: boolean;
-      data?: BoxTypeApi[];
-    };
-
-    if (
-      !boxTypesResponse.ok ||
-      boxTypesPayload.ok !== true ||
-      !Array.isArray(boxTypesPayload.data)
-    ) {
-      return [];
-    }
-
-    const activeTypes = boxTypesPayload.data.filter((type) => type.isActive && type.key);
-    const productEntries: MetadataRoute.Sitemap = [];
-
-    await Promise.all(
-      activeTypes.map(async (boxType) => {
-        const productsResponse = await fetch(
-          `${backendBaseUrl}/api/box-types/${boxType.id}/products`,
-          { next: { revalidate: 3600 } },
-        );
-        const productsPayload = (await productsResponse.json()) as {
-          ok?: boolean;
-          data?: BoxTypeProductApi[];
-        };
-
-        if (
-          !productsResponse.ok ||
-          productsPayload.ok !== true ||
-          !Array.isArray(productsPayload.data) ||
-          productsPayload.data.length === 0
-        ) {
-          return;
-        }
-
-        const encodedKey = encodeURIComponent(boxType.key);
-        productEntries.push({
-          url: `${siteUrl}/products/${encodedKey}`,
-          changeFrequency: "weekly",
-          priority: 0.7,
-        });
-
-        for (const product of productsPayload.data) {
-          const itemNo = String(product.itemNo ?? "").trim();
-          if (!itemNo) continue;
-
-          productEntries.push({
-            url: `${siteUrl}/products/${encodedKey}?itemNo=${encodeURIComponent(itemNo)}`,
-            changeFrequency: "weekly",
-            priority: 0.65,
-          });
-        }
-      }),
-    );
-
-    return productEntries;
-  } catch {
-    return [];
-  }
-}
-
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = getSiteBaseUrl();
+function buildStaticEntries(siteUrl: string): MetadataRoute.Sitemap {
   const lastModified = new Date();
 
-  const staticEntries: MetadataRoute.Sitemap = STATIC_PAGES.map((page) => ({
+  return STATIC_PAGES.map((page) => ({
     url: page.path === "/" ? siteUrl : `${siteUrl}${page.path}`,
     lastModified,
     changeFrequency: page.changeFrequency,
     priority: page.priority,
   }));
+}
 
-  const productEntries = await fetchProductUrls(siteUrl);
+async function fetchJson<T>(url: string): Promise<T | null> {
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      next: { revalidate },
+    });
 
-  return [...staticEntries, ...productEntries];
+    if (!response.ok) return null;
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+function buildProductEntriesForType(
+  siteUrl: string,
+  boxType: BoxTypeApi,
+  products: BoxTypeProductApi[],
+): MetadataRoute.Sitemap {
+  const encodedKey = encodeURIComponent(boxType.key);
+  const entries: MetadataRoute.Sitemap = [
+    {
+      url: `${siteUrl}/products/${encodedKey}`,
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+  ];
+
+  for (const product of products) {
+    const itemNo = String(product.itemNo ?? "").trim();
+    if (!itemNo) continue;
+
+    entries.push({
+      url: `${siteUrl}/products/${encodedKey}?itemNo=${encodeURIComponent(itemNo)}`,
+      changeFrequency: "weekly",
+      priority: 0.65,
+    });
+  }
+
+  return entries;
+}
+
+async function fetchProductUrls(siteUrl: string): Promise<MetadataRoute.Sitemap> {
+  const backendBaseUrl = getSitemapBackendBaseUrl();
+  const boxTypesPayload = await fetchJson<{
+    ok?: boolean;
+    data?: BoxTypeApi[];
+  }>(`${backendBaseUrl}/api/box-types`);
+
+  if (boxTypesPayload?.ok !== true || !Array.isArray(boxTypesPayload.data)) {
+    return [];
+  }
+
+  const activeTypes = boxTypesPayload.data.filter((type) => type.isActive && type.key);
+  const results = await Promise.allSettled(
+    activeTypes.map(async (boxType) => {
+      const productsPayload = await fetchJson<{
+        ok?: boolean;
+        data?: BoxTypeProductApi[];
+      }>(`${backendBaseUrl}/api/box-types/${boxType.id}/products`);
+
+      if (
+        productsPayload?.ok !== true ||
+        !Array.isArray(productsPayload.data) ||
+        productsPayload.data.length === 0
+      ) {
+        return [];
+      }
+
+      return buildProductEntriesForType(siteUrl, boxType, productsPayload.data);
+    }),
+  );
+
+  return results.flatMap((result) =>
+    result.status === "fulfilled" ? result.value : [],
+  );
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const siteUrl = getSiteBaseUrl();
+  const staticEntries = buildStaticEntries(siteUrl);
+
+  try {
+    const productEntries = await fetchProductUrls(siteUrl);
+    return [...staticEntries, ...productEntries];
+  } catch {
+    return staticEntries;
+  }
 }

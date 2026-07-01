@@ -26,3 +26,16 @@ export function getBackendBaseUrl(): string {
   if (fromEnv) return trimTrailingSlash(fromEnv);
   return "http://localhost:3005";
 }
+
+/**
+ * Backend URL for sitemap generation. Prefers Docker-internal hostname so
+ * crawlers never depend on a cold external round-trip to api.boxmag.eu.
+ */
+export function getSitemapBackendBaseUrl(): string {
+  const internal =
+    process.env.SITEMAP_BACKEND_URL?.trim() ||
+    process.env.BACKEND_INTERNAL_URL?.trim();
+
+  if (internal) return trimTrailingSlash(internal);
+  return getBackendBaseUrl();
+}

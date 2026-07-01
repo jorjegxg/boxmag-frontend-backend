@@ -75,6 +75,8 @@ services:
       - "3006:3006"
     env_file:
       - ./.env
+    environment:
+      SITEMAP_BACKEND_URL: http://backend:3005
     depends_on:
       - backend
 
