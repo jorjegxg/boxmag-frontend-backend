@@ -1,9 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getSiteBaseUrl, getSitemapBackendBaseUrl } from "@/lib/site-url";
 
-export const runtime = "nodejs";
-export const revalidate = 3600;
-
 const FETCH_TIMEOUT_MS = 8_000;
 
 type BoxTypeApi = {
@@ -35,7 +32,23 @@ const STATIC_PAGES: Array<{
   { path: "/complaints-and-returns", changeFrequency: "yearly", priority: 0.3 },
 ];
 
-function buildStaticEntries(siteUrl: string): MetadataRoute.Sitemap {
+type SitemapEntry = {
+  url: string;
+  lastModified?: Date;
+  changeFrequency?: MetadataRoute.Sitemap[number]["changeFrequency"];
+  priority?: number;
+};
+
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function buildStaticEntries(siteUrl: string): SitemapEntry[] {
   const lastModified = new Date();
 
   return STATIC_PAGES.map((page) => ({
@@ -50,7 +63,7 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   try {
     const response = await fetch(url, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      next: { revalidate },
+      cache: "no-store",
     });
 
     if (!response.ok) return null;
@@ -64,9 +77,9 @@ function buildProductEntriesForType(
   siteUrl: string,
   boxType: BoxTypeApi,
   products: BoxTypeProductApi[],
-): MetadataRoute.Sitemap {
+): SitemapEntry[] {
   const encodedKey = encodeURIComponent(boxType.key);
-  const entries: MetadataRoute.Sitemap = [
+  const entries: SitemapEntry[] = [
     {
       url: `${siteUrl}/products/${encodedKey}`,
       changeFrequency: "weekly",
@@ -88,7 +101,7 @@ function buildProductEntriesForType(
   return entries;
 }
 
-async function fetchProductUrls(siteUrl: string): Promise<MetadataRoute.Sitemap> {
+async function fetchProductEntries(siteUrl: string): Promise<SitemapEntry[]> {
   const backendBaseUrl = getSitemapBackendBaseUrl();
   const boxTypesPayload = await fetchJson<{
     ok?: boolean;
@@ -124,14 +137,51 @@ async function fetchProductUrls(siteUrl: string): Promise<MetadataRoute.Sitemap>
   );
 }
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export async function collectSitemapEntries(): Promise<SitemapEntry[]> {
   const siteUrl = getSiteBaseUrl();
   const staticEntries = buildStaticEntries(siteUrl);
 
   try {
-    const productEntries = await fetchProductUrls(siteUrl);
+    const productEntries = await fetchProductEntries(siteUrl);
     return [...staticEntries, ...productEntries];
   } catch {
     return staticEntries;
   }
+}
+
+export function entriesToSitemapXml(entries: SitemapEntry[]): string {
+  const urlNodes = entries
+    .map((entry) => {
+      const parts = [
+        "<url>",
+        `<loc>${escapeXml(entry.url)}</loc>`,
+      ];
+
+      if (entry.lastModified) {
+        parts.push(`<lastmod>${entry.lastModified.toISOString()}</lastmod>`);
+      }
+      if (entry.changeFrequency) {
+        parts.push(`<changefreq>${entry.changeFrequency}</changefreq>`);
+      }
+      if (typeof entry.priority === "number") {
+        parts.push(`<priority>${entry.priority}</priority>`);
+      }
+
+      parts.push("</url>");
+      return parts.join("");
+    })
+    .join("");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urlNodes}</urlset>`;
+}
+
+export async function buildSitemapXml(): Promise<string> {
+  const entries = await collectSitemapEntries();
+  return entriesToSitemapXml(entries);
+}
+
+export function buildStaticSitemapXml(): string {
+  const siteUrl = getSiteBaseUrl();
+  return entriesToSitemapXml(buildStaticEntries(siteUrl));
 }
