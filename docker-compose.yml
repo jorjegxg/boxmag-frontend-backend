@@ -69,6 +69,9 @@ services:
         NEXT_PUBLIC_BACKEND_URL: ${BACKEND_PUBLIC_URL:-http://localhost:3005}
         NEXT_PUBLIC_TAX_PERCENT: ${NEXT_PUBLIC_TAX_PERCENT:-21}
         NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:-production}
+        NEXT_PUBLIC_INFO_EMAIL: ${NEXT_PUBLIC_INFO_EMAIL:-}
+        NEXT_PUBLIC_B2B_EMAIL: ${NEXT_PUBLIC_B2B_EMAIL:-}
+        NEXT_PUBLIC_ORDERS_EMAIL: ${NEXT_PUBLIC_ORDERS_EMAIL:-}
     container_name: boxmag4-frontend
     restart: unless-stopped
     ports:
