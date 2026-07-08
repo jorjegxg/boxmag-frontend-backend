@@ -14,7 +14,7 @@ export function HaveAQuestion() {
         {/* Left: illustration */}
         <div className="flex justify-center lg:justify-start">
           <Image
-            src="svgs/contact_us_yellow.svg"
+            src="/svgs/contact_us_yellow.svg"
             alt="Contact us - get in touch"
             width={500}
             height={500}

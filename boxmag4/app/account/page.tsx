@@ -1567,23 +1567,27 @@ export default function AccountPage() {
                     void fetch(`${getBackendBaseUrl()}/api/auth/logout`, {
                       method: "POST",
                       credentials: "include",
-                    }).finally(() => {
-                      localStorage.removeItem(AUTH_STORAGE_KEY);
-                      localStorage.removeItem(AUTH_EMAIL_STORAGE_KEY);
-                      window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
-                      setIsLoggedIn(false);
-                      setLoggedInEmail("");
-                      setAccountProfile({
-                        firstName: "",
-                        lastName: "",
-                        phone: "",
-                        email: "",
-                        companyName: "",
-                        vatNumber: "",
+                    })
+                      .catch(() => {
+                        // Keep local sign-out behavior even if backend is unavailable.
+                      })
+                      .finally(() => {
+                        localStorage.removeItem(AUTH_STORAGE_KEY);
+                        localStorage.removeItem(AUTH_EMAIL_STORAGE_KEY);
+                        window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+                        setIsLoggedIn(false);
+                        setLoggedInEmail("");
+                        setAccountProfile({
+                          firstName: "",
+                          lastName: "",
+                          phone: "",
+                          email: "",
+                          companyName: "",
+                          vatNumber: "",
+                        });
+                        setActiveTab("account");
+                        router.push("/account#account");
                       });
-                      setActiveTab("account");
-                      router.push("/account#account");
-                    });
                   }}
                   className="w-full flex items-center gap-3 px-5 py-3.5 text-sm font-bold uppercase tracking-wide text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
                 >

@@ -50,7 +50,8 @@ const GUEST_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SHIPPING_METHODS_CACHE_KEY = "boxmag.checkout.shippingMethods.v2";
 const SHIPPING_METHODS_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 const CART_QTY_STEP = 10;
-const MAX_ATTACHMENT_BYTES = 18 * 1024 * 1024;
+const MAX_ATTACHMENT_MB = 18;
+const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_MB * 1024 * 1024;
 const VAT_NUMBER_REGEX = /^([A-Z]{2})?[A-Z0-9]{2,12}$/i;
 const shouldAutofillCheckout = isDevelopmentAppEnv();
 
@@ -866,7 +867,7 @@ function OrderAttachmentSection({
                 return;
               }
               if (file.size > MAX_ATTACHMENT_BYTES) {
-                onError("Attachment is too large (max 10 MB).");
+                onError(`Attachment is too large (max ${MAX_ATTACHMENT_MB} MB).`);
                 onAttachmentCleared();
                 event.currentTarget.value = "";
                 return;
@@ -898,7 +899,9 @@ function OrderAttachmentSection({
           {attachmentName || "No file chosen"}
         </span>
       </div>
-      <p className="mt-2 text-xs text-gray-500">Accepted max file size: 10 MB.</p>
+      <p className="mt-2 text-xs text-gray-500">
+        Accepted max file size: {MAX_ATTACHMENT_MB} MB.
+      </p>
     </div>
   );
 }
