@@ -36,6 +36,16 @@ const nextConfig: NextConfig = {
         port: "9000",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "cdn.boxmag.eu",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "storage.boxmag.eu",
+        pathname: "/**",
+      },
     ],
   },
   env: {

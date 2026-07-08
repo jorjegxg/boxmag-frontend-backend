@@ -1099,14 +1099,29 @@ function CheckoutProductDetails({
           key={item.itemNo}
           className="flex flex-col gap-6 rounded-lg border border-gray-200 p-4 text-sm"
         >
+          {/**
+           * Older persisted cart entries may still contain local MinIO URLs.
+           * Normalize them to the public CDN to avoid broken images on production domain.
+           */}
+          {(() => {
+            const rawImageUrl = item.imageUrl?.trim() ?? "";
+            const imageSrc = rawImageUrl
+              ? rawImageUrl.replace(
+                  /^http:\/\/localhost:9000(?=\/)/,
+                  "https://cdn.boxmag.eu",
+                )
+              : "/b2b/boxes/box.png";
+            return (
           <div className="flex w-full flex-col gap-6 sm:flex-row sm:items-start">
             <div className="flex h-[100px] w-[100px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-white">
-              <Image
-                src={item.imageUrl || "/b2b/boxes/box.png"}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageSrc}
                 alt={item.name}
                 width={100}
                 height={100}
                 className="h-full w-full object-contain"
+                loading="lazy"
               />
             </div>
             <CheckoutProductColumn
@@ -1128,6 +1143,8 @@ function CheckoutProductDetails({
               value2={formatPrice(item.unitPrice * item.quantity)}
             />
           </div>
+            );
+          })()}
           <div className="flex flex-col items-end gap-3">
             <div className="flex items-center gap-2">
               <span className="font-bold">{t("checkout.quantity")}</span>
