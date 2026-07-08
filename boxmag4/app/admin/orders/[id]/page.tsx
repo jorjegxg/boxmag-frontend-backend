@@ -201,6 +201,7 @@ export default function AdminOrderDetailsPage() {
         const response = await fetch(
           `${backendBaseUrl}/api/orders/${orderId}`,
           {
+            credentials: "include",
             signal: controller.signal,
           },
         );
@@ -238,7 +239,7 @@ export default function AdminOrderDetailsPage() {
       try {
         const response = await fetch(
           `${backendBaseUrl}/api/orders/offer-senders`,
-          { signal: controller.signal },
+          { credentials: "include", signal: controller.signal },
         );
         const payload = (await response.json()) as {
           ok?: boolean;
@@ -310,6 +311,7 @@ export default function AdminOrderDetailsPage() {
         `${backendBaseUrl}/api/orders/${order.id}/send-offer`,
         {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             fromKey: selectedSenderKey,
@@ -366,6 +368,7 @@ export default function AdminOrderDetailsPage() {
         `${backendBaseUrl}/api/orders/${order.id}/payment-status`,
         {
           method: "PATCH",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ paymentStatus: nextStatus }),
         },
@@ -402,6 +405,7 @@ export default function AdminOrderDetailsPage() {
         `${backendBaseUrl}/api/orders/${order.id}/status`,
         {
           method: "PATCH",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: nextStatus }),
         },

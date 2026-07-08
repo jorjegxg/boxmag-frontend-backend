@@ -70,7 +70,9 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
   loadBoxTypes: async () => {
     set({ isLoadingBoxTypes: true, boxTypesError: null });
     try {
-      const response = await fetch(`${get().backendBaseUrl}/api/box-types`);
+      const response = await fetch(`${get().backendBaseUrl}/api/box-types`, {
+        credentials: "include",
+      });
       if (!response.ok) {
         throw new Error(`Failed with status ${response.status}`);
       }
@@ -104,6 +106,7 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
     try {
       const response = await fetch(`${backendBaseUrl}/api/box-types`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -193,6 +196,7 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
     try {
       const response = await fetch(`${backendBaseUrl}/api/box-types/${editingBoxId}`, {
         method: "PUT",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -239,6 +243,7 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
     try {
       const response = await fetch(`${backendBaseUrl}/api/box-types/${boxTypeId}`, {
         method: "DELETE",
+        credentials: "include",
       });
       const payload = (await response.json()) as { ok?: boolean; message?: string };
       if (!response.ok || payload.ok !== true) {
@@ -272,7 +277,7 @@ export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
     try {
       const response = await fetch(
         `${backendBaseUrl}/api/box-types/${boxTypeId}/activate`,
-        { method: "POST" },
+        { method: "POST", credentials: "include" },
       );
       const payload = (await response.json()) as { ok?: boolean; message?: string };
       if (!response.ok || payload.ok !== true) {

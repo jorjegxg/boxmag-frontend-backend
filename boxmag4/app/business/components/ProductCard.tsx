@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { LiaCheckDoubleSolid } from "react-icons/lia";
 import useBusinessStore from "../store/business_store";
 import MyOutlinedButton from "./MyOutlinedButton";
@@ -23,6 +23,15 @@ export function PrductCard({
 }) {
   const handleClick = () => confirmItem(id);
   const { t } = useLanguage();
+  const fallbackImage = "/pictures/factory.jpg";
+  const [resolvedImageUrl, setResolvedImageUrl] = useState(
+    imageUrl?.trim() || fallbackImage,
+  );
+
+  useEffect(() => {
+    const next = imageUrl?.trim();
+    setResolvedImageUrl(next && next.length > 0 ? next : fallbackImage);
+  }, [imageUrl]);
 
   return (
     <div
@@ -47,11 +56,16 @@ export function PrductCard({
         }`}
       >
         <Image
-          src={imageUrl ?? "/placeholders/box2.png"}
+          src={resolvedImageUrl}
           alt={title}
           width={centerItems ? 200 : 300}
           height={centerItems ? 200 : 300}
           className="object-contain"
+          onError={() => {
+            if (resolvedImageUrl !== fallbackImage) {
+              setResolvedImageUrl(fallbackImage);
+            }
+          }}
         />
       </div>
       <div className="font-semibold text-center text-sm sm:text-lg px-4 sm:px-6 sm:py-6 w-full">

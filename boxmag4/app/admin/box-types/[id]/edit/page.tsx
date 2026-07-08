@@ -209,6 +209,7 @@ export default function EditBoxTypePage() {
           `${backendBaseUrl}/api/box-types/upload-images`,
           {
             method: "POST",
+            credentials: "include",
             body: formData,
           },
         );
@@ -252,6 +253,7 @@ export default function EditBoxTypePage() {
         `${backendBaseUrl}/api/box-types/${boxType.id}`,
         {
           method: "PUT",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -277,6 +279,7 @@ export default function EditBoxTypePage() {
         `${backendBaseUrl}/api/box-types/${boxType.id}/products`,
         {
           method: "PUT",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },

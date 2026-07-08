@@ -173,6 +173,7 @@ export default function AdminPage() {
           `${backendBaseUrl}/api/box-types/upload-images`,
           {
             method: "POST",
+            credentials: "include",
             body: formData,
           },
         );
@@ -243,7 +244,9 @@ export default function AdminPage() {
       setIsLoadingOrders(true);
       setOrdersError(null);
       try {
-        const response = await fetch(`${backendBaseUrl}/api/orders`);
+        const response = await fetch(`${backendBaseUrl}/api/orders`, {
+          credentials: "include",
+        });
         const payload = (await response.json()) as {
           ok?: boolean;
           data?: AdminOrder[];
@@ -278,6 +281,7 @@ export default function AdminPage() {
     try {
       const response = await fetch(
         `${backendBaseUrl}/api/shipping-methods?includeInactive=true`,
+        { credentials: "include" },
       );
       const payload = (await response.json()) as {
         ok?: boolean;
@@ -337,6 +341,7 @@ export default function AdminPage() {
         `${backendBaseUrl}/api/orders/${orderId}/status`,
         {
           method: "PATCH",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -389,6 +394,7 @@ export default function AdminPage() {
     try {
       const response = await fetch(`${backendBaseUrl}/api/shipping-methods`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -433,6 +439,7 @@ export default function AdminPage() {
         `${backendBaseUrl}/api/shipping-methods/${method.id}`,
         {
           method: "PUT",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -487,6 +494,7 @@ export default function AdminPage() {
         `${backendBaseUrl}/api/shipping-methods/${shippingMethodId}`,
         {
           method: "DELETE",
+          credentials: "include",
         },
       );
       const payload = (await response.json()) as {

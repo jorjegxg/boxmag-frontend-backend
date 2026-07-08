@@ -1,3 +1,4 @@
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { buildCorsOptions } from "./config/cors";
@@ -18,6 +19,7 @@ import { exchangeRateRouter } from "./routes/exchange-rate.route";
 export const app = express();
 
 app.use(cors(buildCorsOptions()));
+app.use(cookieParser());
 
 // Stripe webhook must be registered BEFORE express.json() so that the raw
 // request body is available for signature verification.

@@ -151,7 +151,7 @@ export default function AccountOrderDetailsPage() {
       try {
         const response = await fetch(
           `${backendBaseUrl}/api/orders/${orderId}?email=${encodeURIComponent(loggedInEmail)}`,
-          { signal: controller.signal },
+          { credentials: "include", signal: controller.signal },
         );
         const payload = (await response.json()) as {
           ok?: boolean;

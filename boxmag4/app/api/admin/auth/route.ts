@@ -39,12 +39,17 @@ export async function POST(request: Request) {
 
   const token = await createAdminSessionToken(configuredPassword);
   const response = NextResponse.json({ ok: true });
+  // In production the admin panel (boxmag.eu) and the API (api.boxmag.eu) live
+  // on different subdomains. Setting ADMIN_COOKIE_DOMAIN=boxmag.eu makes the
+  // session cookie visible to the backend so it can enforce admin auth too.
+  const cookieDomain = process.env.ADMIN_COOKIE_DOMAIN?.trim() || undefined;
   response.cookies.set(ADMIN_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
   });
   return response;
 }

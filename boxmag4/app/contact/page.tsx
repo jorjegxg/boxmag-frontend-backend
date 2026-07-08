@@ -81,14 +81,14 @@ async function fetchLoggedInContactDefaults(
 
   const backendBaseUrl = getBackendBaseUrl();
   const [profileResponse, addressesResponse] = await Promise.all([
-    fetch(
-      `${backendBaseUrl}/api/auth/profile?email=${encodeURIComponent(loggedInEmail)}`,
-      { signal },
-    ),
-    fetch(
-      `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
-      { signal },
-    ),
+    fetch(`${backendBaseUrl}/api/auth/profile`, {
+      credentials: "include",
+      signal,
+    }),
+    fetch(`${backendBaseUrl}/api/addresses`, {
+      credentials: "include",
+      signal,
+    }),
   ]);
 
   const profilePayload = (await profileResponse.json()) as {

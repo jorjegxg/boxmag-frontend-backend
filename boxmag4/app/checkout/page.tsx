@@ -258,14 +258,14 @@ export default function CheckoutPage() {
       setIsLoadingAddresses(true);
       try {
         const [addressesResponse, profileResponse] = await Promise.all([
-          fetch(
-            `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
-            { signal: controller.signal },
-          ),
-          fetch(
-            `${backendBaseUrl}/api/auth/profile?email=${encodeURIComponent(loggedInEmail)}`,
-            { signal: controller.signal },
-          ),
+          fetch(`${backendBaseUrl}/api/addresses`, {
+            credentials: "include",
+            signal: controller.signal,
+          }),
+          fetch(`${backendBaseUrl}/api/auth/profile`, {
+            credentials: "include",
+            signal: controller.signal,
+          }),
         ]);
         const payload = (await addressesResponse.json()) as {
           ok?: boolean;

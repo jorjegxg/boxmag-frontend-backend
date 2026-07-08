@@ -127,6 +127,7 @@ function LoginRequiredView({
     try {
       const response = await fetch(`${backendBaseUrl}/api/auth/login`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -1149,10 +1150,10 @@ export default function AccountPage() {
     const loadProfile = async () => {
       setIsProfileLoading(true);
       try {
-        const response = await fetch(
-          `${backendBaseUrl}/api/auth/profile?email=${encodeURIComponent(loggedInEmail)}`,
-          { signal: controller.signal },
-        );
+        const response = await fetch(`${backendBaseUrl}/api/auth/profile`, {
+          credentials: "include",
+          signal: controller.signal,
+        });
         const payload = (await response.json()) as {
           ok?: boolean;
           data?: {
@@ -1213,7 +1214,7 @@ export default function AccountPage() {
       try {
         const response = await fetch(
           `${backendBaseUrl}/api/orders?email=${encodeURIComponent(loggedInEmail)}`,
-          { signal: controller.signal },
+          { credentials: "include", signal: controller.signal },
         );
         const payload = (await response.json()) as {
           ok?: boolean;
@@ -1255,10 +1256,10 @@ export default function AccountPage() {
     const loadAddresses = async () => {
       setIsAddressesLoading(true);
       try {
-        const response = await fetch(
-          `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
-          { signal: controller.signal },
-        );
+        const response = await fetch(`${backendBaseUrl}/api/addresses`, {
+          credentials: "include",
+          signal: controller.signal,
+        });
         const payload = (await response.json()) as {
           ok?: boolean;
           data?: UserAddress[];
@@ -1298,6 +1299,7 @@ export default function AccountPage() {
 
     const response = await fetch(`${getBackendBaseUrl()}/api/auth/profile`, {
       method: "PUT",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
@@ -1355,6 +1357,7 @@ export default function AccountPage() {
       "http://localhost:3005";
     const response = await fetch(`${backendBaseUrl}/api/addresses`, {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
@@ -1368,9 +1371,9 @@ export default function AccountPage() {
       throw new Error(json.message ?? "Failed to save address");
     }
 
-    const reload = await fetch(
-      `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
-    );
+    const reload = await fetch(`${backendBaseUrl}/api/addresses`, {
+      credentials: "include",
+    });
     const reloadJson = (await reload.json()) as {
       ok?: boolean;
       data?: UserAddress[];
@@ -1408,6 +1411,7 @@ export default function AccountPage() {
       `${backendBaseUrl}/api/addresses/${addressId}`,
       {
         method: "PUT",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -1422,9 +1426,9 @@ export default function AccountPage() {
       throw new Error(json.message ?? "Failed to update address");
     }
 
-    const reload = await fetch(
-      `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
-    );
+    const reload = await fetch(`${backendBaseUrl}/api/addresses`, {
+      credentials: "include",
+    });
     const reloadJson = (await reload.json()) as {
       ok?: boolean;
       data?: UserAddress[];
@@ -1443,17 +1447,17 @@ export default function AccountPage() {
       process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
       "http://localhost:3005";
     const response = await fetch(
-      `${backendBaseUrl}/api/addresses/${addressId}?email=${encodeURIComponent(loggedInEmail)}`,
-      { method: "DELETE" },
+      `${backendBaseUrl}/api/addresses/${addressId}`,
+      { method: "DELETE", credentials: "include" },
     );
     const json = (await response.json()) as { ok?: boolean; message?: string };
     if (!response.ok || json.ok !== true) {
       throw new Error(json.message ?? "Failed to delete address");
     }
 
-    const reload = await fetch(
-      `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
-    );
+    const reload = await fetch(`${backendBaseUrl}/api/addresses`, {
+      credentials: "include",
+    });
     const reloadJson = (await reload.json()) as {
       ok?: boolean;
       data?: UserAddress[];
@@ -1560,21 +1564,26 @@ export default function AccountPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    localStorage.removeItem(AUTH_STORAGE_KEY);
-                    localStorage.removeItem(AUTH_EMAIL_STORAGE_KEY);
-                    window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
-                    setIsLoggedIn(false);
-                    setLoggedInEmail("");
-                    setAccountProfile({
-                      firstName: "",
-                      lastName: "",
-                      phone: "",
-                      email: "",
-                      companyName: "",
-                      vatNumber: "",
+                    void fetch(`${getBackendBaseUrl()}/api/auth/logout`, {
+                      method: "POST",
+                      credentials: "include",
+                    }).finally(() => {
+                      localStorage.removeItem(AUTH_STORAGE_KEY);
+                      localStorage.removeItem(AUTH_EMAIL_STORAGE_KEY);
+                      window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+                      setIsLoggedIn(false);
+                      setLoggedInEmail("");
+                      setAccountProfile({
+                        firstName: "",
+                        lastName: "",
+                        phone: "",
+                        email: "",
+                        companyName: "",
+                        vatNumber: "",
+                      });
+                      setActiveTab("account");
+                      router.push("/account#account");
                     });
-                    setActiveTab("account");
-                    router.push("/account#account");
                   }}
                   className="w-full flex items-center gap-3 px-5 py-3.5 text-sm font-bold uppercase tracking-wide text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
                 >

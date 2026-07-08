@@ -1,5 +1,7 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createUserSessionToken } from "../config/user-auth";
+import { USER_COOKIE_NAME } from "../config/user-auth";
 
 const { queryMock, executeMock, getConnectionMock } = vi.hoisted(() => ({
   queryMock: vi.fn(),
@@ -43,11 +45,25 @@ describe("orders routes", () => {
   beforeEach(() => {
     queryMock.mockReset();
     executeMock.mockReset();
+    process.env.ADMIN_PASSWORD = "test-admin-password";
+    process.env.USER_SESSION_SECRET = "test-user-session-secret";
   });
 
-  it("returns 400 for invalid status transition payload", async () => {
+  it("returns 401 for invalid status transition without admin auth", async () => {
     const response = await request(app)
       .patch("/api/orders/12/status")
+      .send({ status: "unknown-status" });
+
+    expect(response.status).toBe(401);
+  });
+
+  it("returns 400 for invalid status transition payload when admin", async () => {
+    const { createAdminSessionToken } = await import("../config/admin-auth");
+    const adminCookie = `boxmag-admin-session=${createAdminSessionToken("test-admin-password")}`;
+
+    const response = await request(app)
+      .patch("/api/orders/12/status")
+      .set("Cookie", adminCookie)
       .send({ status: "unknown-status" });
 
     expect(response.status).toBe(400);
@@ -67,6 +83,10 @@ describe("orders routes", () => {
   });
 
   it("returns order attachment for authorized account email", async () => {
+    const userEmail = "customer@example.com";
+    const token = createUserSessionToken(7, userEmail);
+    if (!token) throw new Error("Failed to create user session token");
+
     queryMock.mockResolvedValueOnce([
       [
         {
@@ -80,7 +100,8 @@ describe("orders routes", () => {
 
     const response = await request(app)
       .get("/api/orders/12/attachment")
-      .query({ email: "customer@example.com" });
+      .query({ email: userEmail })
+      .set("Cookie", `${USER_COOKIE_NAME}=${token}`);
 
     expect(response.status).toBe(200);
     expect(response.headers["content-type"]).toContain("application/pdf");

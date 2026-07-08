@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { RowDataPacket } from "mysql2";
+import { requireAdmin } from "../middleware/require-admin";
 import { env } from "../config/env";
 import { mysqlPool } from "../db/mysql";
 import { optimizeUploadedBoxImage } from "../services/image-optimize";
@@ -87,7 +88,7 @@ function calculateWithTax(withoutTax: number): number {
   return Number((withoutTax * taxMultiplier).toFixed(2));
 }
 
-boxTypesRouter.post("/upload-image", imageUpload.single("image"), async (req, res) => {
+boxTypesRouter.post("/upload-image", requireAdmin, imageUpload.single("image"), async (req, res) => {
   if (!req.file) {
     res.status(400).json({
       ok: false,
@@ -124,7 +125,7 @@ boxTypesRouter.post("/upload-image", imageUpload.single("image"), async (req, re
   }
 });
 
-boxTypesRouter.post("/upload-images", imageUpload.array("images", 10), async (req, res) => {
+boxTypesRouter.post("/upload-images", requireAdmin, imageUpload.array("images", 10), async (req, res) => {
   const files = Array.isArray(req.files) ? req.files : [];
   if (files.length === 0) {
     res.status(400).json({
@@ -264,7 +265,7 @@ boxTypesRouter.get("/", async (_req, res) => {
   }
 });
 
-boxTypesRouter.post("/", async (req, res) => {
+boxTypesRouter.post("/", requireAdmin, async (req, res) => {
   const payload = req.body as {
     title?: unknown;
     key?: unknown;
@@ -456,7 +457,7 @@ boxTypesRouter.get("/:id/products", async (req, res) => {
   }
 });
 
-boxTypesRouter.put("/:id/products", async (req, res) => {
+boxTypesRouter.put("/:id/products", requireAdmin, async (req, res) => {
   const boxTypeId = Number(req.params.id);
   const payload = req.body as {
     products?: Array<{
@@ -642,7 +643,7 @@ boxTypesRouter.put("/:id/products", async (req, res) => {
   }
 });
 
-boxTypesRouter.put("/:id", async (req, res) => {
+boxTypesRouter.put("/:id", requireAdmin, async (req, res) => {
   const boxTypeId = Number(req.params.id);
   const payload = req.body as {
     title?: unknown;
@@ -746,7 +747,7 @@ boxTypesRouter.put("/:id", async (req, res) => {
   }
 });
 
-boxTypesRouter.delete("/:id", async (req, res) => {
+boxTypesRouter.delete("/:id", requireAdmin, async (req, res) => {
   const boxTypeId = Number(req.params.id);
 
   if (!Number.isInteger(boxTypeId) || boxTypeId <= 0) {
@@ -788,7 +789,7 @@ boxTypesRouter.delete("/:id", async (req, res) => {
   }
 });
 
-boxTypesRouter.post("/:id/activate", async (req, res) => {
+boxTypesRouter.post("/:id/activate", requireAdmin, async (req, res) => {
   const boxTypeId = Number(req.params.id);
 
   if (!Number.isInteger(boxTypeId) || boxTypeId <= 0) {

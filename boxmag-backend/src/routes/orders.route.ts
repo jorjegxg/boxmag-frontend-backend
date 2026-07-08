@@ -3,6 +3,10 @@ import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { PoolConnection } from "mysql2/promise";
 import { mysqlPool } from "../db/mysql";
 import {
+  requireAdmin,
+} from "../middleware/require-admin";
+import { requireAdminOrUserEmail } from "../middleware/require-admin-or-user-email";
+import {
   getOrderAttachmentFromMinio,
   uploadOrderAttachmentToMinio,
 } from "../services/minio";
@@ -357,7 +361,7 @@ function buildPriceBreakdown(row: OrderListRow) {
   };
 }
 
-ordersRouter.get("/", async (req, res) => {
+ordersRouter.get("/", requireAdminOrUserEmail, async (req, res) => {
   const emailFilter =
     typeof req.query.email === "string" && req.query.email.trim().length > 0
       ? req.query.email.trim().toLowerCase()
@@ -432,7 +436,7 @@ ordersRouter.get("/", async (req, res) => {
   }
 });
 
-ordersRouter.get("/offer-senders", (_req, res) => {
+ordersRouter.get("/offer-senders", requireAdmin, (_req, res) => {
   const senders = getOrderOfferSenderOptions();
   res.json({
     ok: true,
@@ -441,7 +445,7 @@ ordersRouter.get("/offer-senders", (_req, res) => {
   });
 });
 
-ordersRouter.post("/:orderId/send-offer", async (req, res) => {
+ordersRouter.post("/:orderId/send-offer", requireAdmin, async (req, res) => {
   const orderId = Number(req.params.orderId);
   const body = (req.body ?? {}) as {
     fromKey?: unknown;
@@ -548,7 +552,7 @@ ordersRouter.post("/:orderId/send-offer", async (req, res) => {
   }
 });
 
-ordersRouter.get("/:orderId/attachment", async (req, res) => {
+ordersRouter.get("/:orderId/attachment", requireAdminOrUserEmail, async (req, res) => {
   const orderId = Number(req.params.orderId);
   const emailFilter =
     typeof req.query.email === "string" && req.query.email.trim().length > 0
@@ -652,7 +656,7 @@ ordersRouter.get("/:orderId/attachment", async (req, res) => {
   }
 });
 
-ordersRouter.get("/:orderId", async (req, res) => {
+ordersRouter.get("/:orderId", requireAdminOrUserEmail, async (req, res) => {
   const orderId = Number(req.params.orderId);
   const emailFilter =
     typeof req.query.email === "string" && req.query.email.trim().length > 0
@@ -1004,7 +1008,7 @@ ordersRouter.post("/", async (req, res) => {
   }
 });
 
-ordersRouter.patch("/:orderId/payment-status", async (req, res) => {
+ordersRouter.patch("/:orderId/payment-status", requireAdmin, async (req, res) => {
   const orderId = Number(req.params.orderId);
   const nextStatusRaw = toRequiredString((req.body ?? {}).paymentStatus);
   const nextStatus = nextStatusRaw?.toLowerCase() ?? null;
@@ -1076,7 +1080,7 @@ ordersRouter.patch("/:orderId/payment-status", async (req, res) => {
   }
 });
 
-ordersRouter.patch("/:orderId/status", async (req, res) => {
+ordersRouter.patch("/:orderId/status", requireAdmin, async (req, res) => {
   const orderId = Number(req.params.orderId);
   const nextStatusRaw = toRequiredString((req.body ?? {}).status);
   const nextStatus = nextStatusRaw?.toLowerCase() ?? null;

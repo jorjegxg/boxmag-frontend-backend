@@ -2,7 +2,13 @@ import crypto from "crypto";
 import { Router } from "express";
 import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { env } from "../config/env";
+import {
+  USER_COOKIE_NAME,
+  buildUserSessionCookieOptions,
+  createUserSessionToken,
+} from "../config/user-auth";
 import { mysqlPool } from "../db/mysql";
+import { requireUser } from "../middleware/require-user";
 import {
   isEmailTransportConfigured,
   sendVerificationEmail,
@@ -178,7 +184,18 @@ authRouter.post("/login", async (req, res) => {
       [user.id]
     );
 
-    res.status(200).json({
+    const sessionToken = createUserSessionToken(user.id, user.email);
+    if (!sessionToken) {
+      res.status(503).json({
+        ok: false,
+        message: "User sessions are not configured on the server.",
+      });
+      return;
+    }
+
+    res.status(200);
+    res.cookie(USER_COOKIE_NAME, sessionToken, buildUserSessionCookieOptions());
+    res.json({
       ok: true,
       data: {
         id: user.id,
@@ -198,16 +215,16 @@ authRouter.post("/login", async (req, res) => {
   }
 });
 
-authRouter.get("/profile", async (req, res) => {
-  const emailRaw =
-    typeof req.query.email === "string" ? req.query.email.trim().toLowerCase() : "";
-  if (!emailRaw) {
-    res.status(400).json({
-      ok: false,
-      message: "Email query param is required",
-    });
-    return;
-  }
+authRouter.post("/logout", (_req, res) => {
+  res.clearCookie(USER_COOKIE_NAME, buildUserSessionCookieOptions());
+  res.status(200).json({
+    ok: true,
+    message: "Logged out",
+  });
+});
+
+authRouter.get("/profile", requireUser, async (req, res) => {
+  const emailRaw = req.userSession!.email;
 
   try {
     const [rows] = await mysqlPool.execute<UserProfileRow[]>(
@@ -247,18 +264,9 @@ authRouter.get("/profile", async (req, res) => {
   }
 });
 
-authRouter.put("/profile", async (req, res) => {
+authRouter.put("/profile", requireUser, async (req, res) => {
   const payload = (req.body ?? {}) as UpdateProfilePayload;
-  const emailRaw = toOptionalString(payload.email);
-  if (!emailRaw) {
-    res.status(400).json({
-      ok: false,
-      message: "Email is required",
-    });
-    return;
-  }
-
-  const normalizedEmail = emailRaw.toLowerCase();
+  const normalizedEmail = req.userSession!.email;
   const firstName = toOptionalString(payload.firstName);
   const lastName = toOptionalString(payload.lastName);
   const phone = toOptionalString(payload.phone);

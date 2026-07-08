@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { mysqlPool } from "../db/mysql";
+import { requireAdmin } from "../middleware/require-admin";
 
 type ShippingMethodRow = RowDataPacket & {
   id: number;
@@ -52,43 +53,53 @@ function toOptionalNumber(value: unknown): number | null {
 
 export const shippingMethodsRouter = Router();
 
-shippingMethodsRouter.get("/", async (req, res) => {
-  const includeInactive = req.query.includeInactive === "true";
+shippingMethodsRouter.get(
+  "/",
+  (req, res, next) => {
+    if (req.query.includeInactive === "true") {
+      requireAdmin(req, res, next);
+      return;
+    }
+    next();
+  },
+  async (req, res) => {
+    const includeInactive = req.query.includeInactive === "true";
 
-  try {
-    const [rows] = await mysqlPool.query<ShippingMethodRow[]>(
-      `SELECT id, method_key, name, eta_text, price, is_active, sort_order
+    try {
+      const [rows] = await mysqlPool.query<ShippingMethodRow[]>(
+        `SELECT id, method_key, name, eta_text, price, is_active, sort_order
        FROM shipping_methods
        ${includeInactive ? "" : "WHERE is_active = 1"}
        ORDER BY sort_order ASC, id ASC`
-    );
+      );
 
-    res.setHeader(
-      "Cache-Control",
-      "public, max-age=60, s-maxage=300, stale-while-revalidate=86400"
-    );
-    res.json({
-      ok: true,
-      data: rows.map((row) => ({
-        id: row.id,
-        key: row.method_key,
-        name: row.name,
-        etaText: row.eta_text,
-        price: Number(row.price),
-        isActive: Boolean(row.is_active),
-        sortOrder: row.sort_order,
-      })),
-    });
-  } catch (error) {
-    console.error("Failed to load shipping methods", error);
-    res.status(500).json({
-      ok: false,
-      message: "Failed to load shipping methods",
-    });
-  }
-});
+      res.setHeader(
+        "Cache-Control",
+        "public, max-age=60, s-maxage=300, stale-while-revalidate=86400"
+      );
+      res.json({
+        ok: true,
+        data: rows.map((row) => ({
+          id: row.id,
+          key: row.method_key,
+          name: row.name,
+          etaText: row.eta_text,
+          price: Number(row.price),
+          isActive: Boolean(row.is_active),
+          sortOrder: row.sort_order,
+        })),
+      });
+    } catch (error) {
+      console.error("Failed to load shipping methods", error);
+      res.status(500).json({
+        ok: false,
+        message: "Failed to load shipping methods",
+      });
+    }
+  },
+);
 
-shippingMethodsRouter.post("/", async (req, res) => {
+shippingMethodsRouter.post("/", requireAdmin, async (req, res) => {
   const payload = (req.body ?? {}) as CreateShippingMethodPayload;
   const key = toRequiredString(payload.key)?.toLowerCase() ?? null;
   const name = toRequiredString(payload.name);
@@ -128,7 +139,7 @@ shippingMethodsRouter.post("/", async (req, res) => {
   }
 });
 
-shippingMethodsRouter.put("/:shippingMethodId", async (req, res) => {
+shippingMethodsRouter.put("/:shippingMethodId", requireAdmin, async (req, res) => {
   const shippingMethodId = Number(req.params.shippingMethodId);
   const payload = (req.body ?? {}) as UpdateShippingMethodPayload;
   const key = toRequiredString(payload.key)?.toLowerCase() ?? null;
@@ -185,7 +196,7 @@ shippingMethodsRouter.put("/:shippingMethodId", async (req, res) => {
   }
 });
 
-shippingMethodsRouter.delete("/:shippingMethodId", async (req, res) => {
+shippingMethodsRouter.delete("/:shippingMethodId", requireAdmin, async (req, res) => {
   const shippingMethodId = Number(req.params.shippingMethodId);
   if (!Number.isInteger(shippingMethodId) || shippingMethodId <= 0) {
     res.status(400).json({

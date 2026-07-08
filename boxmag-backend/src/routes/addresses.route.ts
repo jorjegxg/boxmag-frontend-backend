@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { mysqlPool } from "../db/mysql";
+import { requireUser } from "../middleware/require-user";
 
 type AddressRow = RowDataPacket & {
   id: number;
@@ -67,15 +68,8 @@ function toRequiredString(value: unknown): string | null {
 
 export const addressesRouter = Router();
 
-addressesRouter.get("/", async (req, res) => {
-  const email = toRequiredString(req.query.email);
-  if (!email) {
-    res.status(400).json({
-      ok: false,
-      message: "Email query param is required",
-    });
-    return;
-  }
+addressesRouter.get("/", requireUser, async (req, res) => {
+  const email = req.userSession!.email;
 
   try {
     const [userRows] = await mysqlPool.execute<UserRow[]>(
@@ -127,9 +121,9 @@ addressesRouter.get("/", async (req, res) => {
   }
 });
 
-addressesRouter.post("/", async (req, res) => {
+addressesRouter.post("/", requireUser, async (req, res) => {
   const payload = (req.body ?? {}) as CreateAddressPayload;
-  const email = toRequiredString(payload.email)?.toLowerCase() ?? null;
+  const email = req.userSession!.email;
   const firstName = toRequiredString(payload.firstName);
   const lastName = toRequiredString(payload.lastName);
   const addressLine1 = toRequiredString(payload.addressLine1);
@@ -137,7 +131,7 @@ addressesRouter.post("/", async (req, res) => {
   const city = toRequiredString(payload.city);
   const country = toRequiredString(payload.country);
 
-  if (!email || !firstName || !lastName || !addressLine1 || !postcode || !city || !country) {
+  if (!firstName || !lastName || !addressLine1 || !postcode || !city || !country) {
     res.status(400).json({
       ok: false,
       message: "Invalid address payload",
@@ -202,10 +196,10 @@ addressesRouter.post("/", async (req, res) => {
   }
 });
 
-addressesRouter.put("/:addressId", async (req, res) => {
+addressesRouter.put("/:addressId", requireUser, async (req, res) => {
   const addressId = Number(req.params.addressId);
   const payload = (req.body ?? {}) as UpdateAddressPayload;
-  const email = toRequiredString(payload.email)?.toLowerCase() ?? null;
+  const email = req.userSession!.email;
   const firstName = toRequiredString(payload.firstName);
   const lastName = toRequiredString(payload.lastName);
   const addressLine1 = toRequiredString(payload.addressLine1);
@@ -216,7 +210,6 @@ addressesRouter.put("/:addressId", async (req, res) => {
   if (
     !Number.isInteger(addressId) ||
     addressId <= 0 ||
-    !email ||
     !firstName ||
     !lastName ||
     !addressLine1 ||
@@ -299,12 +292,11 @@ addressesRouter.put("/:addressId", async (req, res) => {
   }
 });
 
-addressesRouter.delete("/:addressId", async (req, res) => {
+addressesRouter.delete("/:addressId", requireUser, async (req, res) => {
   const addressId = Number(req.params.addressId);
-  const email =
-    typeof req.query.email === "string" ? req.query.email.trim().toLowerCase() : "";
+  const email = req.userSession!.email;
 
-  if (!Number.isInteger(addressId) || addressId <= 0 || !email) {
+  if (!Number.isInteger(addressId) || addressId <= 0) {
     res.status(400).json({
       ok: false,
       message: "Invalid delete address payload",

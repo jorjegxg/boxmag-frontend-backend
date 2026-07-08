@@ -163,12 +163,12 @@ export default function OrderSummaryPage() {
     const loadAccountDefaults = async () => {
       try {
         const [profileResponse, addressesResponse] = await Promise.all([
-          fetch(
-            `${backendBaseUrl}/api/auth/profile?email=${encodeURIComponent(loggedInEmail)}`,
-          ),
-          fetch(
-            `${backendBaseUrl}/api/addresses?email=${encodeURIComponent(loggedInEmail)}`,
-          ),
+          fetch(`${backendBaseUrl}/api/auth/profile`, {
+            credentials: "include",
+          }),
+          fetch(`${backendBaseUrl}/api/addresses`, {
+            credentials: "include",
+          }),
         ]);
 
         const profilePayload = (await profileResponse.json()) as {
