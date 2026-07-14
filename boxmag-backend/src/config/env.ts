@@ -43,6 +43,8 @@ export const env = {
   emailOrdersFrom: process.env.EMAIL_ORDERS_FROM ?? "",
   emailOrdersSmtpUser: process.env.EMAIL_ORDERS_SMTP_USER ?? "",
   emailOrdersSmtpPass: process.env.EMAIL_ORDERS_SMTP_PASS ?? "",
+  emailB2bSmtpUser: process.env.EMAIL_B2B_SMTP_USER ?? "",
+  emailB2bSmtpPass: process.env.EMAIL_B2B_SMTP_PASS ?? "",
   ordersNotificationTo: process.env.ORDERS_NOTIFICATION_TO ?? "",
   /** Default offer email sender key: orders | info | b2b */
   emailOfferDefaultFromKey: process.env.EMAIL_OFFER_DEFAULT_FROM_KEY ?? "orders",

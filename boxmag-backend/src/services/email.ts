@@ -56,6 +56,31 @@ function getOrdersMailTransporter(): MailTransporter {
   return ordersTransporter;
 }
 
+let b2bTransporter: MailTransporter | null = null;
+
+function getB2bSmtpUser(): string {
+  return env.emailB2bSmtpUser.trim() || env.b2bEmail.trim();
+}
+
+function isB2bMailboxSmtpConfigured(): boolean {
+  return Boolean(
+    env.b2bEmail.trim() && getB2bSmtpUser() && env.emailB2bSmtpPass.trim(),
+  );
+}
+
+function getB2bMailTransporter(): MailTransporter {
+  if (!isB2bMailboxSmtpConfigured()) {
+    return transporter;
+  }
+  if (!b2bTransporter) {
+    b2bTransporter = createMailTransporter(
+      getB2bSmtpUser(),
+      env.emailB2bSmtpPass,
+    );
+  }
+  return b2bTransporter;
+}
+
 export type OrderEmailPriceBreakdown = {
   subtotal: number | null;
   vatPercent: number | null;
@@ -284,15 +309,25 @@ function resolveAuthenticatedSmtpFromAddress(): string {
   return env.smtpUser.trim() || env.emailFrom.trim();
 }
 
+function buildMailboxHeaders(
+  fromAddress: string,
+  senderName = "Boxmag",
+): {
+  from: string;
+  replyTo: string;
+} {
+  const address = fromAddress.trim();
+  return {
+    from: `"${senderName}" <${address}>`,
+    replyTo: address,
+  };
+}
+
 function buildOrdersMailboxHeaders(senderName = "Boxmag"): {
   from: string;
   replyTo: string;
 } {
-  const fromAddress = env.emailOrdersFrom.trim();
-  return {
-    from: `"${senderName}" <${fromAddress}>`,
-    replyTo: fromAddress,
-  };
+  return buildMailboxHeaders(env.emailOrdersFrom.trim(), senderName);
 }
 
 function getOrderCustomerMailDelivery(senderName = "Boxmag"): {
@@ -1067,7 +1102,21 @@ function getOfferMailDelivery(fromKey: OrderOfferFromKey): {
   if (fromKey === "orders" && isOrdersMailboxSmtpConfigured()) {
     return {
       transport: getOrdersMailTransporter(),
-      headers: buildOrdersMailboxHeaders("Boxmag"),
+      headers: buildMailboxHeaders(fromAddress, "Boxmag"),
+    };
+  }
+
+  if (fromKey === "b2b" && isB2bMailboxSmtpConfigured()) {
+    return {
+      transport: getB2bMailTransporter(),
+      headers: buildMailboxHeaders(fromAddress, "Boxmag"),
+    };
+  }
+
+  if (fromKey === "info") {
+    return {
+      transport: transporter,
+      headers: buildMailboxHeaders(fromAddress, "Boxmag"),
     };
   }
 
