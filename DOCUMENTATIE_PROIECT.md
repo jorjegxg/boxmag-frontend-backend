@@ -1,5 +1,7 @@
 # Documentatie proiect - Boxmag frontend + backend
 
+> Pentru agenți LLM / Cursor: vezi [AGENTS.md](AGENTS.md) — ghid în engleză cu toate paginile, fluxurile și API-urile.
+
 ## 1) Descriere generala
 
 Acest repository contine doua aplicatii principale:
