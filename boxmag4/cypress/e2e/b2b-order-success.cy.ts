@@ -60,6 +60,39 @@ const setupGuestSession = () => {
   });
 };
 
+const runB2bGuestOrderToSuccess = () => {
+  cy.visit("/business");
+  cy.wait("@getBoxTypes");
+
+  fillBusinessStep();
+  cy.contains("button", "NEXT").click();
+
+  cy.location("pathname").should("eq", "/order-summary");
+  cy.contains("Order Summary").should("exist");
+
+  cy.get("#os-firstName").clear().type("Ion");
+  cy.get("#os-surname").clear().type("Popescu");
+  cy.get("#os-vatNumber").clear().type(VAT_NUMBER);
+  cy.wait("@vatLookup");
+  cy.get("#os-companyName").should("have.value", COMPANY_NAME);
+  cy.get("#os-email").clear().type(GUEST_EMAIL);
+  cy.get("#os-phone").clear().type("+40799111222");
+  cy.get("#os-address").clear().type("Str. Test 10");
+  cy.get("#os-postcode").clear().type("010101");
+  cy.get("#os-city").clear().type("Bucuresti");
+  cy.get("#os-country").select("RO");
+
+  cy.contains("button", "NEXT").click();
+  cy.wait("@createOrder").its("request.body").should((body) => {
+    expect(body.vatNumber).to.eq(VAT_NUMBER);
+    expect(body.companyName).to.eq(COMPANY_NAME);
+    expect(body.email).to.eq(GUEST_EMAIL);
+  });
+
+  cy.location("pathname").should("eq", "/business/order-success");
+  cy.contains("ORD-0128").should("exist");
+};
+
 describe("B2B full order flow – guest with VAT RO2816464", () => {
   beforeEach(() => {
     setupGuestSession();
@@ -84,36 +117,8 @@ describe("B2B full order flow – guest with VAT RO2816464", () => {
   });
 
   it("trimite comanda B2B și afișează promptul de creare cont", () => {
-    cy.visit("/business");
-    cy.wait("@getBoxTypes");
+    runB2bGuestOrderToSuccess();
 
-    fillBusinessStep();
-    cy.contains("button", "NEXT").click();
-
-    cy.location("pathname").should("eq", "/order-summary");
-    cy.contains("Order Summary").should("exist");
-
-    cy.get("#os-firstName").clear().type("Ion");
-    cy.get("#os-surname").clear().type("Popescu");
-    cy.get("#os-vatNumber").clear().type(VAT_NUMBER);
-    cy.wait("@vatLookup");
-    cy.get("#os-companyName").should("have.value", COMPANY_NAME);
-    cy.get("#os-email").clear().type(GUEST_EMAIL);
-    cy.get("#os-phone").clear().type("+40799111222");
-    cy.get("#os-address").clear().type("Str. Test 10");
-    cy.get("#os-postcode").clear().type("010101");
-    cy.get("#os-city").clear().type("Bucuresti");
-    cy.get("#os-country").select("RO");
-
-    cy.contains("button", "NEXT").click();
-    cy.wait("@createOrder").its("request.body").should((body) => {
-      expect(body.vatNumber).to.eq(VAT_NUMBER);
-      expect(body.companyName).to.eq(COMPANY_NAME);
-      expect(body.email).to.eq(GUEST_EMAIL);
-    });
-
-    cy.location("pathname").should("eq", "/business/order-success");
-    cy.contains("ORD-0128").should("exist");
     cy.contains(GUEST_EMAIL).should("exist");
     cy.contains("Create a free account").should("exist");
     cy.contains("No, thanks").should("exist");
@@ -123,6 +128,92 @@ describe("B2B full order flow – guest with VAT RO2816464", () => {
       .and("include", "email=cypress.b2b%40example.com")
       .and("include", "vatNumber=RO2816464")
       .and("include", "from=b2b-order");
+  });
+
+  it("după creare cont și autentificare, comanda apare în ORDERS", () => {
+    cy.intercept("POST", "**/api/auth/register", {
+      statusCode: 200,
+      body: {
+        ok: true,
+        message: "Registration successful. Check your email for the verification link.",
+      },
+    }).as("register");
+
+    cy.intercept("POST", "**/api/auth/login", {
+      statusCode: 200,
+      body: { ok: true },
+    }).as("login");
+
+    cy.intercept("GET", "**/api/auth/profile*", {
+      statusCode: 200,
+      body: {
+        ok: true,
+        data: {
+          firstName: "Ion",
+          lastName: "Popescu",
+          phone: "+40799111222",
+          email: GUEST_EMAIL,
+          companyName: COMPANY_NAME,
+          vatNumber: VAT_NUMBER,
+        },
+      },
+    }).as("getProfile");
+
+    cy.intercept("GET", "**/api/addresses*", {
+      statusCode: 200,
+      body: { ok: true, data: [] },
+    }).as("getAddresses");
+
+    cy.intercept("GET", "**/api/orders*", (req) => {
+      expect(req.url).to.include(encodeURIComponent(GUEST_EMAIL));
+      req.reply({
+        statusCode: 200,
+        body: {
+          ok: true,
+          data: [
+            {
+              id: 128,
+              orderNumber: "ORD-0128",
+              status: "new",
+              createdAt: "2026-07-15T09:00:00.000Z",
+              boxTypeName: "Standard Boxes",
+              quantity: 500,
+              transport: "Own",
+            },
+          ],
+        },
+      });
+    }).as("getOrders");
+
+    runB2bGuestOrderToSuccess();
+
+    cy.contains("a", "Create a free account").click();
+    cy.location("pathname").should("eq", "/registration");
+    cy.get("#reg-email").should("have.value", GUEST_EMAIL);
+    cy.get("#reg-vat").should("have.value", VAT_NUMBER);
+
+    cy.get("#reg-password").clear().type("TestPass123!");
+    cy.get("#reg-confirm").clear().type("TestPass123!");
+    cy.get("#reg-accept").check({ force: true });
+    cy.contains("button", "Register").click();
+    cy.wait("@register");
+
+    cy.contains("Confirm your email").should("exist");
+    cy.contains("a", "Back to login").click();
+
+    cy.location("pathname").should("eq", "/account");
+    cy.location("hash").should("eq", "#orders");
+    cy.contains("h2", "Sign in").should("exist");
+
+    cy.get("#account-login-email").clear().type(GUEST_EMAIL);
+    cy.get("#account-login-password").clear().type("TestPass123!");
+    cy.contains("button", "Sign in").click();
+    cy.wait("@login");
+
+    cy.wait(["@getProfile", "@getAddresses", "@getOrders"]);
+    cy.contains("h1", "ORDERS").should("exist");
+    cy.contains("ORD-0128").should("exist");
+    cy.contains("No orders found.").should("not.exist");
   });
 });
 

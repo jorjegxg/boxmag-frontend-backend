@@ -158,4 +158,69 @@ describe("orders routes", () => {
     const insertArgs = connectionExecute.mock.calls[0]?.[1] as unknown[];
     expect(insertArgs?.[0]).toBe(7);
   });
+
+  it("returns guest B2B order for authenticated user after account creation", async () => {
+    const userEmail = "cypress.b2b@example.com";
+    const token = createUserSessionToken(99, userEmail);
+    if (!token) throw new Error("Failed to create user session token");
+
+    queryMock.mockResolvedValueOnce([
+      [
+        {
+          id: 128,
+          box_type_name: "Standard Boxes",
+          cardboard_type: "B Wave",
+          cardboard_colour: "Brown On Both Side",
+          box_print: "No Color",
+          length_mm: 400,
+          width_mm: 300,
+          height_mm: 200,
+          size_type: "Internal Size - mm",
+          transport: "Own",
+          quantity: 500,
+          attachment_name: null,
+          attachment_object_name: null,
+          attachment_url: null,
+          message: "Cypress B2B full flow test.",
+          items_json: null,
+          status: "new",
+          payment_status: null,
+          stripe_session_id: null,
+          total_amount_cents: null,
+          subtotal_cents: null,
+          vat_percent: null,
+          vat_cents: null,
+          shipping_cents: null,
+          shipping_method: null,
+          shipping_eta: null,
+          offer_sent_at: null,
+          offer_sent_from: null,
+          currency: null,
+          created_at: "2026-07-15T09:00:00.000Z",
+          first_name: "Ion",
+          surname: "Popescu",
+          company_name: "Boxmag Demo SRL",
+          email: userEmail,
+          phone: "+40799111222",
+          city: "Bucuresti",
+          country: "RO",
+        },
+      ],
+    ]);
+
+    const response = await request(app)
+      .get("/api/orders")
+      .query({ email: userEmail })
+      .set("Cookie", `${USER_COOKIE_NAME}=${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0].orderNumber).toBe("ORD-0128");
+    expect(response.body.data[0].email).toBe(userEmail);
+    expect(queryMock).toHaveBeenCalledWith(
+      expect.stringContaining("LOWER(c.email) = ?"),
+      [userEmail, userEmail],
+    );
+  });
 });
