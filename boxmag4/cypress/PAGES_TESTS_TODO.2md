@@ -1,0 +1,18 @@
+B2B testing 
+1.b2b-guest-integration 
+Test the B2B testing. 
+The user is not authenticated 
+Use your yotrevorgxg@gmail.com for the users email 
+For the VAT number use  RO2816464
+The user places the order. 
+The user chooses not to make an account 
+See if it has showed in the admin page Under "Comenzi"
+
+See if the information from the table is correct.  
+See if the status is "Nouă"
+See if the "Răspuns" is "Așteaptă răspuns"
+
+Click on the order. 
+See if the information from this page is correct. 
+
+Tell me to check the user's email account to see if the confirmation order has been sent. 

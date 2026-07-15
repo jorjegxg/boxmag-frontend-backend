@@ -10,6 +10,8 @@ export default defineConfig({
     infoEmail: envFromRoot("NEXT_PUBLIC_INFO_EMAIL"),
     b2bEmail: envFromRoot("NEXT_PUBLIC_B2B_EMAIL"),
     adminPassword: envFromRoot("ADMIN_PASSWORD") || "change-me-admin-password",
+    backendUrl:
+      envFromRoot("NEXT_PUBLIC_BACKEND_URL") || "http://localhost:3005",
   },
   e2e: {
     baseUrl: "http://localhost:3006",
