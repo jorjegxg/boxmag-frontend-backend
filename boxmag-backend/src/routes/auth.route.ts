@@ -13,6 +13,7 @@ import {
   isEmailTransportConfigured,
   sendVerificationEmail,
 } from "../services/email";
+import { linkGuestOrdersToUser } from "../services/link-guest-orders";
 
 type RegisterPayload = {
   email?: unknown;
@@ -476,8 +477,10 @@ authRouter.get("/verify-email", async (req, res) => {
       `SELECT id FROM users WHERE email = ? LIMIT 1`,
       [user.email]
     );
+
+    let linkedUserId: number | null = null;
     if (existingRows.length === 0) {
-      await mysqlPool.execute(
+      const [insertResult] = await mysqlPool.execute<ResultSetHeader>(
         `INSERT INTO users
           (email, password_hash, first_name, last_name, company_name, vat_number, phone,
            email_verification_token_hash, email_verification_expires_at, email_verified_at, role, is_active)
@@ -492,6 +495,13 @@ authRouter.get("/verify-email", async (req, res) => {
           user.phone,
         ]
       );
+      linkedUserId = insertResult.insertId;
+    } else {
+      linkedUserId = existingRows[0]!.id;
+    }
+
+    if (linkedUserId != null && linkedUserId > 0) {
+      await linkGuestOrdersToUser(linkedUserId, user.email);
     }
 
     await mysqlPool.execute(

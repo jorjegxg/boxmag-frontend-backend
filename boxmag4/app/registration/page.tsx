@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { B2b } from "../global/components/b2b";
 import { ServicesSection } from "../global/components/services-section";
 import { HaveAQuestion } from "../global/components/have-a-question";
@@ -10,28 +11,53 @@ import { FaCheckCircle, FaUserPlus } from "react-icons/fa";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { siteEmails } from "../../lib/site-emails";
+import { clearB2bOrderSuccessPayload } from "../../lib/b2b-order-success";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
 
+const lockedInputClass =
+  "w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-3 text-gray-600 cursor-not-allowed focus:outline-none";
+
 const isDevelopment = isDevelopmentAppEnv();
 
-export default function RegistrationPage() {
+function RegistrationPageContent() {
+  const searchParams = useSearchParams();
+  const queryEmail = searchParams.get("email")?.trim() ?? "";
+  const queryFirstName = searchParams.get("firstName")?.trim() ?? "";
+  const querySurname = searchParams.get("surname")?.trim() ?? "";
+  const queryCompanyName = searchParams.get("companyName")?.trim() ?? "";
+  const queryPhone = searchParams.get("phone")?.trim() ?? "";
+  const queryVatNumber = searchParams.get("vatNumber")?.trim() ?? "";
+  const returnTo = searchParams.get("returnTo")?.trim() || "/account#orders";
+  const fromB2bOrder = searchParams.get("from") === "b2b-order";
+  const hasQueryPrefill = Boolean(queryEmail);
+
   const [email, setEmail] = useState(
-    isDevelopment ? siteEmails.devDemoCustomer : "",
+    queryEmail || (isDevelopment ? siteEmails.devDemoCustomer : ""),
   );
-  const [password, setPassword] = useState(isDevelopment ? "dummy123" : "");
+  const [password, setPassword] = useState(isDevelopment && !hasQueryPrefill ? "dummy123" : "");
   const [confirmPassword, setConfirmPassword] = useState(
-    isDevelopment ? "dummy123" : "",
+    isDevelopment && !hasQueryPrefill ? "dummy123" : "",
   );
-  const [firstName, setFirstName] = useState(isDevelopment ? "Ion" : "");
-  const [surname, setSurname] = useState(isDevelopment ? "Popescu" : "");
+  const [firstName, setFirstName] = useState(
+    queryFirstName || (isDevelopment && !hasQueryPrefill ? "Ion" : ""),
+  );
+  const [surname, setSurname] = useState(
+    querySurname || (isDevelopment && !hasQueryPrefill ? "Popescu" : ""),
+  );
   const [companyName, setCompanyName] = useState(
-    isDevelopment ? "Boxmag Test SRL" : "",
+    queryCompanyName || (isDevelopment && !hasQueryPrefill ? "Boxmag Test SRL" : ""),
   );
-  const [phone, setPhone] = useState(isDevelopment ? "+40 700 000 000" : "");
-  const [vatNumber, setVatNumber] = useState(isDevelopment ? "RO12345678" : "");
-  const [acceptRegulations, setAcceptRegulations] = useState(isDevelopment);
+  const [phone, setPhone] = useState(
+    queryPhone || (isDevelopment && !hasQueryPrefill ? "+40 700 000 000" : ""),
+  );
+  const [vatNumber, setVatNumber] = useState(
+    queryVatNumber || (isDevelopment && !hasQueryPrefill ? "RO12345678" : ""),
+  );
+  const [acceptRegulations, setAcceptRegulations] = useState(
+    isDevelopment && !hasQueryPrefill,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{
     kind: "success" | "error";
@@ -41,12 +67,31 @@ export default function RegistrationPage() {
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isEmailLocked, setIsEmailLocked] = useState(fromB2bOrder && Boolean(queryEmail));
 
-  const backendBaseUrl = React.useMemo(() => {
+  const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
     if (!value) return "http://localhost:3005";
     return value.endsWith("/") ? value.slice(0, -1) : value;
   }, []);
+
+  useEffect(() => {
+    if (queryEmail) setEmail(queryEmail);
+    if (queryFirstName) setFirstName(queryFirstName);
+    if (querySurname) setSurname(querySurname);
+    if (queryCompanyName) setCompanyName(queryCompanyName);
+    if (queryPhone) setPhone(queryPhone);
+    if (queryVatNumber) setVatNumber(queryVatNumber);
+    setIsEmailLocked(fromB2bOrder && Boolean(queryEmail));
+  }, [
+    fromB2bOrder,
+    queryCompanyName,
+    queryEmail,
+    queryFirstName,
+    queryPhone,
+    querySurname,
+    queryVatNumber,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +144,10 @@ export default function RegistrationPage() {
         throw new Error(payload.message ?? "Registration failed");
       }
 
+      if (fromB2bOrder) {
+        clearB2bOrderSuccessPayload();
+      }
+
       setFeedback({
         kind: "success",
         message:
@@ -125,7 +174,6 @@ export default function RegistrationPage() {
     <div>
       <B2b />
 
-      {/* Path section */}
       <section className="w-full bg-white px-4 sm:px-6 lg:px-20 pt-6">
         <div className="max-w-4xl mx-auto text-xs lg:text-sm text-gray-500 uppercase tracking-wide">
           <Link href="/" className="hover:underline">
@@ -136,7 +184,6 @@ export default function RegistrationPage() {
         </div>
       </section>
 
-      {/* Main title: REGISTRATION */}
       <section className="w-full px-4 sm:px-6 lg:px-20 py-8">
         <div className="max-w-4xl mx-auto bg-my-red rounded-lg flex items-center justify-center gap-4 py-6 px-6">
           <FaUserPlus className="w-10 h-10 sm:w-12 sm:h-12 text-white shrink-0" />
@@ -146,18 +193,32 @@ export default function RegistrationPage() {
         </div>
       </section>
 
-      {/* Registration form */}
       <section className="w-full px-4 sm:px-6 lg:px-20 pb-12">
         <div className="max-w-4xl mx-auto rounded-lg border-2 border-gray-200 bg-white px-6 py-6 sm:px-8 sm:py-8">
-          <p className="text-gray-600 text-sm mb-6">
-            Create an account to place orders and manage your details. Registration in the Online Store is optional. By registering you accept the{" "}
-            <Link href="/regulations" className="text-my-red font-semibold hover:underline">Regulations</Link>.
-          </p>
+          {fromB2bOrder ? (
+            <p className="text-gray-600 text-sm mb-6">
+              Create an account to save your B2B quote request and track it from your account.
+            </p>
+          ) : (
+            <p className="text-gray-600 text-sm mb-6">
+              Create an account to place orders and manage your details. Registration in the Online Store is optional. By registering you accept the{" "}
+              <Link href="/regulations" className="text-my-red font-semibold hover:underline">Regulations</Link>.
+            </p>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="reg-email" className="block text-sm font-semibold text-gray-800 mb-1">Email *</label>
-                <input id="reg-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className={inputClass} required />
+                <input
+                  id="reg-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className={isEmailLocked ? lockedInputClass : inputClass}
+                  readOnly={isEmailLocked}
+                  required
+                />
               </div>
               <div>
                 <label htmlFor="reg-company" className="block text-sm font-semibold text-gray-800 mb-1">Company Name</label>
@@ -238,11 +299,7 @@ export default function RegistrationPage() {
               </label>
             </div>
             {feedback?.kind === "error" ? (
-              <p
-                className="text-sm text-red-700 font-medium"
-              >
-                {feedback.message}
-              </p>
+              <p className="text-sm text-red-700 font-medium">{feedback.message}</p>
             ) : null}
             <div className="flex flex-col sm:flex-row gap-4 pt-2">
               <button type="submit" disabled={isSubmitting || isRegistered} className="px-6 py-3 rounded-lg bg-my-red text-white font-semibold hover:bg-my-red/90 transition-colors disabled:opacity-70 disabled:cursor-not-allowed">
@@ -296,7 +353,7 @@ export default function RegistrationPage() {
 
               <div className="mt-6 flex justify-end">
                 <Link
-                  href="/account"
+                  href={returnTo}
                   className="inline-flex items-center justify-center rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white hover:bg-my-red/90 transition-colors"
                 >
                   Back to login
@@ -307,5 +364,13 @@ export default function RegistrationPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function RegistrationPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegistrationPageContent />
+    </Suspense>
   );
 }

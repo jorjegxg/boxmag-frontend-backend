@@ -20,6 +20,10 @@ import {
   fetchVatLookup,
   getCachedVatCompany,
 } from "../../lib/vat-company";
+import {
+  formatOrderNumber,
+  writeB2bOrderSuccessPayload,
+} from "../../lib/b2b-order-success";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -100,6 +104,7 @@ export default function OrderSummaryPage() {
     country: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSucceeded, setSubmitSucceeded] = useState(false);
   const [hasLoadedAccountDefaults, setHasLoadedAccountDefaults] = useState(false);
   const [lockedAccountEmail, setLockedAccountEmail] = useState<string | null>(null);
 
@@ -110,8 +115,6 @@ export default function OrderSummaryPage() {
   const typeOfSizes = useBusinessStore((s) => s.typeOfSizes);
   const transportOptions = useBusinessStore((s) => s.transportOptions);
   const draft = useBusinessOrderStore((s) => s.draft);
-  const resetDraft = useBusinessOrderStore((s) => s.resetDraft);
-  const resetSelections = useBusinessStore((s) => s.resetSelections);
 
   const selectedBox = boxes.find((b) => b.isSelected);
   const selectedType = carboardTypes.find((t) => t.isSelected);
@@ -352,10 +355,11 @@ export default function OrderSummaryPage() {
   }, [vatNumber, t]);
 
   useEffect(() => {
+    if (submitSucceeded) return;
     if (!hasRequiredOrderData) {
       router.replace("/business");
     }
-  }, [hasRequiredOrderData, router]);
+  }, [hasRequiredOrderData, router, submitSucceeded]);
 
   const orderRows = [
     { label: t("orderSummary.boxType"), value: selectedBox?.name ?? "—" },
@@ -528,9 +532,13 @@ export default function OrderSummaryPage() {
       });
 
       const responseText = await response.text();
-      let payload: { ok?: boolean; message?: string };
+      let payload: { ok?: boolean; message?: string; data?: { id?: number } };
       try {
-        payload = JSON.parse(responseText) as { ok?: boolean; message?: string };
+        payload = JSON.parse(responseText) as {
+          ok?: boolean;
+          message?: string;
+          data?: { id?: number };
+        };
       } catch {
         if (response.status === 413) {
           throw new Error(
@@ -543,13 +551,29 @@ export default function OrderSummaryPage() {
         throw new Error(payload.message ?? `Failed with status ${response.status}`);
       }
 
+      const orderId = payload.data?.id;
+      if (typeof orderId !== "number" || orderId <= 0) {
+        throw new Error("Order was created but no order id was returned.");
+      }
+
+      writeB2bOrderSuccessPayload({
+        orderId,
+        orderNumber: formatOrderNumber(orderId),
+        email: orderEmail,
+        firstName: firstName.trim(),
+        surname: surname.trim(),
+        companyName: companyName.trim(),
+        vatNumber: vatNumber.trim(),
+        phone: phone.trim(),
+        isGuest: !lockedAccountEmail,
+      });
+
+      setSubmitSucceeded(true);
       notify({
         type: "success",
         message: "Order sent successfully.",
       });
-      resetSelections();
-      resetDraft();
-      router.push("/");
+      router.push("/business/order-success");
     } catch (error) {
       notify({
         type: "error",
