@@ -88,15 +88,16 @@ Auth: Guest | Customer | Admin
 ## P0 — Cont client & autentificare
 
 - [x] DONE FLOW Login client, profil, adrese, comenzi
-  - [x] TEST Vizitorul delogat vede formularul de login pe /account | account.cy.ts
-  - [x] TEST Login cu credențiale valide arată tab-urile contului | account.cy.ts
+  - [x] TEST Vizitorul delogat vede formularul de login pe /account | account.cy.ts / login.cy.ts
+  - [x] TEST Login cu credențiale valide arată tab-urile contului | account.cy.ts / login.cy.ts
+  - [x] TEST Login: validare goală, 401, email normalizat, toggle parolă, localStorage | login.cy.ts
   - [x] TEST Tab My Account arată câmpurile de profil | account.cy.ts
   - [x] TEST Tab Address — adaugă, editează, șterge adresă salvată | account.cy.ts
   - [x] TEST Tab Orders listează istoricul comenzilor | account.cy.ts
   - [x] TEST Logout golește sesiunea și revine la formularul de login | account.cy.ts
   - [x] TEST Tab-urile hash #account #address #orders comută corect | account.cy.ts
   - [ ] TEST SAVE pe profil trimite PUT /api/auth/profile
-  - [ ] TEST Sesiunea supraviețuiește reload-ului paginii
+  - [x] TEST Sesiunea supraviețuiește reload-ului paginii | login.cy.ts
   - [ ] TEST 401 la fetch profil arată din nou formularul de login
 
 - [x] DONE FLOW Adrese cont ↔ shipping la checkout
