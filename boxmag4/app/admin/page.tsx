@@ -19,39 +19,6 @@ import {
   type OrderStatusValue,
 } from "./admin-ro";
 
-function sendDebugLog({
-  hypothesisId,
-  location,
-  message,
-  data,
-}: {
-  hypothesisId: string;
-  location: string;
-  message: string;
-  data: Record<string, unknown>;
-}) {
-  // #region agent log
-  fetch("http://127.0.0.1:7337/ingest/001632f5-f360-4660-a740-ac305c61ac19", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "52d9a7",
-    },
-    body: JSON.stringify({
-      sessionId: "52d9a7",
-      runId: "pre-fix",
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-}
-
-let lastEditClickAt = 0;
-
 type AdminOrder = {
   id: number;
   orderNumber: string;
@@ -522,64 +489,6 @@ export default function AdminPage() {
       setUpdatingShippingMethodId(null);
     }
   };
-
-  useEffect(() => {
-    if (boxTypes.length > 0) {
-      sendDebugLog({
-        hypothesisId: "H4",
-        location: "page.tsx:AdminPage:boxTypesLoaded",
-        message: "box types loaded for table",
-        data: {
-          boxCount: boxTypes.length,
-        },
-      });
-    }
-  }, [boxTypes.length]);
-
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      typeof PerformanceObserver === "undefined"
-    )
-      return;
-
-    const observer = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        const timeSinceEditClick = performance.now() - lastEditClickAt;
-        if (timeSinceEditClick < 0 || timeSinceEditClick > 1500) continue;
-
-        sendDebugLog({
-          hypothesisId: "H6",
-          location: "page.tsx:AdminPage:longTaskAfterEdit",
-          message: "long task detected after edit click",
-          data: {
-            durationMs: Number(entry.duration.toFixed(2)),
-            startTimeMs: Number(entry.startTime.toFixed(2)),
-            timeSinceEditClickMs: Number(timeSinceEditClick.toFixed(2)),
-            entryType: entry.entryType,
-          },
-        });
-      }
-    });
-
-    try {
-      observer.observe({
-        type: "longtask",
-        buffered: true,
-      });
-    } catch {
-      sendDebugLog({
-        hypothesisId: "H6",
-        location: "page.tsx:AdminPage:longTaskObserverUnsupported",
-        message: "long task observer unsupported",
-        data: {},
-      });
-    }
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
 
   const totalOrdersPages = Math.max(
     1,
@@ -1242,9 +1151,6 @@ const BoxTypeRow = memo(function BoxTypeRow({
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/admin/box-types/${boxType.id}/edit`}
-            onClick={() => {
-              lastEditClickAt = performance.now();
-            }}
             className="inline-flex rounded-md bg-my-yellow px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-my-yellow-bright"
           >
             Editează

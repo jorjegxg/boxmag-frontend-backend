@@ -12,12 +12,18 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { siteEmails } from "../../lib/site-emails";
 import { clearB2bOrderSuccessPayload } from "../../lib/b2b-order-success";
+import { checkVAT, countries } from "jsvat";
+import { fetchVatLookup, getCachedVatCompany } from "../../lib/vat-company";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
-
 const lockedInputClass =
   "w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-3 text-gray-600 cursor-not-allowed focus:outline-none";
+const VAT_NUMBER_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
+
+function normalizeVatNumber(value: string): string {
+  return value.trim().toUpperCase().replace(/\s+/g, "");
+}
 
 const isDevelopment = isDevelopmentAppEnv();
 
@@ -36,6 +42,8 @@ function RegistrationPageContent() {
   const [email, setEmail] = useState(
     queryEmail || (isDevelopment ? siteEmails.devDemoCustomer : ""),
   );
+  const [isLookingUpVat, setIsLookingUpVat] = useState(false);
+  const [vatLookupError, setVatLookupError] = useState<string | null>(null);
   const [password, setPassword] = useState(isDevelopment && !hasQueryPrefill ? "dummy123" : "");
   const [confirmPassword, setConfirmPassword] = useState(
     isDevelopment && !hasQueryPrefill ? "dummy123" : "",
@@ -93,12 +101,104 @@ function RegistrationPageContent() {
     queryVatNumber,
   ]);
 
+  useEffect(() => {
+    const normalizedVat = normalizeVatNumber(vatNumber);
+    if (!VAT_NUMBER_REGEX.test(normalizedVat)) {
+      setCompanyName("");
+      setVatLookupError(null);
+      setIsLookingUpVat(false);
+      return;
+    }
+
+    const cachedCompany = getCachedVatCompany(normalizedVat);
+    if (cachedCompany) {
+      setCompanyName(cachedCompany);
+      setVatLookupError(null);
+      setIsLookingUpVat(false);
+      return;
+    }
+
+    let isCancelled = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      setIsLookingUpVat(true);
+      setVatLookupError(null);
+
+      try {
+        const payload = await fetchVatLookup(normalizedVat, controller.signal);
+        if (isCancelled) return;
+
+        if (payload.ok !== true || !payload.companyName) {
+          setCompanyName("");
+          setVatLookupError(payload.message ?? "VAT lookup failed.");
+          return;
+        }
+
+        setCompanyName(payload.companyName);
+        setVatLookupError(null);
+      } catch (error) {
+        if (
+          isCancelled ||
+          (error instanceof DOMException && error.name === "AbortError")
+        ) {
+          return;
+        }
+        setCompanyName("");
+        setVatLookupError("VAT lookup failed.");
+      } finally {
+        if (!isCancelled) {
+          setIsLookingUpVat(false);
+        }
+      }
+    }, 600);
+
+    return () => {
+      isCancelled = true;
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [vatNumber]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) {
       setFeedback({ kind: "error", message: "Email is required." });
+      return;
+    }
+
+    if (isLookingUpVat) {
+      setFeedback({
+        kind: "error",
+        message: "VAT lookup is still in progress. Please wait.",
+      });
+      return;
+    }
+
+    const normalizedVat = normalizeVatNumber(vatNumber);
+    if (!normalizedVat) {
+      setFeedback({ kind: "error", message: "VAT number is required." });
+      return;
+    }
+
+    const vatFormatCheck = checkVAT(normalizedVat, countries);
+    if (!vatFormatCheck.isValid && !vatFormatCheck.isValidFormat) {
+      setFeedback({
+        kind: "error",
+        message:
+          "Invalid VAT number. Please provide a valid VAT (e.g. RO12345678).",
+      });
+      return;
+    }
+
+    if (!companyName.trim()) {
+      setFeedback({
+        kind: "error",
+        message:
+          vatLookupError?.trim() ||
+          "Company name could not be resolved from VAT number.",
+      });
       return;
     }
 
@@ -129,7 +229,7 @@ function RegistrationPageContent() {
           firstName,
           surname,
           companyName,
-          vatNumber,
+          vatNumber: normalizedVat,
           phone,
           acceptRegulations: true,
         }),
@@ -208,6 +308,48 @@ function RegistrationPageContent() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
+                <label htmlFor="reg-vat" className="block text-sm font-semibold text-gray-800 mb-1">VAT Number *</label>
+                <input
+                  id="reg-vat"
+                  type="text"
+                  value={vatNumber}
+                  onChange={(e) => setVatNumber(e.target.value.toUpperCase())}
+                  placeholder="RO12345678"
+                  className={inputClass}
+                  required
+                  pattern="[A-Za-z]{2}\s?[A-Za-z0-9]{2,12}"
+                  title="Use country code plus 2-12 letters/digits (e.g. RO12345678 or RO 12345678)"
+                  aria-describedby={vatLookupError ? "reg-vat-error" : undefined}
+                />
+                {isLookingUpVat ? (
+                  <p className="mt-1 text-sm text-gray-500">Looking up VAT…</p>
+                ) : null}
+                {!isLookingUpVat && vatLookupError ? (
+                  <p id="reg-vat-error" className="mt-1 text-sm text-red-600">
+                    {vatLookupError}
+                  </p>
+                ) : null}
+              </div>
+              <div>
+                <label htmlFor="reg-company" className="block text-sm font-semibold text-gray-800 mb-1">
+                  Company Name *
+                </label>
+                <input
+                  id="reg-company"
+                  type="text"
+                  value={companyName}
+                  readOnly
+                  placeholder={
+                    isLookingUpVat ? "Looking up VAT..." : "Auto-filled from VAT number"
+                  }
+                  className={lockedInputClass}
+                  aria-busy={isLookingUpVat}
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
                 <label htmlFor="reg-email" className="block text-sm font-semibold text-gray-800 mb-1">Email *</label>
                 <input
                   id="reg-email"
@@ -219,10 +361,6 @@ function RegistrationPageContent() {
                   readOnly={isEmailLocked}
                   required
                 />
-              </div>
-              <div>
-                <label htmlFor="reg-company" className="block text-sm font-semibold text-gray-800 mb-1">Company Name</label>
-                <input id="reg-company" type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Company Name" className={inputClass} />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -287,10 +425,7 @@ function RegistrationPageContent() {
                 <label htmlFor="reg-phone" className="block text-sm font-semibold text-gray-800 mb-1">Phone Number</label>
                 <input id="reg-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+40 700 000 000" className={inputClass} />
               </div>
-              <div>
-                <label htmlFor="reg-vat" className="block text-sm font-semibold text-gray-800 mb-1">VAT Number</label>
-                <input id="reg-vat" type="text" value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} placeholder="VAT Number" className={inputClass} />
-              </div>
+              <div />
             </div>
             <div className="flex items-start gap-3">
               <input id="reg-accept" type="checkbox" checked={acceptRegulations} onChange={(e) => setAcceptRegulations(e.target.checked)} className="mt-1 rounded border-gray-300 text-my-red focus:ring-my-red" />
