@@ -9,6 +9,7 @@
     "lint": "eslint",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run --e2e --browser chrome",
+    "db:reset": "bash ../scripts/reset-db.sh",
     "optimize:images": "node scripts/optimize-images.mjs",
     "optimize:images:dry-run": "node scripts/optimize-images.mjs --dry-run"
   },
