@@ -4,13 +4,28 @@
  * Coverage:
  * - page load + form fields
  * - registration success + confirmation modal
+ * - registered fields appear on /account profile
  * - validation (passwords, terms, duplicate email)
  * - B2B query prefill (?from=b2b-order)
  * - VAT lookup fills company name
  * - verify email success / invalid / missing token
  */
 
+import { AUTH_EMAIL_STORAGE_KEY, AUTH_STORAGE_KEY } from "../support/commands";
+
 const VAT_CACHE_KEY = "boxmag.vatCompanyCache.v1";
+
+type RegistrationFormData = {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  firstName: string;
+  surname: string;
+  vatNumber: string;
+  phone: string;
+  acceptTerms: boolean;
+  companyName: string;
+};
 
 const mockVatLookup = (companyName = "Boxmag Test SRL") => {
   cy.intercept("GET", "**/api/vat-lookup*", {
@@ -29,19 +44,9 @@ const visitRegistration = (path = "/registration") => {
 };
 
 const fillRegistrationForm = (
-  overrides: Partial<{
-    email: string;
-    password: string;
-    confirmPassword: string;
-    firstName: string;
-    surname: string;
-    vatNumber: string;
-    phone: string;
-    acceptTerms: boolean;
-    companyName: string;
-  }> = {},
-) => {
-  const data = {
+  overrides: Partial<RegistrationFormData> = {},
+): RegistrationFormData => {
+  const data: RegistrationFormData = {
     email: "new.customer@example.com",
     password: "secret123",
     confirmPassword: "secret123",
@@ -75,6 +80,8 @@ const fillRegistrationForm = (
   } else {
     cy.get("#reg-accept").uncheck({ force: true });
   }
+
+  return data;
 };
 
 describe("Registration page", () => {
@@ -103,21 +110,81 @@ describe("Registration page", () => {
       body: { ok: true, message: "Registration successful" },
     }).as("registerSuccess");
 
-    fillRegistrationForm();
+    const data = fillRegistrationForm();
     cy.contains("button", "Register").click();
 
     cy.wait("@registerSuccess").its("request.body").should((body) => {
-      expect(body.email).to.eq("new.customer@example.com");
-      expect(body.vatNumber).to.eq("RO12345678");
-      expect(body.companyName).to.eq("Boxmag Test SRL");
+      expect(body.email).to.eq(data.email);
+      expect(body.firstName).to.eq(data.firstName);
+      expect(body.surname).to.eq(data.surname);
+      expect(body.phone).to.eq(data.phone);
+      expect(body.vatNumber).to.eq(data.vatNumber);
+      expect(body.companyName).to.eq(data.companyName);
       expect(body.acceptRegulations).to.eq(true);
     });
 
     cy.contains("Registration Successful").should("exist");
-    cy.contains("new.customer@example.com").should("exist");
+    cy.contains(data.email).should("exist");
     cy.contains("a", "Back to login")
       .should("have.attr", "href")
       .and("eq", "/account#orders");
+  });
+
+  it("shows every registration field on the account profile panel", () => {
+    cy.intercept("POST", "**/api/auth/register", {
+      statusCode: 201,
+      body: { ok: true, message: "Registration successful" },
+    }).as("registerSuccess");
+
+    const data = fillRegistrationForm({
+      email: "profile.check@example.com",
+      firstName: "Elena",
+      surname: "Ionescu",
+      vatNumber: "RO2816464",
+      phone: "+40 721 234 567",
+      companyName: "Profile Check SRL",
+    });
+    cy.contains("button", "Register").click();
+    cy.wait("@registerSuccess");
+    cy.contains("Registration Successful").should("exist");
+
+    // After verify + login, profile API returns the same data submitted at register
+    cy.intercept("POST", "**/api/auth/login", {
+      statusCode: 200,
+      body: { ok: true },
+    }).as("loginAfterRegister");
+    cy.mockAccountApis({
+      profile: {
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.surname,
+        phone: data.phone,
+        companyName: data.companyName,
+        vatNumber: data.vatNumber,
+      },
+    });
+
+    cy.visit("/account#account", {
+      onBeforeLoad(win) {
+        win.localStorage.removeItem(AUTH_STORAGE_KEY);
+        win.localStorage.removeItem(AUTH_EMAIL_STORAGE_KEY);
+      },
+    });
+
+    cy.get("#account-login-email").clear().type(data.email);
+    cy.get("#account-login-password").clear().type(data.password);
+    cy.contains("button", "Sign in").click();
+
+    cy.wait("@loginAfterRegister");
+    cy.wait(["@getProfile", "@getAddresses", "@getOrders"]);
+
+    cy.contains("button", "MY ACCOUNT").should("exist");
+    cy.get("#acc-first").should("have.value", data.firstName);
+    cy.get("#acc-last").should("have.value", data.surname);
+    cy.get("#acc-phone").should("have.value", data.phone);
+    cy.get("#acc-vat").should("have.value", data.vatNumber);
+    cy.get("#acc-company").should("have.value", data.companyName);
+    cy.contains(data.email).should("exist");
   });
 
   it("shows validation error when passwords do not match", () => {

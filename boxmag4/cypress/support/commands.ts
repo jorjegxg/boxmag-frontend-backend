@@ -50,6 +50,8 @@ export type MockProfile = {
   lastName: string;
   phone: string;
   email: string;
+  companyName?: string;
+  vatNumber?: string;
 };
 
 export type MockAddress = {
