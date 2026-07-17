@@ -31,7 +31,7 @@ Auth: Guest | Customer | Admin
   - [ ] TEST Selectarea metodei de shipping actualizează totalul comenzii
   - [ ] TEST Căutarea VAT la checkout completează automat numele firmei
   - [ ] TEST VAT invalid blochează place order
-  - [ ] TEST Moneda RON trimite currency: ron în sesiunea de checkout
+  - [x] TEST Moneda RON trimite currency: ron în sesiunea de checkout | currency-eur-ron.cy.ts
   - [x] TEST /checkout/success?session_id= arată confirmarea | checkout-payment-result.cy.ts
   - [ ] TEST Pagina de succes golește coșul din localStorage
   - [x] TEST /checkout/cancel păstrează coșul și arată linkuri | checkout-payment-result.cy.ts
@@ -162,11 +162,12 @@ Auth: Guest | Customer | Admin
   - [x] TEST Vizită /de/shop redirecționează la /shop cu traduceri germane
   - [x] TEST Limba persistă după reload
 
-- [ ] FLOW Monedă EUR / RON
-  - [ ] TEST Switch la RON — prețurile se reformatează pe shop, PDP, checkout
-  - [ ] TEST Modul RON apelează /api/exchange-rate/eur-ron
-  - [ ] TEST Eșec API curs de schimb gestionat grațios
-  - [ ] TEST Moneda persistă în localStorage după reload
+- [x] DONE FLOW Monedă EUR / RON
+  - [x] TEST Switch la RON — prețurile se reformatează pe shop, PDP, checkout | currency-eur-ron.cy.ts
+  - [x] TEST Modul RON apelează /api/exchange-rate/eur-ron | currency-eur-ron.cy.ts
+  - [x] TEST Eșec API curs de schimb gestionat grațios | currency-eur-ron.cy.ts
+  - [x] TEST Moneda persistă în localStorage după reload | currency-eur-ron.cy.ts
+  - [x] TEST Checkout Place order trimite currency: ron | currency-eur-ron.cy.ts
 
 - [ ] FLOW Navigare header & căutare
   - [ ] TEST Căutare header — tastează nume produs, dropdown leagă la PDP
