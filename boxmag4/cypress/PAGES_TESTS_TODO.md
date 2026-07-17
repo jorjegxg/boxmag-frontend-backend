@@ -107,14 +107,14 @@ Auth: Guest | Customer | Admin
   - [x] TEST Șterge adresă în cont → formular manual la checkout | account-address-cart.cy.ts
   - [ ] TEST Editează adresă în cont — câmpurile actualizate la următorul checkout
 
-- [ ] FLOW Înregistrare & verificare email
+- [x] DONE FLOW Înregistrare & verificare email
   - [x] TEST Validare formular înregistrare (parole diferite, email duplicat) | registration-verify.cy.ts
   - [x] TEST Înregistrare reușită arată modal de success | registration-verify.cy.ts
   - [x] TEST /verify-email?token=valid arată success | registration-verify.cy.ts
   - [x] TEST /verify-email?token=expired arată eroare | registration-verify.cy.ts
-  - [ ] TEST Prefill din query B2B (?email=&vatNumber=&from=b2b-order)
-  - [ ] TEST Checkbox termeni obligatoriu la înregistrare
-  - [ ] TEST Token lipsă pe /verify-email — eroare fără apel API
+  - [x] TEST Prefill din query B2B (?email=&vatNumber=&from=b2b-order) | registration-verify.cy.ts
+  - [x] TEST Checkbox termeni obligatoriu la înregistrare | registration-verify.cy.ts
+  - [x] TEST Token lipsă pe /verify-email — eroare fără apel API | registration-verify.cy.ts
 
 - [ ] FLOW Detaliu comandă & reorder
   - [ ] TEST /account/orders/[id] încarcă comanda pentru user autentificat

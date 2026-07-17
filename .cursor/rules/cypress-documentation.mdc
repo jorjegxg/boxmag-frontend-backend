@@ -1,0 +1,23 @@
+---
+description: Document every Cypress e2e test in cypress/documentation
+globs: boxmag4/cypress/**/*
+alwaysApply: false
+---
+
+# Cypress test documentation
+
+Whenever you create or update a Cypress e2e spec under `boxmag4/cypress/e2e/`, also create or update a matching markdown file in `boxmag4/cypress/documentation/`.
+
+Do this by default — the user should not need to ask.
+
+## Doc format (match existing docs)
+
+Follow the structure of `currency-eur-ron.md` / `language-i18n.md`:
+
+1. Title + Spec path + UI/State notes
+2. **Cum funcționează** — behavior table
+3. **Scenarii Cypress** — numbered steps with **CHECK** assertions
+4. **Selectori utili** — Cypress selectors
+5. **Rulare** — `npx cypress run --spec …`
+
+Name the doc after the feature (e.g. `currency-eur-ron.md` for `currency-eur-ron.cy.ts`).
