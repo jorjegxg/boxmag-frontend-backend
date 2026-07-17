@@ -111,7 +111,7 @@ export function NewsletterSubscribe() {
               <span className="text-sm text-gray-500">
                 {t("newsletter.consentStart")}{" "}
                 <Link
-                  href="/privacy"
+                  href="/privacy-policy"
                   className="text-amber-800 font-medium underline hover:text-amber-900"
                 >
                   {t("newsletter.privacyPolicy")}
