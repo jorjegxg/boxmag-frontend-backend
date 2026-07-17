@@ -29,19 +29,29 @@ const STORAGE_KEY = "boxmag.language";
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>("en");
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const fromCookie = document.cookie
+      .match(/(?:^|; )boxmag\.language=(en|ro|de)/)?.[1];
+    const fromStorage = localStorage.getItem(STORAGE_KEY);
+    // Cookie wins: middleware sets it on /ro/* and /de/* redirects
+    const saved =
+      fromCookie === "en" || fromCookie === "ro" || fromCookie === "de"
+        ? fromCookie
+        : fromStorage;
     if (saved === "en" || saved === "ro" || saved === "de") {
       setLanguageState(saved);
     }
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     document.documentElement.lang = language;
     localStorage.setItem(STORAGE_KEY, language);
     document.cookie = `boxmag.language=${language}; path=/; max-age=31536000; samesite=lax`;
-  }, [language]);
+  }, [language, hydrated]);
 
   const value = useMemo<LanguageContextType>(
     () => ({

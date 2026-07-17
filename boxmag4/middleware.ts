@@ -116,7 +116,10 @@ export async function middleware(request: NextRequest) {
   }
 
   const response = NextResponse.next();
-  response.cookies.set(LANG_COOKIE, "en", { path: "/" });
+  const existingLang = request.cookies.get(LANG_COOKIE)?.value;
+  if (existingLang !== "en" && existingLang !== "ro" && existingLang !== "de") {
+    response.cookies.set(LANG_COOKIE, "en", { path: "/" });
+  }
   return response;
 }
 

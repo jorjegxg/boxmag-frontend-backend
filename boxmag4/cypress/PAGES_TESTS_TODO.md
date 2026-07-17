@@ -156,11 +156,11 @@ Auth: Guest | Customer | Admin
 
 ## P1 — Shell global (header, footer, i18n, monedă)
 
-- [ ] FLOW Limbă i18n (EN / RO / DE)
-  - [ ] TEST Switch TopBar la RO — stringurile UI cheie se schimbă (checkout, footer)
-  - [ ] TEST Vizită /ro/about redirecționează la /about și setează cookie boxmag.language
-  - [ ] TEST Vizită /de/shop redirecționează la /shop cu traduceri germane
-  - [ ] TEST Limba persistă după reload
+- [x] DONE FLOW Limbă i18n (EN / RO / DE) | language-i18n.cy.ts — docs: documentation/language-i18n.md
+  - [x] TEST Switch TopBar la RO — stringurile UI cheie se schimbă (checkout, footer)
+  - [x] TEST Vizită /ro/about redirecționează la /about și setează cookie boxmag.language
+  - [x] TEST Vizită /de/shop redirecționează la /shop cu traduceri germane
+  - [x] TEST Limba persistă după reload
 
 - [ ] FLOW Monedă EUR / RON
   - [ ] TEST Switch la RON — prețurile se reformatează pe shop, PDP, checkout
