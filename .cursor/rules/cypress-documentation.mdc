@@ -1,5 +1,5 @@
 ---
-description: Document every Cypress e2e test in cypress/documentation
+description: Document Cypress e2e tests and always report pass/fail results
 globs: boxmag4/cypress/**/*
 alwaysApply: false
 ---
@@ -21,3 +21,12 @@ Follow the structure of `currency-eur-ron.md` / `language-i18n.md`:
 5. **Rulare** — `npx cypress run --spec …`
 
 Name the doc after the feature (e.g. `currency-eur-ron.md` for `currency-eur-ron.cy.ts`).
+
+## Report test results (required)
+
+After every Cypress run (or when reading a Cypress terminal/output), tell the user the outcome clearly:
+
+- If **any** test failed: say **FAILED** first, then counts (e.g. `0 passing, 1 failing`), the failing test title, and the assertion/error message.
+- If all passed: say **PASSED** with counts (e.g. `11/11 passing`).
+- Never imply success when the run failed, timed out, or could not start (e.g. `baseUrl` unreachable).
+- Do not skip or soften a failure while fixing — report the fail, then fix and re-run.
