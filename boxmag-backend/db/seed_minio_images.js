@@ -12,9 +12,15 @@ dotenv.config({ path: path.join(repoRoot, ".env") });
 
 const shouldPurgeBucket = process.argv.includes("--purge");
 
+/** When true, keep compose DNS names (mysql/minio) — seed runs inside the Docker network. */
+const seedInDocker = process.env.SEED_IN_DOCKER === "1";
+
 /** Docker service names (mysql, minio) only resolve inside the compose network. */
 function resolveHostForHostMachine(host) {
   const normalized = (host || "localhost").trim();
+  if (seedInDocker) {
+    return normalized;
+  }
   if (normalized === "minio" || normalized === "mysql") {
     return "127.0.0.1";
   }
@@ -22,6 +28,9 @@ function resolveHostForHostMachine(host) {
 }
 
 function resolveDbPort(rawHost, rawPort) {
+  if (seedInDocker) {
+    return Number(rawPort || 3306);
+  }
   const host = (rawHost || "localhost").trim();
   if (host === "mysql" && process.env.MYSQL_PORT) {
     return Number(process.env.MYSQL_PORT);
@@ -35,9 +44,12 @@ const rawMinioHost = process.env.MINIO_ENDPOINT || "localhost";
 const config = {
   dbHost: resolveHostForHostMachine(rawDbHost),
   dbPort: resolveDbPort(rawDbHost, process.env.DB_PORT),
-  dbName: process.env.DB_NAME || "boxmag4",
-  dbUser: process.env.DB_USER || "boxmag4",
-  dbPassword: process.env.DB_PASSWORD || "change-me-user",
+  dbName: process.env.DB_NAME || process.env.MYSQL_DATABASE || "boxmag4",
+  dbUser: process.env.DB_USER || process.env.MYSQL_USER || "boxmag4",
+  dbPassword:
+    process.env.DB_PASSWORD ||
+    process.env.MYSQL_PASSWORD ||
+    "change-me-user",
   minioEndpoint: resolveHostForHostMachine(rawMinioHost),
   minioPort: Number(process.env.MINIO_PORT_API || 9000),
   minioUseSSL: process.env.MINIO_USE_SSL === "true",
