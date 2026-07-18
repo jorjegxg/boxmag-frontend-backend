@@ -4,7 +4,7 @@
  * Scenarii acoperite:
  *  1. Hero configurator: titlu, 3 selectoare dimensiuni (default 400), CTA
  *  2. Schimbare dimensiuni actualizează href-ul CTA
- *  3. Click CTA → /business?length=&width=&height=
+ *  3. Click CTA → /business?length=&width=&height= + #package-* prefilled
  *  4. Secțiuni: hero, features, testimonials, services
  *  5. CTA-uri către /shop, /business, /contact
  *  6. Newsletter: submit valid cu mock API
@@ -71,6 +71,10 @@ describe("Home page – hero configurator", () => {
 
     cy.get('a[href^="/business?"]').first().click();
     cy.url().should("include", "/business?length=400&width=400&height=400");
+
+    cy.get("#package-length").should("have.value", "400");
+    cy.get("#package-width").should("have.value", "400");
+    cy.get("#package-height").should("have.value", "400");
   });
 
   it("navighează cu dimensiuni personalizate", () => {
@@ -84,6 +88,10 @@ describe("Home page – hero configurator", () => {
       .and("include", "length=800")
       .and("include", "width=200")
       .and("include", "height=1000");
+
+    cy.get("#package-length").should("have.value", "800");
+    cy.get("#package-width").should("have.value", "200");
+    cy.get("#package-height").should("have.value", "1000");
   });
 });
 
