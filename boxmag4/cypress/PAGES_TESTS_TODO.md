@@ -21,10 +21,11 @@ Auth: Guest | Customer | Admin
   - [x] TEST Shop încarcă categorii și produse din API | shop.cy.ts
   - [x] TEST Filtrul /shop?boxTypeId= arată doar produsele potrivite | shop.cy.ts
   - [x] TEST Adaugă în coș din shop — cantitatea default e 100 | shop.cy.ts
-  - [ ] TEST Deschide PDP din card shop — URL folosește slug-ul produsului
-  - [ ] TEST PDP: galerie imagini, tabel tipuri (300 / 500 / Pallet), adauga în coș
-  - [ ] TEST PDP: ?itemNo= selectează SKU-ul corect și actualizează prețurile
-  - [ ] TEST PDP: cantitate sub 100 se ajustează la 100; butonul pallet adaugă 9000
+  - [x] TEST Deschide PDP din card shop — URL folosește slug-ul produsului | shop.cy.ts
+  - [x] TEST PDP: galerie imagini, tabel tipuri (300 / 500 / Pallet), adauga în coș | product-detail.cy.ts
+  - [x] TEST PDP: ?itemNo= selectează SKU-ul corect și actualizează prețurile | product-detail.cy.ts
+  - [x] TEST PDP: cantitate sub 100 se ajustează la 100 | product-detail.cy.ts
+  - [x] BUG PDP: butonul pallet SUPRASCRIE cantitatea cu 9000 în loc s-o adune (100+9000=9100 ca pe /boxesfetco) — documentat, nefixat | product-detail.cy.ts
   - [x] TEST Shop → checkout — articolele din coș și totalurile vizibile | shop.cy.ts
   - [x] TEST Checkout guest cere email înainte de place order | checkout.cy.ts
   - [x] TEST Place order creează sesiune Stripe (mock POST) | checkout.cy.ts
@@ -36,11 +37,12 @@ Auth: Guest | Customer | Admin
   - [x] TEST Pagina de succes golește coșul din localStorage | checkout-payment-result.cy.ts
   - [x] TEST /checkout/cancel păstrează coșul și arată linkuri | checkout-payment-result.cy.ts
 
-- [ ] FLOW Persistența coșului & badge-ul din header
+- [x] DONE FLOW Persistența coșului & badge-ul din header
   - [x] TEST Adaugă produs pe shop — coșul e stocat în localStorage | shop.cy.ts
-  - [ ] TEST Reload pagină — badge-ul din header și subtotalul persistă
-  - [ ] TEST Șterge ultimul articol pe checkout — badge-ul din header revine la zero
-  - [ ] TEST Iconița coșului duce la /checkout
+  - [x] TEST Reload pagină — badge-ul din header și subtotalul persistă | cart-persistence.cy.ts
+  - [x] TEST Șterge ultimul articol pe checkout — badge-ul din header revine la zero | cart-persistence.cy.ts
+  - [x] TEST Undo readaugă articolul șters | cart-persistence.cy.ts
+  - [x] TEST Iconița coșului duce la /checkout | cart-persistence.cy.ts
 
 - [ ] FLOW Tipuri de preț & afișare taxă
   - [ ] TEST Doar tipurile 300, 500, Pallet apar (fără tipuri legacy <100)
@@ -50,7 +52,7 @@ Auth: Guest | Customer | Admin
 
 - [ ] FLOW Tabele landing pe linii de produs
   - [x] TEST /boxesfetco — tabelul se încarcă, adauga în coș min 100, reset qty | boxesfetco.cy.ts
-  - [ ] TEST /corrugated-envelopes — adauga în coș din tabel → checkout arată articolul
+  - [x] TEST /corrugated-envelopes — adauga în coș din tabel → checkout arată articolul | corrugated-envelopes.cy.ts
   - [ ] TEST Secțiunile training / marketing se randează fără erori
 
 ---
@@ -66,7 +68,7 @@ Auth: Guest | Customer | Admin
   - [x] TEST Tip carton, culoare, print, transport, cantitate, mesaj, termeni | business.cy.ts
   - [x] TEST Config valid navighează la /order-summary | business.cy.ts
   - [x] TEST Flux guest complet cu VAT RO2816464 → order success | b2b-order-success.cy.ts
-  - [ ] TEST Acces direct /order-summary fără draft redirecționează la /business
+  - [x] TEST Acces direct /order-summary fără draft redirecționează la /business | order-summary-guard.cy.ts
   - [ ] TEST Atașamentul de fișier pe /business e dus până la POST /api/orders
   - [ ] TEST Toggle dimensiune externă vs internă schimbă etichetele de validare
   - [ ] TEST order-summary: checkbox-urile de consimțământ (telefon/email) obligatorii
@@ -253,8 +255,8 @@ Auth: Guest | Customer | Admin
 - [x] DONE PAGE /shop — Catalog produse
   - [x] TEST (vezi FLOW B2C mai sus)
 
-- [ ] PAGE /products/[key] — Detaliu produs
-  - [ ] TEST (vezi FLOW B2C mai sus)
+- [x] DONE PAGE /products/[key] — Detaliu produs
+  - [x] TEST (vezi FLOW B2C mai sus) | product-detail.cy.ts
 
 - [x] DONE PAGE /checkout
   - [x] TEST (vezi FLOW B2C și checkout mai profund mai sus)
@@ -266,7 +268,8 @@ Auth: Guest | Customer | Admin
   - [x] TEST (vezi FLOW B2B mai sus)
 
 - [ ] PAGE /order-summary — Review B2B
-  - [ ] TEST (vezi FLOW B2B mai sus)
+  - [x] TEST guard fără draft (vezi FLOW B2B mai sus) | order-summary-guard.cy.ts
+  - [ ] TEST restul scenariilor (checkbox-uri consimțământ, eșec API la submit) — vezi FLOW B2B mai sus
 
 - [x] DONE PAGE /business/order-success
   - [x] TEST (vezi FLOW B2B mai sus)
@@ -290,8 +293,8 @@ Auth: Guest | Customer | Admin
 - [ ] PAGE /boxesfetco — Linie BoxFix
   - [ ] TEST (vezi FLOW Tabele linii produs mai sus)
 
-- [ ] PAGE /corrugated-envelopes — Linie plicuri
-  - [ ] TEST (vezi FLOW Tabele linii produs mai sus)
+- [x] DONE PAGE /corrugated-envelopes — Linie plicuri
+  - [x] TEST (vezi FLOW Tabele linii produs mai sus) | corrugated-envelopes.cy.ts
 
 - [ ] PAGE /delivery — Termeni livrare
   - [ ] TEST Conținutul static se încarcă; heading-urile i18n se traduc
@@ -337,7 +340,7 @@ Auth: Guest | Customer | Admin
   - [ ] TEST Vizită /checkout cu coș gol — empty state sau redirect
 
 - [ ] FLOW Flow guards & redirecturi
-  - [ ] TEST /order-summary fără draft B2B → /business
+  - [x] TEST /order-summary fără draft B2B → /business | order-summary-guard.cy.ts
   - [ ] TEST /business/order-success fără sesiune → /business
   - [ ] TEST /admin/* fără cookie → /admin/login
 
