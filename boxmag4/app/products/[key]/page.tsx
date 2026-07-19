@@ -467,11 +467,7 @@ function ProductByKeyPageContent() {
                   <p className="mb-2 text-sm font-semibold text-gray-700">{t("productDemo.addPallet")}</p>
                   <button
                     type="button"
-                    onClick={() =>
-                      setQuantity((prev) =>
-                        prev < BOXES_PER_PALLET ? BOXES_PER_PALLET : prev + BOXES_PER_PALLET,
-                      )
-                    }
+                    onClick={() => setQuantity((prev) => prev + BOXES_PER_PALLET)}
                     className="w-full rounded-xl bg-black px-4 py-3 text-base font-bold text-white hover:bg-black/90"
                   >
                     + {BOXES_PER_PALLET}

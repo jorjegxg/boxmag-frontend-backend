@@ -159,22 +159,14 @@ describe("/products/[key] – PDP", () => {
     cy.contains("span", "100").should("be.visible"); // rămâne la minim
   });
 
-  /**
-   * BUG găsit: pe /boxesfetco (ProductTable) butonul de pallet ADAUGĂ la cantitatea
-   * curentă (100 + 9000 = 9100), dar pe PDP (/products/[key]) butonul de pallet
-   * SUPRASCRIE cantitatea cu exact 9000 când cantitatea curentă e sub un pallet
-   * (vezi app/products/[key]/page.tsx: `prev < BOXES_PER_PALLET ? BOXES_PER_PALLET : prev + BOXES_PER_PALLET`).
-   * Testul de mai jos documentează comportamentul REAL (buggy) al PDP-ului.
-   */
-  it("[BUG] butonul + 9000 suprascrie cantitatea cu 9000 în loc s-o adune la cei 100 existenți", () => {
+  it("butonul + 9000 adaugă la cantitatea curentă (100 + 9000 = 9100), consistent cu /boxesfetco", () => {
     interceptPdpApis();
     visitPdp("/products/standard?itemNo=STD-001");
     cy.wait(["@getBoxTypes", "@getProducts"]);
 
     cy.contains("span", "100").should("be.visible");
     cy.contains("button", "+ 9000").click();
-    cy.contains("span", "9000").should("be.visible");
-    cy.contains("span", "9100").should("not.exist");
+    cy.contains("span", "9100").should("be.visible");
   });
 
   it("Add to cart adaugă produsul selectat în localStorage (boxmag.cart)", () => {

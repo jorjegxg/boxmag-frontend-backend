@@ -24,8 +24,7 @@ Auth: Guest | Customer | Admin
   - [x] TEST Deschide PDP din card shop — URL folosește slug-ul produsului | shop.cy.ts
   - [x] TEST PDP: galerie imagini, tabel tipuri (300 / 500 / Pallet), adauga în coș | product-detail.cy.ts
   - [x] TEST PDP: ?itemNo= selectează SKU-ul corect și actualizează prețurile | product-detail.cy.ts
-  - [x] TEST PDP: cantitate sub 100 se ajustează la 100 | product-detail.cy.ts
-  - [x] BUG PDP: butonul pallet SUPRASCRIE cantitatea cu 9000 în loc s-o adune (100+9000=9100 ca pe /boxesfetco) — documentat, nefixat | product-detail.cy.ts
+  - [x] TEST PDP: cantitate sub 100 se ajustează la 100; butonul pallet adaugă 9000 | product-detail.cy.ts
   - [x] TEST Shop → checkout — articolele din coș și totalurile vizibile | shop.cy.ts
   - [x] TEST Checkout guest cere email înainte de place order | checkout.cy.ts
   - [x] TEST Place order creează sesiune Stripe (mock POST) | checkout.cy.ts
