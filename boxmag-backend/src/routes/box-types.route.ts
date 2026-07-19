@@ -88,6 +88,18 @@ function calculateWithTax(withoutTax: number): number {
   return Number((withoutTax * taxMultiplier).toFixed(2));
 }
 
+/** Slug for `/products/[key]` from admin title when client omits `key`. */
+function slugifyBoxTypeKey(title: string): string {
+  const slug = title
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 100);
+  return slug || `box-type-${Date.now()}`;
+}
+
 boxTypesRouter.post("/upload-image", requireAdmin, imageUpload.single("image"), async (req, res) => {
   if (!req.file) {
     res.status(400).json({
@@ -290,13 +302,10 @@ boxTypesRouter.post("/", requireAdmin, async (req, res) => {
     return;
   }
 
-  if (typeof payload.key !== "string" || payload.key.trim().length === 0) {
-    res.status(400).json({
-      ok: false,
-      message: "Key is required",
-    });
-    return;
-  }
+  const providedKey =
+    typeof payload.key === "string" && payload.key.trim().length > 0
+      ? payload.key.trim()
+      : slugifyBoxTypeKey(payload.title.trim());
 
   if (payload.isActive != null && typeof payload.isActive !== "boolean") {
     res.status(400).json({
@@ -311,6 +320,14 @@ boxTypesRouter.post("/", requireAdmin, async (req, res) => {
       "SELECT MAX(id) AS maxId FROM box_types"
     );
     const nextId = (maxIdRows[0]?.maxId ?? 0) + 1;
+    let boxTypeKey = providedKey;
+    const [existingKeyRows] = await mysqlPool.query<Array<RowDataPacket & { id: number }>>(
+      "SELECT id FROM box_types WHERE `key` = ? LIMIT 1",
+      [boxTypeKey],
+    );
+    if (existingKeyRows.length > 0) {
+      boxTypeKey = `${providedKey.slice(0, 90)}-${nextId}`;
+    }
 
     const connection = await mysqlPool.getConnection();
     try {
@@ -318,7 +335,7 @@ boxTypesRouter.post("/", requireAdmin, async (req, res) => {
       await connection.execute(
         `INSERT INTO box_types (id, title, \`key\`, is_active)
          VALUES (?, ?, ?, ?)`,
-        [nextId, payload.title.trim(), payload.key.trim(), payload.isActive === false ? 0 : 1]
+        [nextId, payload.title.trim(), boxTypeKey, payload.isActive === false ? 0 : 1]
       );
       for (const image of normalizedImages) {
         await connection.execute(
@@ -340,7 +357,7 @@ boxTypesRouter.post("/", requireAdmin, async (req, res) => {
       data: {
         id: nextId,
         title: payload.title.trim(),
-        key: payload.key.trim(),
+        key: boxTypeKey,
         images: normalizedImages.map((image, index) => ({
           id: index + 1,
           url: image.url,

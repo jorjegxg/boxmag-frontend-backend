@@ -222,7 +222,8 @@ Auth: Guest | Customer | Admin
   - [ ] TEST Download atașament pe detaliu comandă admin
 
 - [ ] FLOW CRUD tipuri cutii admin
-  - [ ] TEST Creează tip cutie cu titlu și upload imagine
+  - [x] TEST Creează tip cutie cu titlu și upload imagine | admin-box-types.cy.ts
+  - [x] TEST Tipul nou apare în search header pe /shop | admin-box-types.cy.ts
   - [ ] TEST Lista arată tipuri cutii active/inactive
   - [ ] TEST Șterge sau dezactivează tip cutie
   - [ ] TEST /admin/box-types/[id]/edit încarcă metadata și produse
