@@ -3,10 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createUserSessionToken } from "../config/user-auth";
 import { USER_COOKIE_NAME } from "../config/user-auth";
 
-const { queryMock, executeMock, getConnectionMock } = vi.hoisted(() => ({
+const {
+  queryMock,
+  executeMock,
+  getConnectionMock,
+  isOrderEmailTransportConfiguredMock,
+  sendOrderOfferEmailToCustomerMock,
+} = vi.hoisted(() => ({
   queryMock: vi.fn(),
   executeMock: vi.fn(),
   getConnectionMock: vi.fn(),
+  isOrderEmailTransportConfiguredMock: vi.fn(() => false),
+  sendOrderOfferEmailToCustomerMock: vi.fn(async () => undefined),
 }));
 
 vi.mock("../db/mysql", () => ({
@@ -18,13 +26,14 @@ vi.mock("../db/mysql", () => ({
 }));
 
 vi.mock("../services/email", () => ({
-  isOrderEmailTransportConfigured: vi.fn(() => false),
+  isOrderEmailTransportConfigured: isOrderEmailTransportConfiguredMock,
   getOrderOfferSenderOptions: vi.fn(() => [
     { key: "orders", email: "orders@example.com", label: "Orders" },
   ]),
+  resolveDefaultOrderOfferFromKey: vi.fn(() => "orders"),
   sendBusinessOrderConfirmationEmailToCustomer: vi.fn(async () => undefined),
   sendNewOrderNotificationEmail: vi.fn(async () => undefined),
-  sendOrderOfferEmailToCustomer: vi.fn(async () => undefined),
+  sendOrderOfferEmailToCustomer: sendOrderOfferEmailToCustomerMock,
 }));
 
 vi.mock("../services/minio", () => ({
@@ -45,9 +54,19 @@ describe("orders routes", () => {
   beforeEach(() => {
     queryMock.mockReset();
     executeMock.mockReset();
+    isOrderEmailTransportConfiguredMock.mockReset();
+    isOrderEmailTransportConfiguredMock.mockReturnValue(false);
+    sendOrderOfferEmailToCustomerMock.mockReset();
     process.env.ADMIN_PASSWORD = "test-admin-password";
     process.env.USER_SESSION_SECRET = "test-user-session-secret";
   });
+
+  function adminCookieHeader(): Promise<string> {
+    return import("../config/admin-auth").then(
+      ({ createAdminSessionToken }) =>
+        `boxmag-admin-session=${createAdminSessionToken("test-admin-password")}`,
+    );
+  }
 
   it("returns 401 for invalid status transition without admin auth", async () => {
     const response = await request(app)
@@ -222,5 +241,246 @@ describe("orders routes", () => {
       expect.stringContaining("LOWER(c.email) = ?"),
       [userEmail, userEmail],
     );
+  });
+
+  it("returns 401 for order listing without admin auth or email filter", async () => {
+    const response = await request(app).get("/api/orders");
+    expect(response.status).toBe(401);
+  });
+
+  it("lists all orders for an admin with no email filter", async () => {
+    const adminCookie = await adminCookieHeader();
+    queryMock.mockResolvedValueOnce([
+      [
+        {
+          id: 5,
+          box_type_name: "Standard Box",
+          cardboard_type: "B Wave",
+          cardboard_colour: "Brown",
+          box_print: "No print",
+          length_mm: null,
+          width_mm: null,
+          height_mm: null,
+          size_type: "Custom",
+          transport: "Own",
+          quantity: 100,
+          attachment_name: null,
+          attachment_object_name: null,
+          attachment_url: null,
+          message: "",
+          items_json: null,
+          status: "new",
+          payment_status: null,
+          stripe_session_id: null,
+          total_amount_cents: null,
+          subtotal_cents: null,
+          vat_percent: null,
+          vat_cents: null,
+          shipping_cents: null,
+          shipping_method: null,
+          shipping_eta: null,
+          offer_sent_at: null,
+          offer_sent_from: null,
+          currency: null,
+          created_at: "2026-07-01T00:00:00.000Z",
+          first_name: "Ana",
+          surname: "Ionescu",
+          company_name: "Boxmag SRL",
+          email: "admin-view@example.com",
+          phone: "+40700000000",
+          city: "Bucuresti",
+          country: "RO",
+        },
+      ],
+    ]);
+
+    const response = await request(app)
+      .get("/api/orders")
+      .set("Cookie", adminCookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data).toHaveLength(1);
+    expect(queryMock).toHaveBeenCalledWith(expect.stringContaining("FROM orders o"));
+  });
+
+  it("returns configured offer senders for admin", async () => {
+    const adminCookie = await adminCookieHeader();
+    const response = await request(app)
+      .get("/api/orders/offer-senders")
+      .set("Cookie", adminCookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data).toEqual([
+      { key: "orders", email: "orders@example.com", label: "Orders" },
+    ]);
+    expect(response.body.defaultKey).toBe("orders");
+  });
+
+  it("returns 401 for offer-senders without admin auth", async () => {
+    const response = await request(app).get("/api/orders/offer-senders");
+    expect(response.status).toBe(401);
+  });
+
+  it("returns 503 when sending an offer but email transport is not configured", async () => {
+    const adminCookie = await adminCookieHeader();
+    isOrderEmailTransportConfiguredMock.mockReturnValue(false);
+
+    const response = await request(app)
+      .post("/api/orders/12/send-offer")
+      .set("Cookie", adminCookie)
+      .send({ fromKey: "orders" });
+
+    expect(response.status).toBe(503);
+    expect(sendOrderOfferEmailToCustomerMock).not.toHaveBeenCalled();
+  });
+
+  it("sends an order offer email and records offer-sent metadata", async () => {
+    const adminCookie = await adminCookieHeader();
+    isOrderEmailTransportConfiguredMock.mockReturnValue(true);
+
+    queryMock
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 12,
+            box_type_name: "Standard Box",
+            cardboard_type: "B Wave",
+            cardboard_colour: "Brown",
+            box_print: "No print",
+            length_mm: null,
+            width_mm: null,
+            height_mm: null,
+            size_type: "Custom",
+            transport: "Own",
+            quantity: 100,
+            attachment_name: null,
+            attachment_object_name: null,
+            attachment_url: null,
+            message: "",
+            items_json: null,
+            status: "new",
+            payment_status: null,
+            total_amount_cents: null,
+            subtotal_cents: null,
+            vat_percent: null,
+            vat_cents: null,
+            shipping_cents: null,
+            shipping_method: null,
+            shipping_eta: null,
+            offer_sent_at: null,
+            offer_sent_from: null,
+            currency: null,
+            created_at: "2026-07-01T00:00:00.000Z",
+            first_name: "Ana",
+            surname: "Ionescu",
+            company_name: "Boxmag SRL",
+            email: "offer-target@example.com",
+            phone: "+40700000000",
+            city: "Bucuresti",
+            country: "RO",
+          },
+        ],
+      ])
+      .mockResolvedValueOnce([
+        [
+          {
+            offer_sent_at: "2026-07-19T10:00:00.000Z",
+            offer_sent_from: "orders@example.com",
+          },
+        ],
+      ]);
+    executeMock.mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+    const response = await request(app)
+      .post("/api/orders/12/send-offer")
+      .set("Cookie", adminCookie)
+      .send({ fromKey: "orders", message: "Here is your offer" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data.to).toBe("offer-target@example.com");
+    expect(response.body.data.offerSentFrom).toBe("orders@example.com");
+    expect(sendOrderOfferEmailToCustomerMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns 404 when sending an offer for a missing order", async () => {
+    const adminCookie = await adminCookieHeader();
+    isOrderEmailTransportConfiguredMock.mockReturnValue(true);
+    queryMock.mockResolvedValueOnce([[]]);
+
+    const response = await request(app)
+      .post("/api/orders/999/send-offer")
+      .set("Cookie", adminCookie)
+      .send({ fromKey: "orders" });
+
+    expect(response.status).toBe(404);
+  });
+
+  it("updates payment status for an admin on a non-Stripe order", async () => {
+    const adminCookie = await adminCookieHeader();
+    queryMock.mockResolvedValueOnce([[{ stripe_session_id: null }]]);
+    executeMock.mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+    const response = await request(app)
+      .patch("/api/orders/12/payment-status")
+      .set("Cookie", adminCookie)
+      .send({ paymentStatus: "paid" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data).toEqual({ id: 12, paymentStatus: "paid" });
+  });
+
+  it("blocks manual payment-status update for Stripe-managed orders", async () => {
+    const adminCookie = await adminCookieHeader();
+    queryMock.mockResolvedValueOnce([[{ stripe_session_id: "cs_test_123" }]]);
+
+    const response = await request(app)
+      .patch("/api/orders/12/payment-status")
+      .set("Cookie", adminCookie)
+      .send({ paymentStatus: "paid" });
+
+    expect(response.status).toBe(400);
+    expect(executeMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when updating payment status for a missing order", async () => {
+    const adminCookie = await adminCookieHeader();
+    queryMock.mockResolvedValueOnce([[]]);
+
+    const response = await request(app)
+      .patch("/api/orders/999/payment-status")
+      .set("Cookie", adminCookie)
+      .send({ paymentStatus: "paid" });
+
+    expect(response.status).toBe(404);
+  });
+
+  it("updates order status for an admin on the happy path", async () => {
+    const adminCookie = await adminCookieHeader();
+    executeMock.mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+    const response = await request(app)
+      .patch("/api/orders/12/status")
+      .set("Cookie", adminCookie)
+      .send({ status: "completed" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data).toEqual({ id: 12, status: "completed" });
+  });
+
+  it("returns 404 when updating status for a missing order", async () => {
+    const adminCookie = await adminCookieHeader();
+    executeMock.mockResolvedValueOnce([{ affectedRows: 0 }]);
+
+    const response = await request(app)
+      .patch("/api/orders/999/status")
+      .set("Cookie", adminCookie)
+      .send({ status: "completed" });
+
+    expect(response.status).toBe(404);
   });
 });

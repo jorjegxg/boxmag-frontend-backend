@@ -87,7 +87,6 @@ const useBusinessStore = create<BusinessState>((set) => ({
         isSelected: isDevelopment ? index === 0 : false,
     })),
     confirmCarboardTypeOption(id) {
-        console.log("confirmCarboardTypeOption ", id);
         set((state) => ({
             carboarbonTypeOptions: state.carboarbonTypeOptions.map((option) => 
                 option.id === id ? { ...option, isSelected: true } : { ...option, isSelected: false })
@@ -96,7 +95,6 @@ const useBusinessStore = create<BusinessState>((set) => ({
   
     boxColorOptions: boxColorOptions.map((option, index) => ({ ...option, isSelected: isDevelopment ? index === 0 : false })),
     confirmBoxColorOption(id) {
-        console.log("confirmBoxColorOption ", id);
         set((state) => ({
             boxColorOptions: state.boxColorOptions.map((option) => option.id === id ? { ...option, isSelected: true } : { ...option, isSelected: false })
         }));
@@ -104,7 +102,6 @@ const useBusinessStore = create<BusinessState>((set) => ({
 
     boxPrintOptions: boxPrintOptions.map((option, index) => ({ ...option, isSelected: isDevelopment ? index === 0 : false })),
     confirmBoxPrintOption(id) {
-        console.log("confirmBoxPrintOption ", id);
         set((state) => ({
             boxPrintOptions: state.boxPrintOptions.map((option) => option.id === id ? { ...option, isSelected: true } : { ...option, isSelected: false })
         }));
@@ -112,7 +109,6 @@ const useBusinessStore = create<BusinessState>((set) => ({
 
     typeOfSizes: typeOfSizes.map((option, index) => ({ ...option, isSelected: isDevelopment ? index === 0 : false })),
     confirmTypeOfSize(id) {
-        console.log("confirmTypeOfSize ", id);
         set((state) => ({
             typeOfSizes: state.typeOfSizes.map((option) => option.id === id ? { ...option, isSelected: true } : { ...option, isSelected: false })
         }));
@@ -121,7 +117,6 @@ const useBusinessStore = create<BusinessState>((set) => ({
 
     boxSizes: boxSizes.map((option, index) => ({ ...option, isSelected: isDevelopment ? index === 0 : false })),
     confirmBoxSize(id) {
-        console.log("confirmBoxSize ", id);
         set((state) => ({
             boxSizes: state.boxSizes.map((option) => option.id === id ? { ...option, isSelected: true } : { ...option, isSelected: false })
         }));

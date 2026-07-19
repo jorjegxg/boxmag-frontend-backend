@@ -81,22 +81,3 @@ export function requireAdmin(
     message: "Admin authentication required.",
   });
 }
-
-/**
- * Endpoints that serve both admin and customer use cases. Admin auth is enforced
- * only when the request is NOT scoped by an email query param.
- * @deprecated Use requireAdminOrUserEmail instead.
- */
-export function requireAdminUnlessEmailScoped(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
-  const email =
-    typeof req.query.email === "string" ? req.query.email.trim() : "";
-  if (email) {
-    next();
-    return;
-  }
-  requireAdmin(req, res, next);
-}

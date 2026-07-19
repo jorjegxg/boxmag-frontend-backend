@@ -23,7 +23,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import useBusinessStore from "./store/business_store";
 import useBusinessOrderStore from "../stores/business_order_store";
 import { useNotification } from "../global/components/notification-center";
-import { getAppEnv, isDevelopmentAppEnv } from "../../lib/app-env";
+import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { siteEmails } from "../../lib/site-emails";
 import { useLanguage } from "../i18n/language-context";
 
@@ -72,12 +72,6 @@ const BussinessPage = () => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
     if (!value) return "http://localhost:3005";
     return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
-
-  useEffect(() => {
-    console.log(
-      `[BusinessPage] Environment mode: ${getAppEnv() || "unknown"} (NEXT_PUBLIC_APP_ENV=${process.env.NEXT_PUBLIC_APP_ENV ?? "undefined"})`,
-    );
   }, []);
 
   useEffect(() => {

@@ -11,6 +11,7 @@ const {
   isOrderEmailTransportConfiguredMock,
   sendOrderConfirmationEmailToCustomerMock,
   sendNewOrderNotificationEmailMock,
+  isStripeConfiguredMock,
 } = vi.hoisted(() => ({
   executeMock: vi.fn(),
   queryMock: vi.fn(),
@@ -19,8 +20,9 @@ const {
   stripeRetrieveMock: vi.fn(),
   constructEventMock: vi.fn(),
   isOrderEmailTransportConfiguredMock: vi.fn(() => false),
-  sendOrderConfirmationEmailToCustomerMock: vi.fn(async () => undefined),
+  sendOrderConfirmationEmailToCustomerMock: vi.fn(async (_params: unknown) => undefined),
   sendNewOrderNotificationEmailMock: vi.fn(async () => undefined),
+  isStripeConfiguredMock: vi.fn(() => true),
 }));
 
 vi.mock("../services/exchange-rate.service", () => ({
@@ -59,7 +61,7 @@ vi.mock("../config/env", async (importOriginal) => {
 });
 
 vi.mock("../services/stripe", () => ({
-  isStripeConfigured: vi.fn(() => true),
+  isStripeConfigured: isStripeConfiguredMock,
   getStripeClient: vi.fn(() => ({
     checkout: {
       sessions: {
@@ -87,6 +89,8 @@ describe("payments routes", () => {
     isOrderEmailTransportConfiguredMock.mockReturnValue(false);
     sendOrderConfirmationEmailToCustomerMock.mockReset();
     sendNewOrderNotificationEmailMock.mockReset();
+    isStripeConfiguredMock.mockReset();
+    isStripeConfiguredMock.mockReturnValue(true);
 
     const connection = {
       beginTransaction: vi.fn(async () => undefined),
@@ -446,5 +450,130 @@ describe("payments routes", () => {
     expect(response.body.ok).toBe(true);
     expect(sendOrderConfirmationEmailToCustomerMock).toHaveBeenCalledTimes(1);
     expect(sendNewOrderNotificationEmailMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns 503 from create-checkout-session when Stripe is not configured", async () => {
+    isStripeConfiguredMock.mockReturnValue(false);
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({});
+
+    expect(response.status).toBe(503);
+    expect(response.body.ok).toBe(false);
+    expect(stripeCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 from session poll when Stripe is not configured", async () => {
+    isStripeConfiguredMock.mockReturnValue(false);
+
+    const response = await request(app).get("/api/payments/sessions/cs_any");
+
+    expect(response.status).toBe(503);
+    expect(response.body.ok).toBe(false);
+    expect(stripeRetrieveMock).not.toHaveBeenCalled();
+  });
+
+  it("webhook returns 503 when Stripe is not configured", async () => {
+    isStripeConfiguredMock.mockReturnValue(false);
+
+    const response = await request(app)
+      .post("/api/payments/webhook")
+      .set("stripe-signature", "t=1,v1=test")
+      .set("Content-Type", "application/json")
+      .send(Buffer.from(JSON.stringify({ id: "evt_unconfigured" })));
+
+    expect(response.status).toBe(503);
+    expect(constructEventMock).not.toHaveBeenCalled();
+  });
+
+  it("webhook returns 400 when the stripe-signature header is missing", async () => {
+    const response = await request(app)
+      .post("/api/payments/webhook")
+      .set("Content-Type", "application/json")
+      .send(Buffer.from(JSON.stringify({ id: "evt_no_sig" })));
+
+    expect(response.status).toBe(400);
+    expect(constructEventMock).not.toHaveBeenCalled();
+  });
+
+  it("webhook marks order failed on checkout.session.async_payment_failed", async () => {
+    constructEventMock.mockReturnValue({
+      type: "checkout.session.async_payment_failed",
+      data: {
+        object: {
+          id: "cs_failed_1",
+        },
+      },
+    });
+
+    const response = await request(app)
+      .post("/api/payments/webhook")
+      .set("stripe-signature", "t=1,v1=test")
+      .set("Content-Type", "application/json")
+      .send(Buffer.from(JSON.stringify({ id: "evt_failed" })));
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ received: true });
+    expect(executeMock).toHaveBeenCalledWith(
+      expect.stringContaining("payment_status = 'failed'"),
+      ["cs_failed_1"],
+    );
+    expect(sendNewOrderNotificationEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("webhook marks order failed on checkout.session.expired", async () => {
+    constructEventMock.mockReturnValue({
+      type: "checkout.session.expired",
+      data: {
+        object: {
+          id: "cs_expired_1",
+        },
+      },
+    });
+
+    const response = await request(app)
+      .post("/api/payments/webhook")
+      .set("stripe-signature", "t=1,v1=test")
+      .set("Content-Type", "application/json")
+      .send(Buffer.from(JSON.stringify({ id: "evt_expired" })));
+
+    expect(response.status).toBe(200);
+    expect(executeMock).toHaveBeenCalledWith(
+      expect.stringContaining("payment_status = 'failed'"),
+      ["cs_expired_1"],
+    );
+  });
+
+  it("webhook returns 400 when signature verification fails", async () => {
+    constructEventMock.mockImplementation(() => {
+      throw new Error("invalid signature");
+    });
+
+    const response = await request(app)
+      .post("/api/payments/webhook")
+      .set("stripe-signature", "t=1,v1=bad")
+      .set("Content-Type", "application/json")
+      .send(Buffer.from(JSON.stringify({ id: "evt_bad_sig" })));
+
+    expect(response.status).toBe(400);
+    expect(response.text).toContain("Webhook signature verification failed");
+  });
+
+  it("webhook is a no-op for unhandled event types", async () => {
+    constructEventMock.mockReturnValue({
+      type: "customer.created",
+      data: { object: {} },
+    });
+
+    const response = await request(app)
+      .post("/api/payments/webhook")
+      .set("stripe-signature", "t=1,v1=test")
+      .set("Content-Type", "application/json")
+      .send(Buffer.from(JSON.stringify({ id: "evt_unhandled" })));
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ received: true });
+    expect(executeMock).not.toHaveBeenCalled();
   });
 });

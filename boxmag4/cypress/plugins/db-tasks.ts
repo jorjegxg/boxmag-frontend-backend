@@ -37,13 +37,7 @@ function getDbConfig(): DbConfig {
 }
 
 async function withConnection<T>(
-  run: (connection: {
-    query: (sql: string) => Promise<[unknown, unknown]>;
-    execute: (
-      sql: string,
-      values?: unknown[],
-    ) => Promise<[unknown, unknown]>;
-  }) => Promise<T>,
+  run: (connection: import("mysql2/promise").Connection) => Promise<T>,
   options: { multipleStatements?: boolean } = {},
 ): Promise<T> {
   const mysql = require(path.resolve(

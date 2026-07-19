@@ -8,12 +8,6 @@ healthRouter.get("/", (_req, res) => {
     ok: true,
     environment: env.nodeEnv,
     timestamp: new Date().toISOString(),
-    database: {
-      host: env.dbHost,
-      port: env.dbPort,
-      name: env.dbName,
-      user: env.dbUser,
-    },
   });
 });
 
