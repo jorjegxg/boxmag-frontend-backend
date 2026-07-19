@@ -28,12 +28,12 @@ Auth: Guest | Customer | Admin
   - [x] TEST Shop → checkout — articolele din coș și totalurile vizibile | shop.cy.ts
   - [x] TEST Checkout guest cere email înainte de place order | checkout.cy.ts
   - [x] TEST Place order creează sesiune Stripe (mock POST) | checkout.cy.ts
-  - [ ] TEST Selectarea metodei de shipping actualizează totalul comenzii
-  - [ ] TEST Căutarea VAT la checkout completează automat numele firmei
-  - [ ] TEST VAT invalid blochează place order
+  - [x] TEST Selectarea metodei de shipping actualizează totalul comenzii | checkout.cy.ts
+  - [x] TEST Căutarea VAT la checkout completează automat numele firmei | checkout.cy.ts
+  - [x] TEST VAT invalid blochează place order | checkout.cy.ts
   - [x] TEST Moneda RON trimite currency: ron în sesiunea de checkout | currency-eur-ron.cy.ts
   - [x] TEST /checkout/success?session_id= arată confirmarea | checkout-payment-result.cy.ts
-  - [ ] TEST Pagina de succes golește coșul din localStorage
+  - [x] TEST Pagina de succes golește coșul din localStorage | checkout-payment-result.cy.ts
   - [x] TEST /checkout/cancel păstrează coșul și arată linkuri | checkout-payment-result.cy.ts
 
 - [ ] FLOW Persistența coșului & badge-ul din header

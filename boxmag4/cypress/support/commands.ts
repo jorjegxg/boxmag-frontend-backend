@@ -3,7 +3,38 @@
 export const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
 export const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 export const CART_STORAGE_KEY = "boxmag.cart";
+export const SHIPPING_METHODS_CACHE_KEY = "boxmag.checkout.shippingMethods.v2";
 export const TEST_EMAIL = "test@example.com";
+
+export const MOCK_SHIPPING_METHODS = [
+  {
+    id: 0,
+    key: "own-transport",
+    name: "Own transport",
+    etaText: "Customer pickup / own carrier",
+    price: 0,
+    isActive: true,
+    sortOrder: 0,
+  },
+  {
+    id: 1,
+    key: "standard",
+    name: "Standard Delivery",
+    etaText: "Estimated 7-10 days",
+    price: 25,
+    isActive: true,
+    sortOrder: 1,
+  },
+  {
+    id: 2,
+    key: "express",
+    name: "Express Delivery",
+    etaText: "Estimated 2-4 days",
+    price: 40,
+    isActive: true,
+    sortOrder: 2,
+  },
+];
 
 export type SeedCartItem = {
   itemNo: string;
@@ -237,17 +268,7 @@ Cypress.Commands.add("mockCheckoutApis", () => {
     statusCode: 200,
     body: {
       ok: true,
-      data: [
-        {
-          id: 1,
-          key: "standard",
-          name: "Standard Delivery",
-          etaText: "Estimated 7-10 days",
-          price: 25,
-          isActive: true,
-          sortOrder: 1,
-        },
-      ],
+      data: MOCK_SHIPPING_METHODS,
     },
   }).as("getShippingMethods");
 });
@@ -264,6 +285,7 @@ Cypress.Commands.add("visitCheckoutLoggedOut", (options: { cartItems?: SeedCartI
     onBeforeLoad(win) {
       win.localStorage.removeItem(AUTH_STORAGE_KEY);
       win.localStorage.removeItem(AUTH_EMAIL_STORAGE_KEY);
+      win.localStorage.removeItem(SHIPPING_METHODS_CACHE_KEY);
       win.localStorage.setItem(CART_STORAGE_KEY, buildCartStorage(cartItems));
     },
   });
@@ -282,15 +304,30 @@ Cypress.Commands.add(
       statusCode: 200,
       body: { ok: true, data: addresses },
     }).as("getCheckoutAddresses");
+    cy.intercept("GET", "**/api/auth/profile*", {
+      statusCode: 200,
+      body: {
+        ok: true,
+        data: {
+          firstName: "John",
+          lastName: "Doe",
+          phone: "799111222",
+          email,
+          companyName: "Boxmag SRL",
+          vatNumber: "RO12345678",
+        },
+      },
+    }).as("getCheckoutProfile");
 
     cy.visit("/checkout", {
       onBeforeLoad(win) {
         setAuthInWindow(win, email);
+        win.localStorage.removeItem(SHIPPING_METHODS_CACHE_KEY);
         win.localStorage.setItem(CART_STORAGE_KEY, buildCartStorage(cartItems));
       },
     });
 
-    cy.wait(["@getShippingMethods", "@getCheckoutAddresses"]);
+    cy.wait(["@getShippingMethods", "@getCheckoutAddresses", "@getCheckoutProfile"]);
   },
 );
 

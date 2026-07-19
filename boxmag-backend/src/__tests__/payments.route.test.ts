@@ -1,14 +1,27 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { executeMock, queryMock, getConnectionMock, stripeCreateMock } = vi.hoisted(
-  () => ({
-    executeMock: vi.fn(),
-    queryMock: vi.fn(),
-    getConnectionMock: vi.fn(),
-    stripeCreateMock: vi.fn(),
-  }),
-);
+const {
+  executeMock,
+  queryMock,
+  getConnectionMock,
+  stripeCreateMock,
+  stripeRetrieveMock,
+  constructEventMock,
+  isOrderEmailTransportConfiguredMock,
+  sendOrderConfirmationEmailToCustomerMock,
+  sendNewOrderNotificationEmailMock,
+} = vi.hoisted(() => ({
+  executeMock: vi.fn(),
+  queryMock: vi.fn(),
+  getConnectionMock: vi.fn(),
+  stripeCreateMock: vi.fn(),
+  stripeRetrieveMock: vi.fn(),
+  constructEventMock: vi.fn(),
+  isOrderEmailTransportConfiguredMock: vi.fn(() => false),
+  sendOrderConfirmationEmailToCustomerMock: vi.fn(async () => undefined),
+  sendNewOrderNotificationEmailMock: vi.fn(async () => undefined),
+}));
 
 vi.mock("../services/exchange-rate.service", () => ({
   getEurRonRate: vi.fn(async () => ({
@@ -29,10 +42,21 @@ vi.mock("../db/mysql", () => ({
 }));
 
 vi.mock("../services/email", () => ({
-  isOrderEmailTransportConfigured: vi.fn(() => false),
-  sendOrderConfirmationEmailToCustomer: vi.fn(async () => undefined),
-  sendNewOrderNotificationEmail: vi.fn(async () => undefined),
+  isOrderEmailTransportConfigured: isOrderEmailTransportConfiguredMock,
+  sendOrderConfirmationEmailToCustomer: sendOrderConfirmationEmailToCustomerMock,
+  sendNewOrderNotificationEmail: sendNewOrderNotificationEmailMock,
 }));
+
+vi.mock("../config/env", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../config/env")>();
+  return {
+    ...actual,
+    env: {
+      ...actual.env,
+      stripeWebhookSecret: "whsec_test_secret",
+    },
+  };
+});
 
 vi.mock("../services/stripe", () => ({
   isStripeConfigured: vi.fn(() => true),
@@ -40,7 +64,11 @@ vi.mock("../services/stripe", () => ({
     checkout: {
       sessions: {
         create: stripeCreateMock,
+        retrieve: stripeRetrieveMock,
       },
+    },
+    webhooks: {
+      constructEvent: constructEventMock,
     },
   })),
 }));
@@ -53,6 +81,12 @@ describe("payments routes", () => {
     queryMock.mockReset();
     getConnectionMock.mockReset();
     stripeCreateMock.mockReset();
+    stripeRetrieveMock.mockReset();
+    constructEventMock.mockReset();
+    isOrderEmailTransportConfiguredMock.mockReset();
+    isOrderEmailTransportConfiguredMock.mockReturnValue(false);
+    sendOrderConfirmationEmailToCustomerMock.mockReset();
+    sendNewOrderNotificationEmailMock.mockReset();
 
     const connection = {
       beginTransaction: vi.fn(async () => undefined),
@@ -195,4 +229,222 @@ describe("payments routes", () => {
     expect(stripePayload.metadata.eur_ron_rate).toBe("5.0000");
   });
 
+  it("webhook checkout.session.completed marks paid and sends confirmation emails", async () => {
+    isOrderEmailTransportConfiguredMock.mockReturnValue(true);
+    constructEventMock.mockReturnValue({
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_paid_1",
+          payment_intent: "pi_paid_1",
+          amount_total: 12100,
+          currency: "eur",
+          payment_status: "paid",
+        },
+      },
+    });
+
+    executeMock.mockResolvedValueOnce([{ affectedRows: 1 }]);
+    queryMock
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 55,
+            status: "new",
+            payment_status: "paid",
+            stripe_session_id: "cs_paid_1",
+            stripe_payment_intent_id: "pi_paid_1",
+            total_amount_cents: 12100,
+            subtotal_cents: 10000,
+            vat_percent: 21,
+            vat_cents: 2100,
+            shipping_cents: 0,
+            shipping_method: "Standard",
+            shipping_eta: "3-5 days",
+            currency: "eur",
+            box_type_name: "Checkout Cart Order",
+            cardboard_type: "N/A",
+            cardboard_colour: "N/A",
+            box_print: "N/A",
+            size_type: "N/A",
+            transport: "Standard",
+            quantity: 100,
+            attachment_name: null,
+            attachment_object_name: null,
+            attachment_url: null,
+            message: "Stripe checkout cart order",
+            items_json: JSON.stringify([
+              {
+                itemNo: "STD-001",
+                name: "Standard Box",
+                unitPrice: 10,
+                quantity: 100,
+                lineTotal: 1000,
+              },
+            ]),
+            created_at: new Date("2026-05-28T10:00:00.000Z"),
+          },
+        ],
+      ])
+      .mockResolvedValueOnce([
+        [
+          {
+            first_name: "Jane",
+            surname: "Doe",
+            company_name: "Demo SRL",
+            vat_number: "RO12345678",
+            email: "buyer@example.com",
+            phone: "799000000",
+            address: "Str Test 1",
+            postcode: "725400",
+            city: "Radauti",
+            country: "RO",
+            create_account: 0,
+            consent_phone: 1,
+            consent_email: 1,
+          },
+        ],
+      ]);
+
+    const response = await request(app)
+      .post("/api/payments/webhook")
+      .set("stripe-signature", "t=1,v1=test")
+      .set("Content-Type", "application/json")
+      .send(Buffer.from(JSON.stringify({ id: "evt_1" })));
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ received: true });
+    expect(constructEventMock).toHaveBeenCalled();
+    expect(sendNewOrderNotificationEmailMock).toHaveBeenCalledTimes(1);
+    expect(sendOrderConfirmationEmailToCustomerMock).toHaveBeenCalledTimes(1);
+    expect(sendOrderConfirmationEmailToCustomerMock.mock.calls[0]?.[0]).toMatchObject({
+      orderId: 55,
+      customerEmail: "buyer@example.com",
+      customerName: "Jane Doe",
+    });
+  });
+
+  it("webhook does not resend emails when order already paid", async () => {
+    isOrderEmailTransportConfiguredMock.mockReturnValue(true);
+    constructEventMock.mockReturnValue({
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_paid_dup",
+          payment_intent: "pi_paid_dup",
+          amount_total: 12100,
+          currency: "eur",
+          payment_status: "paid",
+        },
+      },
+    });
+    executeMock.mockResolvedValueOnce([{ affectedRows: 0 }]);
+
+    const response = await request(app)
+      .post("/api/payments/webhook")
+      .set("stripe-signature", "t=1,v1=test")
+      .set("Content-Type", "application/json")
+      .send(Buffer.from(JSON.stringify({ id: "evt_dup" })));
+
+    expect(response.status).toBe(200);
+    expect(sendNewOrderNotificationEmailMock).not.toHaveBeenCalled();
+    expect(sendOrderConfirmationEmailToCustomerMock).not.toHaveBeenCalled();
+  });
+
+  it("session poll marks paid and sends emails when Stripe reports paid", async () => {
+    isOrderEmailTransportConfiguredMock.mockReturnValue(true);
+    stripeRetrieveMock.mockResolvedValue({
+      id: "cs_poll_1",
+      payment_status: "paid",
+      payment_intent: "pi_poll_1",
+      amount_total: 12100,
+      currency: "eur",
+      customer_details: { email: "buyer@example.com" },
+    });
+    executeMock.mockResolvedValueOnce([{ affectedRows: 1 }]);
+    queryMock
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 66,
+            status: "new",
+            payment_status: "paid",
+            stripe_session_id: "cs_poll_1",
+            stripe_payment_intent_id: "pi_poll_1",
+            total_amount_cents: 12100,
+            subtotal_cents: 10000,
+            vat_percent: 21,
+            vat_cents: 2100,
+            shipping_cents: 0,
+            shipping_method: "Standard",
+            shipping_eta: "3-5 days",
+            currency: "eur",
+            box_type_name: "Checkout Cart Order",
+            cardboard_type: "N/A",
+            cardboard_colour: "N/A",
+            box_print: "N/A",
+            size_type: "N/A",
+            transport: "Standard",
+            quantity: 100,
+            attachment_name: null,
+            attachment_object_name: null,
+            attachment_url: null,
+            message: "Stripe checkout cart order",
+            items_json: "[]",
+            created_at: new Date("2026-05-28T10:00:00.000Z"),
+          },
+        ],
+      ])
+      .mockResolvedValueOnce([
+        [
+          {
+            first_name: "Jane",
+            surname: "Doe",
+            company_name: "Demo SRL",
+            vat_number: "RO12345678",
+            email: "buyer@example.com",
+            phone: "799000000",
+            address: "Str Test 1",
+            postcode: "725400",
+            city: "Radauti",
+            country: "RO",
+            create_account: 0,
+            consent_phone: 1,
+            consent_email: 1,
+          },
+        ],
+      ])
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 66,
+            status: "new",
+            payment_status: "paid",
+            stripe_session_id: "cs_poll_1",
+            stripe_payment_intent_id: "pi_poll_1",
+            total_amount_cents: 12100,
+            currency: "eur",
+            box_type_name: "Checkout Cart Order",
+            cardboard_type: "N/A",
+            cardboard_colour: "N/A",
+            box_print: "N/A",
+            size_type: "N/A",
+            transport: "Standard",
+            quantity: 100,
+            attachment_name: null,
+            attachment_object_name: null,
+            attachment_url: null,
+            message: null,
+            created_at: new Date("2026-05-28T10:00:00.000Z"),
+          },
+        ],
+      ]);
+
+    const response = await request(app).get("/api/payments/sessions/cs_poll_1");
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(sendOrderConfirmationEmailToCustomerMock).toHaveBeenCalledTimes(1);
+    expect(sendNewOrderNotificationEmailMock).toHaveBeenCalledTimes(1);
+  });
 });
