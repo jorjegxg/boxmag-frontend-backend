@@ -1,0 +1,469 @@
+<title>Suita Cypress — Boxmag</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #f2ead9;
+    --surface: #fffdf8;
+    --surface-2: #eadfc7;
+    --ink: #2b2116;
+    --muted: #7d6f57;
+    --line: #d9cba9;
+    --accent: #c23b22;
+    --accent-ink: #ffffff;
+    --good: #3f7d4f;
+    --good-bg: #e3efe2;
+    --warn: #a8721c;
+    --warn-bg: #f5e9d2;
+    --stamp: #2b2116;
+    --shadow: 0 1px 0 rgba(43, 33, 22, 0.06);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b160f;
+      --surface: #241d14;
+      --surface-2: #2d251a;
+      --ink: #efe4cd;
+      --muted: #a4937399;
+      --muted: #ab9a79;
+      --line: #40331f;
+      --accent: #e0602e;
+      --accent-ink: #1b160f;
+      --good: #7bc191;
+      --good-bg: #223126;
+      --warn: #e0ab52;
+      --warn-bg: #362c17;
+      --stamp: #efe4cd;
+      --shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1b160f;
+    --surface: #241d14;
+    --surface-2: #2d251a;
+    --ink: #efe4cd;
+    --muted: #ab9a79;
+    --line: #40331f;
+    --accent: #e0602e;
+    --accent-ink: #1b160f;
+    --good: #7bc191;
+    --good-bg: #223126;
+    --warn: #e0ab52;
+    --warn-bg: #362c17;
+    --stamp: #efe4cd;
+    --shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+  }
+  :root[data-theme="light"] {
+    --bg: #f2ead9;
+    --surface: #fffdf8;
+    --surface-2: #eadfc7;
+    --ink: #2b2116;
+    --muted: #7d6f57;
+    --line: #d9cba9;
+    --accent: #c23b22;
+    --accent-ink: #ffffff;
+    --good: #3f7d4f;
+    --good-bg: #e3efe2;
+    --warn: #a8721c;
+    --warn-bg: #f5e9d2;
+    --stamp: #2b2116;
+    --shadow: 0 1px 0 rgba(43, 33, 22, 0.06);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%;
+    color: var(--ink);
+    font-family: ui-sans-serif, "Segoe UI", Roboto, system-ui, sans-serif;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem;
+  }
+
+  /* ---------- header : shipping-label manifest ---------- */
+
+  header.manifest {
+    background: var(--surface);
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    padding: 1.75rem 1.75rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  header.manifest::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border: 1px dashed var(--line);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .eyebrow {
+    font: 700 0.72rem/1 ui-monospace, "Cascadia Code", Consolas, monospace;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  h1 {
+    margin: 0.35rem 0 0.15rem;
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    font-stretch: condensed;
+  }
+  header.manifest p.sub {
+    margin: 0;
+    color: var(--muted);
+    max-width: 60ch;
+  }
+
+  .stamp {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.75rem;
+    border: 3px solid var(--accent);
+    color: var(--accent);
+    font: 800 0.8rem/1 ui-monospace, Consolas, monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.4rem 0.6rem;
+    border-radius: 3px;
+    transform: rotate(4deg);
+    opacity: 0.85;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    margin-top: 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .stat {
+    background: var(--surface);
+    padding: 0.9rem 1rem;
+  }
+  .stat .n {
+    font: 800 1.6rem/1 ui-monospace, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .l {
+    margin-top: 0.2rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  /* ---------- category cards ---------- */
+
+  main { margin-top: 2rem; display: flex; flex-direction: column; gap: 1rem; }
+
+  .cat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .cat-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.95rem 1.15rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+  }
+  .cat-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  .cat-index {
+    font: 800 0.75rem ui-monospace, Consolas, monospace;
+    color: var(--accent-ink);
+    background: var(--accent);
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 3px;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .cat-title { flex: 1; min-width: 0; }
+  .cat-title h2 {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 700;
+  }
+  .cat-title .meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .cat-count {
+    font: 700 0.85rem ui-monospace, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    flex: none;
+  }
+  .chev {
+    flex: none;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-right: 2px solid var(--muted);
+    border-bottom: 2px solid var(--muted);
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+  }
+  .cat[open] .chev { transform: rotate(45deg); }
+
+  .bar-track {
+    height: 5px;
+    background: var(--surface-2);
+  }
+  .bar-fill {
+    height: 100%;
+    background: var(--accent);
+  }
+
+  .cat-body {
+    padding: 0.25rem 1.15rem 1.05rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .spec-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.15rem 0.9rem;
+    padding: 0.65rem 0.8rem;
+    background: var(--surface-2);
+    border-radius: 4px;
+  }
+  .spec-file {
+    font: 700 0.82rem ui-monospace, Consolas, monospace;
+  }
+  .spec-desc {
+    grid-column: 1 / -1;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .spec-n {
+    font: 700 0.78rem ui-monospace, Consolas, monospace;
+    color: var(--accent);
+    align-self: start;
+    white-space: nowrap;
+  }
+
+  /* details/summary reset */
+  details.cat summary { list-style: none; }
+  details.cat summary::-webkit-details-marker { display: none; }
+
+  /* ---------- gaps panel ---------- */
+
+  .gaps {
+    margin-top: 1.75rem;
+    background: var(--warn-bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1.1rem 1.3rem 1.3rem;
+  }
+  .gaps h2 {
+    margin: 0 0 0.5rem;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--warn);
+  }
+  .gaps h2 .pill {
+    font: 700 0.68rem ui-monospace, Consolas, monospace;
+    background: var(--warn);
+    color: var(--surface);
+    padding: 0.15rem 0.45rem;
+    border-radius: 3px;
+    letter-spacing: 0.04em;
+  }
+  .gaps ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 0.25rem 1.5rem;
+    color: var(--ink);
+    font-size: 0.86rem;
+  }
+  .gaps li::marker { color: var(--warn); }
+
+  footer {
+    margin-top: 2.5rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+  footer code {
+    background: var(--surface-2);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    font-size: 0.76rem;
+  }
+
+  @media (max-width: 560px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .stamp { display: none; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="manifest">
+    <div class="stamp">Verificat</div>
+    <p class="eyebrow">Boxmag · manifest de testare</p>
+    <h1>Suita Cypress E2E</h1>
+    <p class="sub">Hartă completă a testelor automate pentru magazinul B2C, configuratorul B2B, contul de client și panoul de admin — actualizată 2026-07-19.</p>
+    <div class="stats">
+      <div class="stat"><div class="n">23</div><div class="l">Fișiere spec</div></div>
+      <div class="stat"><div class="n">186</div><div class="l">Scenarii it()</div></div>
+      <div class="stat"><div class="n">8</div><div class="l">Zone acoperite</div></div>
+      <div class="stat"><div class="n">~30</div><div class="l">Scenarii încă neacoperite</div></div>
+    </div>
+  </header>
+
+  <main id="categories"></main>
+
+  <div class="gaps">
+    <h2>Goluri cunoscute <span class="pill">documentate, neimplementate</span></h2>
+    <ul>
+      <li>Autentificare admin (<code>/admin/login</code>) și CRUD metode shipping</li>
+      <li>Detaliu comandă client (<code>/account/orders/[id]</code>) + reorder</li>
+      <li>Editare cantitate / atașament direct pe checkout</li>
+      <li>Căutare din header și meniul hamburger mobil</li>
+      <li>Pagini statice: about, delivery, how-to-buy, privacy, regulations, retururi</li>
+      <li>Reziliență API (stări de eroare) și SEO (sitemap, robots.txt)</li>
+    </ul>
+  </div>
+
+  <footer>
+    Detalii pas-cu-pas pentru fiecare flux: <code>cypress/documentation/*.md</code> · lista de goluri: <code>cypress/PAGES_TESTS_TODO.md</code>
+  </footer>
+</div>
+
+<script>
+  const DATA = [
+    {
+      title: "E-commerce B2C — magazin, produs, coș",
+      specs: [
+        ["shop.cy.ts", 9, "Catalog, filtrare pe tip de cutie, add-to-cart, produsele ajung corect pe checkout."],
+        ["product-detail.cy.ts", 8, "Galerie, tabel prețuri 300/500/Pallet, selector SKU, cantitate minimă 100, buton pallet +9000."],
+        ["boxesfetco.cy.ts", 7, "Tabel linie BoxFix, reset cantitate după add, verificare preț × cantitate pe checkout."],
+        ["corrugated-envelopes.cy.ts", 3, "Tabel linie plicuri, add-to-cart, apare corect pe checkout."],
+        ["cart-persistence.cy.ts", 5, "Badge coș persistă la reload, numără linii nu cantitate, undo la ștergere."],
+      ],
+    },
+    {
+      title: "Checkout & plăți (Stripe)",
+      specs: [
+        ["checkout.cy.ts", 13, "Validare email/VAT, lookup firmă, 3 metode de shipping, place order guest + logat, erori API."],
+        ["checkout-payment-result.cy.ts", 6, "Success/cancel/pending, golire coș după plată confirmată, erori de sesiune."],
+        ["currency-eur-ron.cy.ts", 5, "Switch EUR/RON pe shop/PDP/checkout, curs de schimb, fallback, persistență."],
+        ["account-address-cart.cy.ts", 9, "Adresa default din cont apare la checkout, comutare manuală, sync cu ștergerea din cont."],
+      ],
+    },
+    {
+      title: "Comenzi custom B2B (configurator)",
+      specs: [
+        ["business.cy.ts", 16, "Pași configurator, tipuri de cutii din API, validare completă, query params dimensiuni."],
+        ["order-summary-guard.cy.ts", 2, "Acces direct fără draft redirecționează la /business, fără flash de conținut."],
+        ["b2b-order-success.cy.ts", 6, "Flux complet business → order-summary → success, creare cont din success, VAT RO2816464."],
+        ["b2b-guest-integration.cy.ts", 1, "Guest plasează comandă, refuză cont — verificare automată + checklist manual admin/email."],
+        ["b2b-guest-create-account.cy.ts", 1, "Guest plasează comandă, creează cont din success — verificare automată + checklist manual."],
+      ],
+    },
+    {
+      title: "Cont client & autentificare",
+      specs: [
+        ["login.cy.ts", 8, "Formular sign-in, validare, credențiale invalide, normalizare email, persistență."],
+        ["account.cy.ts", 19, "Tab-uri My Account / Address / Orders, salvare adresă, logout, hash-uri #account #address #orders."],
+        ["account-logged-in.cy.ts", 25, "Deep-dive: PUT/DELETE adresă, checkbox-uri default, loading state, statusuri comenzi multiple."],
+        ["registration-verify.cy.ts", 12, "Înregistrare, VAT lookup, verificare email (valid/invalid/lipsă), prefill din query B2B."],
+      ],
+    },
+    {
+      title: "Shell global — limbă, monedă, navigare",
+      specs: [
+        ["language-i18n.cy.ts", 4, "Switch EN/RO/DE, prefix /ro /de, persistență cookie + localStorage."],
+        ["home-navigation.cy.ts", 8, "Hero → /business cu dimensiuni în query, secțiuni home, newsletter."],
+      ],
+    },
+    {
+      title: "Contact",
+      specs: [
+        ["contact.cy.ts", 15, "Formular complet, validare câmpuri + VAT + termeni, submit, erori API, linkuri legale."],
+      ],
+    },
+    {
+      title: "Admin",
+      specs: [
+        ["admin-orders.cy.ts", 3, "Tabel comenzi, schimbare status din listă și din detaliu."],
+        ["admin-box-types.cy.ts", 1, "Creare tip de cutie cu upload imagine → apare activ în admin și în search /shop."],
+      ],
+    },
+  ];
+
+  const root = document.getElementById("categories");
+  const maxCount = Math.max(...DATA.map((c) => c.specs.reduce((s, x) => s + x[1], 0)));
+
+  DATA.forEach((cat, i) => {
+    const total = cat.specs.reduce((s, x) => s + x[1], 0);
+    const pct = Math.round((total / maxCount) * 100);
+
+    const details = document.createElement("details");
+    details.className = "cat";
+    if (i === 0) details.open = true;
+
+    details.innerHTML = `
+      <summary class="cat-head">
+        <span class="cat-index">${String(i + 1).padStart(2, "0")}</span>
+        <span class="cat-title">
+          <h2>${cat.title}</h2>
+          <span class="meta">${cat.specs.length} fișiere spec</span>
+        </span>
+        <span class="cat-count">${total} teste</span>
+        <span class="chev"></span>
+      </summary>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <div class="cat-body">
+        ${cat.specs
+          .map(
+            ([file, n, desc]) => `
+          <div class="spec-row">
+            <span class="spec-file">${file}</span>
+            <span class="spec-n">${n} test${n === 1 ? "" : "e"}</span>
+            <span class="spec-desc">${desc}</span>
+          </div>`
+          )
+          .join("")}
+      </div>
+    `;
+    root.appendChild(details);
+  });
+</script>
