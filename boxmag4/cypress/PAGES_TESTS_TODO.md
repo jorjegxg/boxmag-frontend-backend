@@ -49,7 +49,7 @@ Auth: Guest | Customer | Admin
   - [ ] TEST Totalurile pe linie la checkout = preț tip × cantitate
 
 - [ ] FLOW Tabele landing pe linii de produs
-  - [ ] TEST /boxesfetco — tabelul se încarcă, adauga în coș min 100, linkuri la PDP
+  - [x] TEST /boxesfetco — tabelul se încarcă, adauga în coș min 100, reset qty | boxesfetco.cy.ts
   - [ ] TEST /corrugated-envelopes — adauga în coș din tabel → checkout arată articolul
   - [ ] TEST Secțiunile training / marketing se randează fără erori
 
