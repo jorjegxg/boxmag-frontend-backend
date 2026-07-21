@@ -69,6 +69,11 @@ const fillValidVat = (
   });
   cy.get("#checkout-vatNumber").clear().type(vat, { delay: 0 });
 
+  // VAT lookup fires after a 600ms debounce — wait for the actual request so
+  // we don't race ahead of it (a passing "not.exist" check can be a false
+  // negative if the debounce simply hasn't fired yet).
+  cy.wait("@vatLookup", { timeout: 15000 });
+
   // Company input is read-only and only fills from VAT lookup/cache.
   // With a saved address, place-order can still use selectedAddress.companyName,
   // so callers may skip this assert via expectCompany: null.

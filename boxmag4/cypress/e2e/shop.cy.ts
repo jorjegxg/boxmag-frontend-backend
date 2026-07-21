@@ -79,14 +79,14 @@ const productsByType: Record<number, MockProduct[]> = {
       itemNo: "STD-001",
       productName: "Standard Box 300x200",
       internalDimensionsMM: { l: 300, w: 200, h: 150 },
-      prices: [{ id: 1, name: "Base", withoutTax: 10, withTax: 11.9 }],
+      prices: [{ id: 1, name: "300", withoutTax: 10, withTax: 11.9 }],
     },
     {
       id: 102,
       boxTypeId: 1,
       itemNo: "STD-002",
       productName: "Standard Box 400x300",
-      prices: [{ id: 2, name: "Base", withoutTax: 12, withTax: 14.28 }],
+      prices: [{ id: 2, name: "300", withoutTax: 12, withTax: 14.28 }],
     },
   ],
   3: [
@@ -95,7 +95,7 @@ const productsByType: Record<number, MockProduct[]> = {
       boxTypeId: 3,
       itemNo: "MLR-001",
       productName: "Mailer 250x180",
-      prices: [{ id: 3, name: "Base", withoutTax: 5, withTax: 5.95 }],
+      prices: [{ id: 3, name: "300", withoutTax: 5, withTax: 5.95 }],
     },
   ],
 };

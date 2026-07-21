@@ -15,6 +15,7 @@ import { useCartStore, type CartItem } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
 import { FaTrashAlt } from "react-icons/fa";
 import { isDevelopmentAppEnv } from "../../lib/app-env";
+import { rememberVatCompany } from "../../lib/vat-company";
 import { CheckoutShippingInformation } from "./components/checkout-shipping-information";
 
 type UserAddress = {
@@ -292,6 +293,15 @@ export default function CheckoutPage() {
         setSelectedAddressId(defaultAddress?.id ?? null);
         if (profileResponse.ok && profilePayload.ok === true && profilePayload.data) {
           const profileVat = String(profilePayload.data.vatNumber ?? "").trim();
+          const profileCompanyName = String(
+            profilePayload.data.companyName ?? "",
+          ).trim();
+          // Already-known VAT/company pair from the account profile — seed the
+          // cache so we don't hit the external VAT lookup service again just
+          // because the user visited checkout.
+          if (profileVat && profileCompanyName) {
+            rememberVatCompany(profileVat, profileCompanyName);
+          }
           setVatNumber((prev) => prev || profileVat);
         }
       } catch (_error) {

@@ -531,12 +531,19 @@ function MyAccountTab({
           {t("account.emailSection")}
         </h3>
         <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">
+          <label
+            htmlFor="acc-email"
+            className="block text-xs font-semibold text-gray-500 mb-1 uppercase"
+          >
             {t("account.emailAddress")}
           </label>
-          <div className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700">
-            {profile.email || "-"}
-          </div>
+          <input
+            id="acc-email"
+            type="email"
+            value={profile.email || ""}
+            readOnly
+            className={lockedInputClass}
+          />
           <p className="mt-2 text-xs text-gray-500">
             Email-ul contului nu poate fi modificat.
           </p>

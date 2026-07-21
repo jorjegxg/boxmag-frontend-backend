@@ -105,9 +105,10 @@ export function CheckoutShippingInformation({
     selectedAddress?.companyName.trim() ||
     "";
 
-  useEffect(() => {
-    onVatLookupStateChange?.(isLookingUpVat);
-  }, [isLookingUpVat, onVatLookupStateChange]);
+  const updateIsLookingUpVat = (value: boolean) => {
+    setIsLookingUpVat(value);
+    onVatLookupStateChange?.(value);
+  };
 
   useEffect(() => {
     const normalizedVat = normalizeVatNumber(vatNumber);
@@ -121,14 +122,14 @@ export function CheckoutShippingInformation({
     if (cachedCompany) {
       setManualAddress((prev) => ({ ...prev, companyName: cachedCompany }));
       setVatLookupError(null);
-      setIsLookingUpVat(false);
+      updateIsLookingUpVat(false);
       return;
     }
 
     let isCancelled = false;
     const controller = new AbortController();
     const timeoutId = window.setTimeout(async () => {
-      setIsLookingUpVat(true);
+      updateIsLookingUpVat(true);
       setVatLookupError(null);
 
       try {
@@ -167,7 +168,7 @@ export function CheckoutShippingInformation({
         setVatLookupError(t("contact.vatLookupFailed"));
       } finally {
         if (!isCancelled) {
-          setIsLookingUpVat(false);
+          updateIsLookingUpVat(false);
         }
       }
     }, 600);

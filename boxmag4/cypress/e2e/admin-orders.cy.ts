@@ -96,6 +96,8 @@ const orderDetails = {
   createdAt: "2026-05-28T08:00:00.000Z",
 };
 
+// Box types & shipping methods panels are collapsed by default and only
+// fetch their data when expanded, so /admin visits don't wait on them.
 const interceptAdminPrerequisites = () => {
   cy.intercept("GET", "**/api/box-types", {
     statusCode: 200,
@@ -121,7 +123,7 @@ describe("Admin orders", () => {
     }).as("getOrders");
 
     cy.visit("/admin");
-    cy.wait(["@getBoxTypes", "@getShippingMethodsAdmin", "@getOrders"]);
+    cy.wait("@getOrders");
 
     cy.contains("Comenzi").should("exist");
     cy.contains("ORD-0042").should("exist");
@@ -141,7 +143,7 @@ describe("Admin orders", () => {
     }).as("patchOrderStatus");
 
     cy.visit("/admin");
-    cy.wait(["@getBoxTypes", "@getShippingMethodsAdmin", "@getOrders"]);
+    cy.wait("@getOrders");
 
     cy.contains("tr", "ORD-0042").within(() => {
       cy.get("select").select("in progress");
@@ -168,7 +170,7 @@ describe("Admin orders", () => {
     }).as("patchOrderStatusDetails");
 
     cy.visit("/admin");
-    cy.wait(["@getBoxTypes", "@getShippingMethodsAdmin", "@getOrders"]);
+    cy.wait("@getOrders");
 
     cy.contains("tr", "ORD-0042").click();
     cy.wait("@getOrderDetails");
@@ -178,7 +180,10 @@ describe("Admin orders", () => {
     cy.contains("ORD-0042").should("exist");
     cy.contains("Ana Popescu").should("exist");
 
-    cy.get("select").first().select("completed");
+    cy.contains("p", "Schimbă status")
+      .parent()
+      .find("select")
+      .select("completed");
     cy.wait("@patchOrderStatusDetails").its("request.body").should((body) => {
       expect(body.status).to.eq("completed");
     });
