@@ -310,6 +310,8 @@ export function CheckoutShippingInformation({
                 : "border-gray-300"
             }`}
             placeholder={t("checkout.placeholder.vatNumber")}
+            pattern="[A-Za-z]{2}\s?[A-Za-z0-9]{2,12}"
+            title="Use country code plus 2-12 letters/digits (e.g. RO12345678 or RO 12345678)"
             autoComplete="off"
             required
             aria-describedby={vatLookupError ? "checkout-vatNumber-error" : undefined}

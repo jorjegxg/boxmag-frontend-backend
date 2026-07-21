@@ -441,11 +441,12 @@ export default function OrderSummaryPage() {
       return;
     }
 
-    if (!VAT_NUMBER_REGEX.test(vatNumber.trim())) {
+    const normalizedVat = normalizeVatNumber(vatNumber);
+    if (!VAT_NUMBER_REGEX.test(normalizedVat)) {
       setVatFormatError(true);
       notify({
         type: "error",
-        message: "Codul TVA trebuie sa fie in format valid (ex: RO12345678, DE123456789).",
+        message: "Codul TVA trebuie sa fie in format valid (ex: RO12345678, RO 12345678).",
       });
       return;
     }
@@ -519,7 +520,7 @@ export default function OrderSummaryPage() {
           firstName,
           surname,
           companyName,
-          vatNumber: vatNumber || null,
+          vatNumber: normalizedVat || null,
           email: orderEmail,
           phone,
           address,
@@ -563,7 +564,7 @@ export default function OrderSummaryPage() {
         firstName: firstName.trim(),
         surname: surname.trim(),
         companyName: companyName.trim(),
-        vatNumber: vatNumber.trim(),
+        vatNumber: normalizedVat,
         phone: phone.trim(),
         isGuest: !lockedAccountEmail,
       });
@@ -664,15 +665,15 @@ export default function OrderSummaryPage() {
                   if (e.target.value.trim().length > 0 && requiredFieldErrors.vatNumber) {
                     setRequiredFieldErrors((prev) => ({ ...prev, vatNumber: false }));
                   }
-                  if (VAT_NUMBER_REGEX.test(nextValue.trim()) && vatFormatError) {
+                  if (VAT_NUMBER_REGEX.test(normalizeVatNumber(nextValue)) && vatFormatError) {
                     setVatFormatError(false);
                   }
-                }} placeholder={t("orderSummary.vatNumber")} pattern="^([A-Z]{2})?[A-Z0-9]{2,12}$" title="Format valid: RO12345678, DE123456789 sau 12345678" className={requiredFieldErrors.vatNumber || vatFormatError || vatLookupError ? invalidInputClass : inputClass} autoComplete="off" required />
+                }} placeholder={t("orderSummary.vatNumber")} pattern="^([A-Za-z]{2})?\s?[A-Za-z0-9]{2,12}$" title="Format valid: RO12345678, RO 12345678, DE123456789 sau 12345678" className={requiredFieldErrors.vatNumber || vatFormatError || vatLookupError ? invalidInputClass : inputClass} autoComplete="off" required />
                 {isLookingUpVat ? (
                   <p className="mt-1 text-sm text-gray-500">{t("contact.vatLookupLoading")}</p>
                 ) : null}
                 {requiredFieldErrors.vatNumber ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.vatNumberRequired")}</p> : null}
-                {!requiredFieldErrors.vatNumber && vatFormatError ? <p className="mt-1 text-sm text-red-600">Format invalid. Exemple valide: RO12345678, DE123456789, FRAB12345</p> : null}
+                {!requiredFieldErrors.vatNumber && vatFormatError ? <p className="mt-1 text-sm text-red-600">Format invalid. Exemple: RO12345678, RO 12345678, DE123456789</p> : null}
                 {!requiredFieldErrors.vatNumber && !vatFormatError && !isLookingUpVat && vatLookupError ? (
                   <p className="mt-1 text-sm text-red-600">{vatLookupError}</p>
                 ) : null}
