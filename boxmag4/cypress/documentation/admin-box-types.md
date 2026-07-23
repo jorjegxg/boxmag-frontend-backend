@@ -1,7 +1,7 @@
 # Admin — tipuri de cutii (creare + search shop)
 
 **Spec:** `cypress/e2e/admin-box-types.cy.ts`  
-**UI admin:** `boxmag4/app/admin/page.tsx` — secțiunea „Gestionare tipuri de cutii”  
+**UI admin:** `boxmag4/app/admin/box-types/page.tsx` — `/admin/box-types`  
 **UI search:** `boxmag4/app/global/components/header.tsx` — `form[role="search"]` pe `/shop`  
 **Auth:** `cy.loginAdmin()` → cookie `boxmag-admin-session`
 
@@ -15,7 +15,7 @@ Necesită frontend (:3006), backend (:3005), MySQL, MinIO.
 
 | Acțiune | Efect |
 |--------|--------|
-| Expand „Gestionare tipuri de cutii” | `GET /api/box-types` + formular Titlu / Imagini |
+| Visit `/admin/box-types` | `GET /api/box-types` + formular Titlu / Imagini |
 | Upload + „Adaugă tip de cutie” | `POST /api/box-types/upload-images` → `POST /api/box-types` (key auto din title) |
 | Row în tabel | Titlu + status `Activ` |
 | Search pe `/shop` (≥2 caractere) | Filtrează tipuri active după `title`; dropdown `box_types` |
@@ -28,7 +28,7 @@ Necesită frontend (:3006), backend (:3005), MySQL, MinIO.
 
 1. Health check backend; skip dacă indisponibil
 2. `cy.loginAdmin()`
-3. Visit `/admin`, expand secțiunea tipuri cutii
+3. Visit `/admin/box-types`
 4. Completează Titlu unic (`Cypress Box <timestamp>`)
 5. `selectFile` pe `#box-image-upload` (`cypress/fixtures/box-type.png`)
 6. Click „Adaugă tip de cutie”
@@ -42,7 +42,7 @@ Necesită frontend (:3006), backend (:3005), MySQL, MinIO.
 ## Selectori utili
 
 ```ts
-cy.contains("button", "Gestionare tipuri de cutii")
+cy.visit("/admin/box-types")
 cy.contains("label", "Titlu").find("input")
 cy.get("#box-image-upload")
 cy.contains("button", "Adaugă tip de cutie")

@@ -303,7 +303,7 @@ export default function EditBoxTypePage() {
       setSelectedImageFiles([]);
       setImages(nextImages);
       if (redirectToAdmin) {
-        router.push("/admin");
+        router.push("/admin/box-types");
       }
     } catch (error) {
       setSaveError(
@@ -437,6 +437,10 @@ export default function EditBoxTypePage() {
           <span className="mx-2">→</span>
           <Link href="/admin" className="hover:underline">
             Admin
+          </Link>{" "}
+          <span className="mx-2">→</span>
+          <Link href="/admin/box-types" className="hover:underline">
+            Tipuri de cutii
           </Link>{" "}
           <span className="mx-2">→</span>
           <span className="text-gray-700 font-semibold">Editare tip cutie</span>
@@ -864,7 +868,7 @@ export default function EditBoxTypePage() {
                         : "Salvează"}
                   </button>
                   <Link
-                    href="/admin"
+                    href="/admin/box-types"
                     className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
                   >
                     Anulează

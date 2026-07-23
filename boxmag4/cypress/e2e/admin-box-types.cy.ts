@@ -37,8 +37,7 @@ describe("Admin box types", () => {
     );
     cy.intercept("GET", "**/api/box-types").as("getBoxTypes");
 
-    cy.visit("/admin");
-    cy.contains("button", "Gestionare tipuri de cutii").click();
+    cy.visit("/admin/box-types");
     cy.wait("@getBoxTypes");
 
     cy.contains("label", "Titlu").find("input").clear().type(title);

@@ -456,6 +456,10 @@ export default function AdminOrderDetailsPage() {
             Admin
           </Link>
           <span className="mx-2">→</span>
+          <Link href="/admin/orders" className="hover:underline">
+            Comenzi
+          </Link>
+          <span className="mx-2">→</span>
           <span className="font-semibold text-gray-700">
             {order ? order.orderNumber : `Comanda #${orderId}`}
           </span>
@@ -478,10 +482,10 @@ export default function AdminOrderDetailsPage() {
               <div className="space-y-4">
                 <p className="text-sm font-medium text-red-700">{loadError}</p>
                 <Link
-                  href="/admin"
+                  href="/admin/orders"
                   className="text-sm font-semibold text-my-red hover:underline"
                 >
-                  Înapoi la admin
+                  Înapoi la lista de comenzi
                 </Link>
               </div>
             ) : !order ? (
@@ -490,10 +494,10 @@ export default function AdminOrderDetailsPage() {
                   Comanda nu a fost găsită.
                 </p>
                 <Link
-                  href="/admin"
+                  href="/admin/orders"
                   className="text-sm font-semibold text-my-red hover:underline"
                 >
-                  Înapoi la admin
+                  Înapoi la lista de comenzi
                 </Link>
               </div>
             ) : (
@@ -509,7 +513,7 @@ export default function AdminOrderDetailsPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => router.push("/admin")}
+                    onClick={() => router.push("/admin/orders")}
                     className="inline-flex h-9 items-center rounded-md border border-gray-300 px-4 text-sm font-semibold text-gray-800 hover:bg-gray-50"
                   >
                     Înapoi la lista de comenzi

@@ -70,7 +70,7 @@ describe("b2b-guest-integration", () => {
 
     cy.loginAdmin();
     cy.intercept("GET", "**/api/orders").as("getAdminOrders");
-    cy.visit("/admin");
+    cy.visit("/admin/orders");
     cy.wait("@getAdminOrders");
 
     cy.get<CreateOrderBody>("@orderPayload").then((orderPayload) => {

@@ -68,11 +68,13 @@ Quick-reference for AI agents working in the Boxmag monorepo. For local setup an
 ### Admin
 
 ```
-/admin/login → /admin (dashboard) → /admin/orders/[id] | /admin/box-types/[id]/edit
+/admin/login → /admin (hub) → /admin/orders | /admin/box-types | /admin/shipping-methods
+                              → /admin/orders/[id] | /admin/box-types/[id]/edit
 ```
 
 - UI is in Romanian
 - Protected by `boxmag4/middleware.ts`
+- Shared nav in `boxmag4/app/admin/components/AdminNav.tsx`
 
 ---
 
@@ -417,21 +419,59 @@ Each section follows: **Purpose → What to expect → Key files → Backend/API
 
 ---
 
-### `/admin` — Admin dashboard
+### `/admin` — Admin hub
 
-**Purpose:** Manage box types, view orders, manage shipping methods.
+**Purpose:** Landing panou cu linkuri către secțiunile admin.
 
-**What to expect:** Romanian UI. CRUD for box types, order status table, shipping method management.
+**What to expect:** Romanian UI. Carduri către Comenzi, Tipuri de cutii, Metode de livrare. Nav comună pe toate paginile admin (except login).
 
-**Key files:** `boxmag4/app/admin/page.tsx`, `boxmag4/app/admin/use-admin-box-types-store.ts`
+**Key files:** `boxmag4/app/admin/page.tsx`, `boxmag4/app/admin/components/AdminNav.tsx`
 
-**Backend/API:**
-- `GET|POST|PUT|DELETE /api/box-types`
-- `POST /api/box-types/upload-image(s)`
-- `GET /api/orders`
-- `GET|POST|PUT|DELETE /api/shipping-methods`
+**Backend/API:** None pe hub.
 
-**Gotchas:** Middleware-protected. Uses admin cookie for all backend calls.
+**Gotchas:** Middleware-protected. Funcționalitățile CRUD sunt pe rutele dedicate de mai jos.
+
+---
+
+### `/admin/orders` — Admin orders list
+
+**Purpose:** Listă comenzi cu status și paginare.
+
+**What to expect:** Tabel comenzi; click pe rând → detaliu.
+
+**Key files:** `boxmag4/app/admin/orders/page.tsx`, `admin-ro.ts`
+
+**Backend/API:** `GET /api/orders`, `PATCH /api/orders/:id/status`
+
+**Gotchas:** Back-linkurile din detaliu duc aici, nu pe hub.
+
+---
+
+### `/admin/box-types` — Admin box types
+
+**Purpose:** Creare tipuri de cutii; activare / ascundere; link către editare.
+
+**What to expect:** Formular creare + tabel tipuri.
+
+**Key files:** `boxmag4/app/admin/box-types/page.tsx`, `use-admin-box-types-store.ts`
+
+**Backend/API:** `GET|POST /api/box-types`, `POST /api/box-types/upload-images`, activate/deactivate
+
+**Gotchas:** Imaginea e obligatorie la creare.
+
+---
+
+### `/admin/shipping-methods` — Admin shipping methods
+
+**Purpose:** CRUD metode de livrare pentru checkout.
+
+**What to expect:** Formular adăugare + tabel editabil.
+
+**Key files:** `boxmag4/app/admin/shipping-methods/page.tsx`
+
+**Backend/API:** `GET|POST|PUT|DELETE /api/shipping-methods`
+
+**Gotchas:** Load include inactive (`?includeInactive=true`).
 
 ---
 

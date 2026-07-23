@@ -1,5 +1,5 @@
 /**
- * E2E tests - /admin and /admin/orders/[id]
+ * E2E tests - /admin/orders and /admin/orders/[id]
  *
  * Coverage:
  * - loads orders table
@@ -96,33 +96,18 @@ const orderDetails = {
   createdAt: "2026-05-28T08:00:00.000Z",
 };
 
-// Box types & shipping methods panels are collapsed by default and only
-// fetch their data when expanded, so /admin visits don't wait on them.
-const interceptAdminPrerequisites = () => {
-  cy.intercept("GET", "**/api/box-types", {
-    statusCode: 200,
-    body: { ok: true, data: [] },
-  }).as("getBoxTypes");
-
-  cy.intercept("GET", "**/api/shipping-methods?includeInactive=true", {
-    statusCode: 200,
-    body: { ok: true, data: [] },
-  }).as("getShippingMethodsAdmin");
-};
-
 describe("Admin orders", () => {
   beforeEach(() => {
     cy.loginAdmin();
   });
 
   it("loads orders table from API", () => {
-    interceptAdminPrerequisites();
     cy.intercept("GET", "**/api/orders", {
       statusCode: 200,
       body: { ok: true, data: orders },
     }).as("getOrders");
 
-    cy.visit("/admin");
+    cy.visit("/admin/orders");
     cy.wait("@getOrders");
 
     cy.contains("Comenzi").should("exist");
@@ -132,7 +117,6 @@ describe("Admin orders", () => {
   });
 
   it("updates order status from orders table", () => {
-    interceptAdminPrerequisites();
     cy.intercept("GET", "**/api/orders", {
       statusCode: 200,
       body: { ok: true, data: orders },
@@ -142,7 +126,7 @@ describe("Admin orders", () => {
       body: { ok: true, data: { id: 42, status: "in progress" } },
     }).as("patchOrderStatus");
 
-    cy.visit("/admin");
+    cy.visit("/admin/orders");
     cy.wait("@getOrders");
 
     cy.contains("tr", "ORD-0042").within(() => {
@@ -155,7 +139,6 @@ describe("Admin orders", () => {
   });
 
   it("opens admin order details and updates status", () => {
-    interceptAdminPrerequisites();
     cy.intercept("GET", "**/api/orders", {
       statusCode: 200,
       body: { ok: true, data: orders },
@@ -169,7 +152,7 @@ describe("Admin orders", () => {
       body: { ok: true, data: { id: 42, status: "completed" } },
     }).as("patchOrderStatusDetails");
 
-    cy.visit("/admin");
+    cy.visit("/admin/orders");
     cy.wait("@getOrders");
 
     cy.contains("tr", "ORD-0042").click();

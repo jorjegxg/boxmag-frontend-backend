@@ -11,7 +11,7 @@
 | Submit order summary | `POST /api/orders` → `201` + `emailsSent.notification` + `emailsSent.customerConfirmation` |
 | Backend email | Notificare internă la `ORDERS_NOTIFICATION_TO` (ex. `info@` + `orders@`); confirmare client la emailul din formular |
 | Success | `/business/order-success`, „No, thanks” → `/` |
-| Admin | `/admin` → rând Comenzi + detalii comandă |
+| Admin | `/admin/orders` → rând Comenzi + detalii comandă |
 
 ## Scenarii Cypress
 

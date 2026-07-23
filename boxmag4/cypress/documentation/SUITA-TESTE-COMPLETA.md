@@ -76,7 +76,7 @@ Reset DB automat înainte de rulare (`CYPRESS_RESET_DB=false` ca să-l dezactive
 
 | Spec | Scenarii | Ce testează |
 | --- | --- | --- |
-| `admin-orders.cy.ts` | 3 | `/admin`: tabelul de comenzi din API, schimbare status direct din listă (`PATCH`), deschidere detaliu comandă (`/admin/orders/[id]`) + schimbare status acolo |
+| `admin-orders.cy.ts` | 3 | `/admin/orders`: tabelul de comenzi din API, schimbare status direct din listă (`PATCH`), deschidere detaliu comandă (`/admin/orders/[id]`) + schimbare status acolo |
 | `admin-box-types.cy.ts` | 1 (flux amplu) | Creare tip de cutie cu titlu + upload imagine (`POST /api/box-types/upload-images` → `POST /api/box-types`), apare în tabelul admin ca „Activ”, apoi apare în search-ul din header pe `/shop` |
 
 ## 8. Pagini statice / smoke
