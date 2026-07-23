@@ -726,29 +726,29 @@ export default function ContactUsPage() {
       <section className="w-full bg-teal-600 py-12 px-6 lg:px-20">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-stretch gap-10 lg:gap-12">
           <div className="flex-1">
-            <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 uppercase tracking-wide mb-6">
+            <h2 className="text-2xl lg:text-3xl font-bold text-white uppercase tracking-wide mb-6">
               {t("contact.storeInfo")}
             </h2>
-            <div className="space-y-4 text-gray-700">
+            <div className="space-y-4 text-white">
               <div className="flex items-start gap-3">
-                <FaMapMarkerAlt className="w-5 h-5 text-gray-800 shrink-0 mt-0.5" />
+                <FaMapMarkerAlt className="w-5 h-5 text-white shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-gray-900">Boxmag.eu</p>
+                  <p className="font-semibold text-white">Boxmag.eu</p>
                   <p className="mt-1">Stefan cel Mare 131 street</p>
                   <p>RO-725400 Radauti, Suceava</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <FaPhoneAlt className="w-5 h-5 text-gray-800 shrink-0" />
+                <FaPhoneAlt className="w-5 h-5 text-white shrink-0" />
                 <p>
-                  <span className="font-bold text-gray-900">Tel:</span> +40 799
+                  <span className="font-bold text-white">Tel:</span> +40 799
                   553 345
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <FaEnvelope className="w-5 h-5 text-gray-800 shrink-0" />
+                <FaEnvelope className="w-5 h-5 text-white shrink-0" />
                 <p>
-                  <span className="font-bold text-gray-900">Mail:</span>{" "}
+                  <span className="font-bold text-white">Mail:</span>{" "}
                   {siteEmails.info}
                 </p>
               </div>
