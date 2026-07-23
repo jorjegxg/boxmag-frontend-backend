@@ -116,6 +116,27 @@ export const placeB2bGuestOrder = () => {
     expect(body.email).to.eq(GUEST_EMAIL);
     expect(body.vatNumber).to.eq(VAT_NUMBER);
     cy.wrap(body).as("orderPayload");
+
+    const responseBody = interception.response?.body as {
+      ok?: boolean;
+      data?: {
+        id?: number;
+        emailsSent?: {
+          notification?: boolean;
+          customerConfirmation?: boolean;
+        };
+      };
+    };
+    expect(responseBody?.ok, "create order ok").to.eq(true);
+    expect(
+      responseBody?.data?.emailsSent?.notification,
+      "internal order notification email sent",
+    ).to.eq(true);
+    expect(
+      responseBody?.data?.emailsSent?.customerConfirmation,
+      "customer confirmation email sent",
+    ).to.eq(true);
+    cy.wrap(responseBody?.data?.id).as("orderId");
   });
 
   cy.location("pathname").should("eq", "/business/order-success");

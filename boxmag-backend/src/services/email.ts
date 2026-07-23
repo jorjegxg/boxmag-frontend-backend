@@ -350,6 +350,105 @@ function getOrderCustomerMailDelivery(senderName = "Boxmag"): {
   };
 }
 
+function parseNotificationRecipients(raw: string): string[] {
+  return raw
+    .split(/[,;]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+export function isOrderNotificationRecipientConfigured(): boolean {
+  return Boolean(env.ordersNotificationTo.trim());
+}
+
+export type OrderCreationEmailResult = {
+  notification: boolean;
+  customerConfirmation: boolean;
+  errors: string[];
+};
+
+export async function sendOrderCreationEmails(
+  params: NewOrderEmailParams,
+): Promise<OrderCreationEmailResult> {
+  const result: OrderCreationEmailResult = {
+    notification: false,
+    customerConfirmation: false,
+    errors: [],
+  };
+
+  if (!isOrderEmailTransportConfigured()) {
+    console.warn(
+      JSON.stringify({
+        event: "order_email_skipped",
+        orderId: params.orderId,
+        reason: "smtp_not_configured",
+      }),
+    );
+    result.errors.push("smtp_not_configured");
+    return result;
+  }
+
+  if (!isOrderNotificationRecipientConfigured()) {
+    console.warn(
+      JSON.stringify({
+        event: "order_email_skipped",
+        orderId: params.orderId,
+        reason: "orders_notification_to_missing",
+      }),
+    );
+    result.errors.push("orders_notification_to_missing");
+  } else {
+    try {
+      await sendNewOrderNotificationEmail(params);
+      result.notification = true;
+      console.info(
+        JSON.stringify({
+          event: "order_notification_email_sent",
+          orderId: params.orderId,
+          to: env.ordersNotificationTo.trim(),
+          from: env.emailOrdersFrom.trim(),
+        }),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(
+        JSON.stringify({
+          event: "order_notification_email_failed",
+          orderId: params.orderId,
+          to: env.ordersNotificationTo.trim(),
+          error: message,
+        }),
+      );
+      result.errors.push(`notification_failed:${message}`);
+    }
+  }
+
+  try {
+    await sendBusinessOrderConfirmationEmailToCustomer(params);
+    result.customerConfirmation = true;
+    console.info(
+      JSON.stringify({
+        event: "order_customer_confirmation_email_sent",
+        orderId: params.orderId,
+        to: params.customerEmail,
+      }),
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(
+      JSON.stringify({
+        event: "order_customer_confirmation_email_failed",
+        orderId: params.orderId,
+        to: params.customerEmail,
+        error: message,
+      }),
+    );
+    result.errors.push(`customer_confirmation_failed:${message}`);
+  }
+
+  return result;
+}
+
 /** Use the authenticated SMTP mailbox as From; department address as Reply-To. */
 function buildCustomerMailHeaders(params: {
   replyTo: string;
@@ -768,11 +867,16 @@ export async function sendNewOrderNotificationEmail(
       </div>`
     : "";
 
+  const recipients = parseNotificationRecipients(env.ordersNotificationTo);
+  if (recipients.length === 0) {
+    throw new Error("ORDERS_NOTIFICATION_TO is not configured");
+  }
+
   const attachments = await buildEmailAttachments(params);
   const { transport, headers } = getOrderCustomerMailDelivery("Boxmag Comenzi");
   await transport.sendMail({
     ...headers,
-    to: env.ordersNotificationTo,
+    to: recipients.join(", "),
     subject: isQuoteRequest
       ? `Cerere oferta noua ${orderNumber}`
       : `Comanda noua ${orderNumber}`,
@@ -859,7 +963,8 @@ export async function sendBusinessOrderConfirmationEmailToCustomer(
     displayMessage,
   } = buildOrderEmailContent(params, { includeLinePricing: false });
 
-  const attachments = await buildEmailAttachments(params);
+  // Customer confirmations intentionally omit the customer's uploaded file:
+  // they already have it, and large attachments risk being dropped after a 250.
   const { transport, headers } = getOrderCustomerMailDelivery();
   await transport.sendMail({
     ...headers,
@@ -961,7 +1066,6 @@ export async function sendBusinessOrderConfirmationEmailToCustomer(
         </table>
       </div>
     `,
-    ...(attachments.length > 0 ? { attachments } : {}),
   });
 }
 
@@ -977,7 +1081,7 @@ export async function sendOrderConfirmationEmailToCustomer(
     displayMessage,
   } = buildOrderEmailContent(params);
 
-  const attachments = await buildEmailAttachments(params);
+  // Customer confirmations intentionally omit the customer's uploaded file.
   const { transport, headers } = getOrderCustomerMailDelivery();
   await transport.sendMail({
     ...headers,
@@ -1017,7 +1121,6 @@ export async function sendOrderConfirmationEmailToCustomer(
         <p style="margin:4px 0 0;">Echipa Boxmag</p>
       </div>
     `,
-    ...(attachments.length > 0 ? { attachments } : {}),
   });
 }
 

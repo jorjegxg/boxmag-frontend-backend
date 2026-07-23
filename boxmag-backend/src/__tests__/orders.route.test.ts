@@ -8,12 +8,18 @@ const {
   executeMock,
   getConnectionMock,
   isOrderEmailTransportConfiguredMock,
+  sendOrderCreationEmailsMock,
   sendOrderOfferEmailToCustomerMock,
 } = vi.hoisted(() => ({
   queryMock: vi.fn(),
   executeMock: vi.fn(),
   getConnectionMock: vi.fn(),
-  isOrderEmailTransportConfiguredMock: vi.fn(() => false),
+  isOrderEmailTransportConfiguredMock: vi.fn(() => true),
+  sendOrderCreationEmailsMock: vi.fn(async () => ({
+    notification: true,
+    customerConfirmation: true,
+    errors: [],
+  })),
   sendOrderOfferEmailToCustomerMock: vi.fn(async () => undefined),
 }));
 
@@ -31,8 +37,7 @@ vi.mock("../services/email", () => ({
     { key: "orders", email: "orders@example.com", label: "Orders" },
   ]),
   resolveDefaultOrderOfferFromKey: vi.fn(() => "orders"),
-  sendBusinessOrderConfirmationEmailToCustomer: vi.fn(async () => undefined),
-  sendNewOrderNotificationEmail: vi.fn(async () => undefined),
+  sendOrderCreationEmails: sendOrderCreationEmailsMock,
   sendOrderOfferEmailToCustomer: sendOrderOfferEmailToCustomerMock,
 }));
 
@@ -54,8 +59,14 @@ describe("orders routes", () => {
   beforeEach(() => {
     queryMock.mockReset();
     executeMock.mockReset();
+    sendOrderCreationEmailsMock.mockReset();
+    sendOrderCreationEmailsMock.mockResolvedValue({
+      notification: true,
+      customerConfirmation: true,
+      errors: [],
+    });
     isOrderEmailTransportConfiguredMock.mockReset();
-    isOrderEmailTransportConfiguredMock.mockReturnValue(false);
+    isOrderEmailTransportConfiguredMock.mockReturnValue(true);
     sendOrderOfferEmailToCustomerMock.mockReset();
     process.env.ADMIN_PASSWORD = "test-admin-password";
     process.env.USER_SESSION_SECRET = "test-user-session-secret";
@@ -173,6 +184,11 @@ describe("orders routes", () => {
 
     expect(response.status).toBe(201);
     expect(response.body.ok).toBe(true);
+    expect(response.body.data.emailsSent).toEqual({
+      notification: true,
+      customerConfirmation: true,
+    });
+    expect(sendOrderCreationEmailsMock).toHaveBeenCalledTimes(1);
     expect(connectionExecute).toHaveBeenCalled();
     const insertArgs = connectionExecute.mock.calls[0]?.[1] as unknown[];
     expect(insertArgs?.[0]).toBe(7);

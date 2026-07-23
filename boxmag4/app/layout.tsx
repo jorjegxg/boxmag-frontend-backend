@@ -4,6 +4,7 @@ import "./globals.css";
 import { Footer } from "./global/components/footer";
 import { Header } from "./global/components/header";
 import { TopBar } from "./global/components/top-bar";
+import { getSiteBaseUrl } from "../lib/site-url";
 import { Providers } from "./providers";
 
 const geistSans = Geist({
@@ -17,8 +18,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteBaseUrl()),
   title: "Boxmag",
   description: "Cutii din carton ondulat — producător și magazin online",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/icon.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({

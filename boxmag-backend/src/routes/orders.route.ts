@@ -16,8 +16,7 @@ import {
   resolveDefaultOrderOfferFromKey,
   type NewOrderEmailParams,
   type OrderOfferFromKey,
-  sendBusinessOrderConfirmationEmailToCustomer,
-  sendNewOrderNotificationEmail,
+  sendOrderCreationEmails,
   sendOrderOfferEmailToCustomer,
 } from "../services/email";
 import {
@@ -912,86 +911,49 @@ ordersRouter.post("/", async (req, res) => {
 
     await conn.commit();
 
-    if (isOrderEmailTransportConfigured()) {
-      try {
-        const customerName = `${firstName} ${surname}`.trim();
-        await sendNewOrderNotificationEmail({
-          orderId,
-          customerName,
-          customerEmail: email,
-          companyName,
-          vatNumber,
-          customerPhone: phone,
-          customerAddress: address,
-          customerPostcode: postcode,
-          customerCity: city,
-          customerCountry: country,
-          createAccount,
-          consentPhone,
-          consentEmail,
-          cardboardType,
-          cardboardColour,
-          boxPrint,
-          lengthMm,
-          widthMm,
-          heightMm,
-          sizeType,
-          transport,
-          quantity,
-          ftl,
-          attachmentName: effectiveAttachmentName,
-          attachmentObjectName,
-          attachmentUrl,
-          boxTypeName,
-          message,
-          items: null,
-          priceBreakdown: null,
-        });
-        await sendBusinessOrderConfirmationEmailToCustomer({
-          orderId,
-          customerName,
-          customerEmail: email,
-          companyName,
-          vatNumber,
-          customerPhone: phone,
-          customerAddress: address,
-          customerPostcode: postcode,
-          customerCity: city,
-          customerCountry: country,
-          createAccount,
-          consentPhone,
-          consentEmail,
-          cardboardType,
-          cardboardColour,
-          boxPrint,
-          lengthMm,
-          widthMm,
-          heightMm,
-          sizeType,
-          transport,
-          quantity,
-          ftl,
-          attachmentName: effectiveAttachmentName,
-          attachmentObjectName,
-          attachmentUrl,
-          boxTypeName,
-          message,
-          items: null,
-          priceBreakdown: null,
-        });
-      } catch (emailError) {
-        console.error("Order created, but failed to send confirmation emails", emailError);
-      }
-    } else {
-      console.warn(
-        "Order created but SMTP is not configured; internal order notification email skipped",
-      );
-    }
+    const customerName = `${firstName} ${surname}`.trim();
+    const emailParams: NewOrderEmailParams = {
+      orderId,
+      customerName,
+      customerEmail: email,
+      companyName,
+      vatNumber,
+      customerPhone: phone,
+      customerAddress: address,
+      customerPostcode: postcode,
+      customerCity: city,
+      customerCountry: country,
+      createAccount,
+      consentPhone,
+      consentEmail,
+      cardboardType,
+      cardboardColour,
+      boxPrint,
+      lengthMm,
+      widthMm,
+      heightMm,
+      sizeType,
+      transport,
+      quantity,
+      ftl,
+      attachmentName: effectiveAttachmentName,
+      attachmentObjectName,
+      attachmentUrl,
+      boxTypeName,
+      message,
+      items: null,
+      priceBreakdown: null,
+    };
+    const emailsSent = await sendOrderCreationEmails(emailParams);
 
     res.status(201).json({
       ok: true,
       data: {
         id: orderId,
+        emailsSent: {
+          notification: emailsSent.notification,
+          customerConfirmation: emailsSent.customerConfirmation,
+        },
       },
     });
   } catch (error) {

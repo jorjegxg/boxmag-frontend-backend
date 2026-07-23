@@ -4,6 +4,7 @@ import {
   resetB2bGuestUser,
   resetDatabaseForTests,
   setEmailVerificationToken,
+  assertOrderNotificationEmailLog,
 } from "./cypress/plugins/db-tasks";
 import { readRootEnvValue } from "./lib/root-env";
 
@@ -21,6 +22,7 @@ export default defineConfig({
   env: {
     infoEmail: envFromRoot("NEXT_PUBLIC_INFO_EMAIL"),
     b2bEmail: envFromRoot("NEXT_PUBLIC_B2B_EMAIL"),
+    ordersNotificationTo: envFromRoot("ORDERS_NOTIFICATION_TO") || "orders@boxmag.eu",
     adminPassword: envFromRoot("ADMIN_PASSWORD") || "change-me-admin-password",
     backendUrl:
       envFromRoot("NEXT_PUBLIC_BACKEND_URL") || "http://localhost:3005",
@@ -64,6 +66,12 @@ export default defineConfig({
           phone: string;
         }) {
           return ensurePendingRegistrationForTest(options);
+        },
+        assertOrderNotificationEmailLog(options: {
+          orderId: number;
+          mustIncludeRecipient?: string;
+        }) {
+          return assertOrderNotificationEmailLog(options);
         },
       });
     },
