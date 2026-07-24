@@ -3,9 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "../../i18n/language-context";
 
+const MAP_DEBOUNCE_MS = 700;
+
 export type MapAddressInput = {
   addressLine1: string;
   addressLine2?: string;
+  postcode?: string;
   city: string;
   country: string;
 };
@@ -13,16 +16,19 @@ export type MapAddressInput = {
 function buildMapQuery(address: MapAddressInput | null): string | null {
   if (!address) return null;
 
+  const addressLine1 = address.addressLine1?.trim() ?? "";
+  if (!addressLine1) return null;
+
   const parts = [
-    address.country,
-    address.addressLine1,
+    addressLine1,
     address.addressLine2,
+    address.postcode,
     address.city,
+    address.country,
   ]
     .map((part) => part?.trim())
     .filter((part): part is string => Boolean(part));
 
-  if (parts.length === 0) return null;
   return parts.join(", ");
 }
 
@@ -46,6 +52,7 @@ export function CheckoutAddressMap({ address }: { address: MapAddressInput | nul
     [
       address?.addressLine1,
       address?.addressLine2,
+      address?.postcode,
       address?.city,
       address?.country,
     ],
@@ -60,22 +67,20 @@ export function CheckoutAddressMap({ address }: { address: MapAddressInput | nul
       return;
     }
 
-    if (query === debouncedQuery) {
-      return;
-    }
+    // Only show loading on first map load; keep the previous iframe while typing.
+    setStatus((prev) => (prev === "ready" ? prev : "loading"));
 
-    setStatus("loading");
     const timer = window.setTimeout(() => {
       setDebouncedQuery(query);
       setStatus("ready");
-    }, 350);
+    }, MAP_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timer);
-  }, [query, debouncedQuery]);
+  }, [query]);
 
   const googleMapsLink =
-    query != null
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+    debouncedQuery != null
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(debouncedQuery)}`
       : null;
 
   if (status === "ready" && debouncedQuery) {

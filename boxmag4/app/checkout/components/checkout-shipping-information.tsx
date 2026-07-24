@@ -185,6 +185,7 @@ export function CheckoutShippingInformation({
       return {
         addressLine1: manualAddress.addressLine1,
         addressLine2: manualAddress.addressLine2,
+        postcode: manualAddress.postcode,
         city: manualAddress.city,
         country: manualAddress.country,
       };
@@ -193,6 +194,7 @@ export function CheckoutShippingInformation({
     return {
       addressLine1: selectedAddress.addressLine1,
       addressLine2: selectedAddress.addressLine2,
+      postcode: selectedAddress.postcode,
       city: selectedAddress.city,
       country: selectedAddress.country,
     };
@@ -200,10 +202,12 @@ export function CheckoutShippingInformation({
     useManualAddressForm,
     manualAddress.addressLine1,
     manualAddress.addressLine2,
+    manualAddress.postcode,
     manualAddress.city,
     manualAddress.country,
     selectedAddress?.addressLine1,
     selectedAddress?.addressLine2,
+    selectedAddress?.postcode,
     selectedAddress?.city,
     selectedAddress?.country,
   ]);
