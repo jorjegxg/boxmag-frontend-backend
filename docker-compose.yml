@@ -3,6 +3,7 @@ services:
     image: mysql:8.0
     container_name: boxmag4-mysql
     restart: unless-stopped
+    mem_limit: 512m
     ports:
       - "${MYSQL_PORT:-3306}:3306"
     env_file:
@@ -13,7 +14,16 @@ services:
       MYSQL_USER: "${MYSQL_USER:-boxmag4}"
       MYSQL_PASSWORD: "${MYSQL_PASSWORD:-boxmag4}"
       TZ: "${TZ:-UTC}"
-    command: ["mysqld", "--default-authentication-plugin=mysql_native_password"]
+    # Cap memory on a 4GB VPS — default MySQL can balloon under load.
+    command:
+      [
+        "mysqld",
+        "--default-authentication-plugin=mysql_native_password",
+        "--innodb-buffer-pool-size=128M",
+        "--max-connections=50",
+        "--performance-schema=OFF",
+        "--table-open-cache=200",
+      ]
     volumes:
       - boxmag4_mysql_data:/var/lib/mysql
     healthcheck:
@@ -26,6 +36,7 @@ services:
     image: quay.io/minio/minio:latest
     container_name: boxmag4-minio
     restart: unless-stopped
+    mem_limit: 256m
     ports:
       - "${MINIO_PORT_API:-9000}:9000"
       - "${MINIO_PORT_CONSOLE:-9001}:9001"
@@ -41,14 +52,18 @@ services:
     build:
       context: ./boxmag-backend
       dockerfile: Dockerfile
+      target: production
+    command: ["node", "dist/server.js"]
     container_name: boxmag4-backend
     restart: unless-stopped
+    mem_limit: 256m
     ports:
       - "${PORT:-3005}:3005"
     env_file:
       - ./.env
     environment:
       NODE_ENV: production
+      NODE_OPTIONS: "--max-old-space-size=192"
       DB_HOST: mysql
       DB_PORT: 3306
       MINIO_ENDPOINT: minio
@@ -59,12 +74,19 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3005/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
   frontend:
     profiles: ["app"]
     build:
       context: ./boxmag4
       dockerfile: Dockerfile
+      target: production
       args:
         NEXT_PUBLIC_BACKEND_URL: ${BACKEND_PUBLIC_URL:-http://localhost:3005}
         NEXT_PUBLIC_TAX_PERCENT: ${NEXT_PUBLIC_TAX_PERCENT:-21}
@@ -73,15 +95,36 @@ services:
         NEXT_PUBLIC_B2B_EMAIL: ${NEXT_PUBLIC_B2B_EMAIL:-}
         NEXT_PUBLIC_ORDERS_EMAIL: ${NEXT_PUBLIC_ORDERS_EMAIL:-}
     container_name: boxmag4-frontend
+    command: ["npm", "run", "start"]
     restart: unless-stopped
+    # next-server has repeatedly OOM-killed at ~700MB–1.2GB on this 4GB host.
+    mem_limit: 512m
     ports:
       - "3006:3006"
     env_file:
       - ./.env
     environment:
       SITEMAP_BACKEND_URL: http://backend:3005
+      NODE_OPTIONS: "--max-old-space-size=384"
     depends_on:
       - backend
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3006/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  autoheal:
+    image: willfarrell/autoheal:1.2.0
+    container_name: boxmag4-autoheal
+    restart: unless-stopped
+    mem_limit: 32m
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: all
+      AUTOHEAL_INTERVAL: 10
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   boxmag4_mysql_data:

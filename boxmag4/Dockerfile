@@ -17,7 +17,7 @@ ENV NEXT_PUBLIC_B2B_EMAIL=$NEXT_PUBLIC_B2B_EMAIL
 ENV NEXT_PUBLIC_ORDERS_EMAIL=$NEXT_PUBLIC_ORDERS_EMAIL
 RUN npm run build
 
-FROM node:22-alpine
+FROM node:22-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app/.next ./.next

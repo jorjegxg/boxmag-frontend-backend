@@ -1,9 +1,19 @@
 # boxmag-frontend-backend
 
-## VPS dev with Docker bind mounts
+## VPS production (required for boxmag.eu)
 
-This repository now supports a development override so code changes made on the
-VPS are reflected immediately inside Docker containers.
+On the public VPS, run **only** the production compose file (`next start`), never the
+dev override:
+
+`docker compose --profile app --env-file .env -f docker-compose.yml up -d --build`
+
+`docker-compose.dev.yml` starts `next dev` (HMR/Turbopack). That mode has repeatedly
+OOM-killed this 4GB host when proxied behind nginx.
+
+## VPS / local development with Docker bind mounts
+
+Use the override **only on a non-public machine**, or change published ports so it
+does not replace production on `:3006` / `:3005`.
 
 ### 1) Prepare environment
 

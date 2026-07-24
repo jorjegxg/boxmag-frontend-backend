@@ -22,7 +22,10 @@ const corsOriginEnv =
 const nextConfig: NextConfig = {
   allowedDevOrigins: originsToDevHosts(allowedCorsOrigins),
   images: {
+    // Prefer serving CDN assets directly (see ProductCard). Local public/ assets
+    // still use the optimizer; keep remotePatterns for any remaining next/image usage.
     dangerouslyAllowLocalIP: true,
+    minimumCacheTTL: 60 * 60 * 24,
     remotePatterns: [
       {
         protocol: "http",

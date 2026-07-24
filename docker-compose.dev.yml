@@ -1,3 +1,7 @@
+# WARNING: Do NOT use this override on the public production VPS (boxmag.eu).
+# `next dev` + Turbopack/HMR routinely grows past 1GB RSS and has OOM-killed the host.
+# For production: `docker compose --profile app -f docker-compose.yml up -d`
+# For local/dev only: compose with this file on a non-public machine or different ports.
 services:
   backend:
     build:

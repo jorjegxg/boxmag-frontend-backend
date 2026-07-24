@@ -19,6 +19,8 @@ type ContactPayload = {
 const MAX_ATTACHMENT_MB = 10;
 const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_MB * 1024 * 1024;
 const MAX_ATTACHMENTS = 5;
+/** Cap total attachment payload so concurrent contact submits cannot OOM the Node process. */
+const MAX_TOTAL_ATTACHMENT_BYTES = 15 * 1024 * 1024;
 const rootEnvPath = path.resolve(process.cwd(), "../.env");
 const rootEnv =
   fs.existsSync(rootEnvPath)
@@ -40,6 +42,23 @@ const rootEnv =
 function envValue(key: string): string | undefined {
   const value = process.env[key] ?? rootEnv[key];
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+let sharedTransporter: nodemailer.Transporter | null = null;
+
+function getTransporter(smtpHost: string, smtpPort: number, smtpUser: string, smtpPass: string) {
+  if (!sharedTransporter) {
+    sharedTransporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
+  }
+  return sharedTransporter;
 }
 
 function isNonEmpty(value: string): boolean {
@@ -117,6 +136,16 @@ export async function POST(req: Request): Promise<Response> {
       );
     }
 
+    const totalAttachmentBytes = attachmentFiles.reduce((sum, file) => sum + file.size, 0);
+    if (totalAttachmentBytes > MAX_TOTAL_ATTACHMENT_BYTES) {
+      return Response.json(
+        {
+          message: `Total attachments are too large. Maximum combined size is ${Math.floor(MAX_TOTAL_ATTACHMENT_BYTES / (1024 * 1024))} MB.`,
+        },
+        { status: 400 },
+      );
+    }
+
     const normalizedVat = body.vatNumber.trim().toUpperCase().replace(/\s+/g, "");
     const vatCheck = checkVAT(normalizedVat, countries);
     if (!vatCheck.isValid && !vatCheck.isValidFormat) {
@@ -142,22 +171,14 @@ export async function POST(req: Request): Promise<Response> {
       );
     }
 
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465,
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
-    });
+    const transporter = getTransporter(smtpHost, smtpPort, smtpUser, smtpPass);
 
     const attachments = [];
     for (const attachmentFile of attachmentFiles) {
-      const bytes = await attachmentFile.arrayBuffer();
+      const bytes = Buffer.from(await attachmentFile.arrayBuffer());
       attachments.push({
         filename: attachmentFile.name,
-        content: Buffer.from(bytes),
+        content: bytes,
         contentType: attachmentFile.type || undefined,
       });
     }

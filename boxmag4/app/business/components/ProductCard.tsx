@@ -1,10 +1,12 @@
 "use client";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
-import { LiaCheckDoubleSolid } from "react-icons/lia";
-import useBusinessStore from "../store/business_store";
 import MyOutlinedButton from "./MyOutlinedButton";
 import { useLanguage } from "../../i18n/language-context";
+
+function isRemoteImageUrl(url: string): boolean {
+  return /^https?:\/\//i.test(url);
+}
 
 export function PrductCard({
   title,
@@ -33,6 +35,14 @@ export function PrductCard({
     setResolvedImageUrl(next && next.length > 0 ? next : fallbackImage);
   }, [imageUrl]);
 
+  const imageWidth = centerItems ? 200 : 300;
+  const imageHeight = centerItems ? 200 : 300;
+  const handleImageError = () => {
+    if (resolvedImageUrl !== fallbackImage) {
+      setResolvedImageUrl(fallbackImage);
+    }
+  };
+
   return (
     <div
       role="button"
@@ -55,18 +65,27 @@ export function PrductCard({
           centerItems ? "justify-center" : "justify-end"
         }`}
       >
-        <Image
-          src={resolvedImageUrl}
-          alt={title}
-          width={centerItems ? 200 : 300}
-          height={centerItems ? 200 : 300}
-          className="object-contain"
-          onError={() => {
-            if (resolvedImageUrl !== fallbackImage) {
-              setResolvedImageUrl(fallbackImage);
-            }
-          }}
-        />
+        {/* Remote CDN URLs: skip next/image+sharp (native RSS spikes on small VPS). */}
+        {isRemoteImageUrl(resolvedImageUrl) ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={resolvedImageUrl}
+            alt={title}
+            width={imageWidth}
+            height={imageHeight}
+            className="object-contain"
+            onError={handleImageError}
+          />
+        ) : (
+          <Image
+            src={resolvedImageUrl}
+            alt={title}
+            width={imageWidth}
+            height={imageHeight}
+            className="object-contain"
+            onError={handleImageError}
+          />
+        )}
       </div>
       <div className="font-semibold text-center text-sm sm:text-lg px-4 sm:px-6 sm:py-6 w-full">
         {title}

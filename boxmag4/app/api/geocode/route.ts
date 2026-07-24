@@ -25,7 +25,7 @@ async function geocodeWithGoogle(query: string, apiKey: string) {
   url.searchParams.set("address", query);
   url.searchParams.set("key", apiKey);
 
-  const response = await fetch(url.toString(), { next: { revalidate: 3600 } });
+  const response = await fetch(url.toString(), { cache: "no-store" });
   if (!response.ok) {
     return null;
   }
@@ -54,7 +54,7 @@ async function geocodeWithNominatim(query: string) {
       "User-Agent": "BoxmagCheckout/1.0 (https://boxmag.eu)",
       Accept: "application/json",
     },
-    next: { revalidate: 3600 },
+    cache: "no-store",
   });
 
   if (!response.ok) return null;
