@@ -144,7 +144,7 @@
   "checkout.placeholder.phone": "Telefon",
   "checkout.placeholder.email": "Adresă de email",
   "checkout.vatNumber": "Cod TVA",
-  "checkout.placeholder.vatNumber": "ex. RO12345678 sau RO 12345678",
+  "checkout.placeholder.vatNumber": "ex. RO12345678",
   "checkout.guestEmailHint": "Obligatoriu pentru confirmarea comenzii. Autentifică-te ca să legi comenzile de cont.",
   "checkout.error.emailRequired": "Te rugăm să introduci adresa de email.",
   "checkout.error.emailInvalid": "Te rugăm să introduci o adresă de email validă.",

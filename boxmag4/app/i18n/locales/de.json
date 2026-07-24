@@ -144,7 +144,7 @@
   "checkout.placeholder.phone": "Telefon",
   "checkout.placeholder.email": "E-Mail-Adresse",
   "checkout.vatNumber": "USt-Nummer",
-  "checkout.placeholder.vatNumber": "z. B. DE123456789 oder DE 123456789",
+  "checkout.placeholder.vatNumber": "z. B. DE123456789",
   "checkout.guestEmailHint": "Erforderlich für die Bestellbestätigung. Melden Sie sich an, um Bestellungen mit Ihrem Konto zu verknüpfen.",
   "checkout.error.emailRequired": "Bitte geben Sie Ihre E-Mail-Adresse ein.",
   "checkout.error.emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",

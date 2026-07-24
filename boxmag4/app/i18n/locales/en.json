@@ -144,7 +144,7 @@
   "checkout.placeholder.phone": "Phone",
   "checkout.placeholder.email": "Email address",
   "checkout.vatNumber": "VAT Number",
-  "checkout.placeholder.vatNumber": "e.g. RO12345678 or RO 12345678",
+  "checkout.placeholder.vatNumber": "e.g. RO12345678",
   "checkout.guestEmailHint": "Required for order confirmation. Sign in to link orders to your account.",
   "checkout.error.emailRequired": "Please enter your email address.",
   "checkout.error.emailInvalid": "Please enter a valid email address.",
