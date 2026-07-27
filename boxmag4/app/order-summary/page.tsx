@@ -11,6 +11,7 @@ import { ServicesSection } from "../global/components/services-section";
 import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import useBusinessStore from "../business/store/business_store";
+import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { useLanguage } from "../i18n/language-context";
 import useBusinessOrderStore from "../stores/business_order_store";
 import { useNotification } from "../global/components/notification-center";
@@ -74,16 +75,23 @@ export default function OrderSummaryPage() {
   const { t } = useLanguage();
   const router = useRouter();
   const { notify } = useNotification();
-  const [firstName, setFirstName] = useState("");
-  const [surname, setSurname] = useState("");
+  const isDevelopment = isDevelopmentAppEnv();
+  const [firstName, setFirstName] = useState(() => (isDevelopment ? "Test" : ""));
+  const [surname, setSurname] = useState(() => (isDevelopment ? "Dev" : ""));
   const [companyName, setCompanyName] = useState("");
-  const [vatNumber, setVatNumber] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [postcode, setPostcode] = useState("");
-  const [city, setCity] = useState("");
-  const [country, setCountry] = useState("");
+  const [vatNumber, setVatNumber] = useState(() =>
+    isDevelopment ? "RO 2816464" : "",
+  );
+  const [email, setEmail] = useState(() =>
+    isDevelopment ? "test@dev.local" : "",
+  );
+  const [phone, setPhone] = useState(() => (isDevelopment ? "0700000000" : ""));
+  const [address, setAddress] = useState(() =>
+    isDevelopment ? "Str. Test nr. 1" : "",
+  );
+  const [postcode, setPostcode] = useState(() => (isDevelopment ? "400000" : ""));
+  const [city, setCity] = useState(() => (isDevelopment ? "Cluj-Napoca" : ""));
+  const [country, setCountry] = useState(() => (isDevelopment ? "RO" : ""));
   const [consentPhone, setConsentPhone] = useState(true);
   const [consentEmail, setConsentEmail] = useState(true);
   const [consentPhoneError, setConsentPhoneError] = useState("");

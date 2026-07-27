@@ -871,7 +871,7 @@ export async function sendNewOrderNotificationEmail(
   const replyNoticeText =
     "IMPORTANT: Nu raspunde la acest email. Raspunsul catre client trebuie trimis din panoul de administrare al site-ului, din pagina comenzii:\n" +
     adminOrderUrl;
-  const replyNoticeHtml = `<div style="margin:32px 0 0;padding:20px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;text-align:center;">
+  const replyNoticeHtml = `<div style="margin:32px 0 0;padding:20px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;text-align:left;">
         <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#1e40af;font-weight:700;">
           Nu raspunde la acest email. Raspunsul catre client trebuie trimis din panoul de administrare al site-ului, din pagina comenzii.
         </p>
