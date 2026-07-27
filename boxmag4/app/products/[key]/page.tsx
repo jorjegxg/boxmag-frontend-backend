@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minus, Plus, X, ZoomIn } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useLanguage } from "../../i18n/language-context";
@@ -58,6 +58,7 @@ function ProductByKeyPageContent() {
   const itemNoQuery = searchParams.get("itemNo")?.trim() ?? "";
 
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [quantity, setQuantity] = useState(MIN_ORDER_QTY);
 
   const [loadState, setLoadState] = useState<
@@ -251,6 +252,34 @@ function ProductByKeyPageContent() {
     };
   }, []);
 
+  const showPrevImage = () => {
+    const count = galleryWithProduct.length;
+    if (count === 0) return;
+    setSelectedImage((prev) => (prev - 1 + count) % count);
+  };
+
+  const showNextImage = () => {
+    const count = galleryWithProduct.length;
+    if (count === 0) return;
+    setSelectedImage((prev) => (prev + 1) % count);
+  };
+
+  useEffect(() => {
+    if (!isZoomOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsZoomOpen(false);
+      else if (event.key === "ArrowLeft") showPrevImage();
+      else if (event.key === "ArrowRight") showNextImage();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isZoomOpen, galleryWithProduct.length]);
+
   const triggerAddToCartAnimation = () => {
     if (addToCartAnimationTimeoutRef.current != null) {
       window.clearTimeout(addToCartAnimationTimeoutRef.current);
@@ -351,7 +380,12 @@ function ProductByKeyPageContent() {
 
           <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr_260px]">
             <div>
-              <div className="relative flex h-[320px] w-[423px] max-w-full items-center justify-center rounded-2xl border border-gray-200 bg-[#f6f1e8] p-6">
+              <button
+                type="button"
+                onClick={() => setIsZoomOpen(true)}
+                className="group relative flex h-[320px] w-[423px] max-w-full cursor-zoom-in items-center justify-center rounded-2xl border border-gray-200 bg-[#f6f1e8] p-6"
+                aria-label="Zoom image"
+              >
                 <img
                   src={galleryWithProduct[selectedImage]}
                   alt={productName}
@@ -360,9 +394,12 @@ function ProductByKeyPageContent() {
                   loading="eager"
                   fetchPriority="high"
                   decoding="async"
-                  className="h-full w-full max-h-full max-w-full object-contain"
+                  className="h-full w-full max-h-full max-w-full object-contain transition-transform duration-200 group-hover:scale-[1.03]"
                 />
-              </div>
+                <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  <ZoomIn className="h-4 w-4" />
+                </span>
+              </button>
 
               <div className="mt-5 flex flex-wrap gap-3">
                 {galleryWithProduct.map((src, index) => (
@@ -534,6 +571,66 @@ function ProductByKeyPageContent() {
         </section>
       </main>
       <NewsletterSubscribe />
+
+      {isZoomOpen ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4"
+          onClick={() => setIsZoomOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={productName}
+        >
+          <button
+            type="button"
+            onClick={() => setIsZoomOpen(false)}
+            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+            aria-label="Close"
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {galleryWithProduct.length > 1 ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                showPrevImage();
+              }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="h-7 w-7" />
+            </button>
+          ) : null}
+
+          <img
+            src={galleryWithProduct[selectedImage]}
+            alt={productName}
+            onClick={(event) => event.stopPropagation()}
+            className="max-h-[90vh] max-w-[90vw] object-contain"
+          />
+
+          {galleryWithProduct.length > 1 ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                showNextImage();
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
+              aria-label="Next image"
+            >
+              <ChevronRight className="h-7 w-7" />
+            </button>
+          ) : null}
+
+          {galleryWithProduct.length > 1 ? (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-4 py-1 text-sm text-white">
+              {selectedImage + 1} / {galleryWithProduct.length}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

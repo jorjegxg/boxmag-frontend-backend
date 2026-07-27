@@ -23,16 +23,6 @@ export default function AdminNav() {
   return (
     <nav className="w-full bg-white px-6 lg:px-20 pt-4">
       <div className="max-w-7xl mx-auto flex flex-wrap gap-2 border-b border-gray-200 pb-3">
-        <Link
-          href="/admin"
-          className={`rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
-            pathname === "/admin"
-              ? "bg-my-red text-white"
-              : "text-gray-700 hover:bg-gray-100"
-          }`}
-        >
-          Panou
-        </Link>
         {NAV_ITEMS.map((item) => {
           const isActive =
             pathname === item.match || pathname.startsWith(`${item.match}/`);
