@@ -867,6 +867,19 @@ export async function sendNewOrderNotificationEmail(
       </div>`
     : "";
 
+  const adminOrderUrl = `${env.frontendBaseUrl.replace(/\/$/, "")}/admin/orders/${params.orderId}`;
+  const replyNoticeText =
+    "IMPORTANT: Nu raspunde la acest email. Raspunsul catre client trebuie trimis din panoul de administrare al site-ului, din pagina comenzii:\n" +
+    adminOrderUrl;
+  const replyNoticeHtml = `<div style="margin:32px 0 0;padding:20px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;text-align:center;">
+        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#1e40af;font-weight:700;">
+          Nu raspunde la acest email. Raspunsul catre client trebuie trimis din panoul de administrare al site-ului, din pagina comenzii.
+        </p>
+        <a href="${escapeHtml(adminOrderUrl)}" style="display:inline-block;padding:14px 28px;background:#1d4ed8;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:700;font-size:15px;">
+          Raspunde din admin
+        </a>
+      </div>`;
+
   const recipients = parseNotificationRecipients(env.ordersNotificationTo);
   if (recipients.length === 0) {
     throw new Error("ORDERS_NOTIFICATION_TO is not configured");
@@ -913,6 +926,8 @@ export async function sendNewOrderNotificationEmail(
       productsTableText,
       priceBreakdownText ? `\n${priceBreakdownText}` : "",
       displayMessage ? `\nMesaj client:\n${displayMessage}` : "",
+      "",
+      replyNoticeText,
     ]
       .filter(Boolean)
       .join("\n"),
@@ -946,6 +961,7 @@ export async function sendNewOrderNotificationEmail(
         </div>`
             : ""
         }
+        ${replyNoticeHtml}
       </div>
     `,
     ...(attachments.length > 0 ? { attachments } : {}),
