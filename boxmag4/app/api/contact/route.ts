@@ -44,6 +44,62 @@ function envValue(key: string): string | undefined {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+function getBackendBaseUrl(): string {
+  const value =
+    process.env.NEXT_PUBLIC_BACKEND_URL?.trim() ??
+    envValue("NEXT_PUBLIC_BACKEND_URL") ??
+    envValue("BACKEND_URL");
+  const normalized = value?.replace(/\/$/, "");
+  return normalized && normalized.length > 0
+    ? normalized
+    : "http://localhost:3005";
+}
+
+/** Public site origin, used to link admins to the message in the admin panel. */
+function getSiteBaseUrl(): string {
+  const value =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ??
+    envValue("NEXT_PUBLIC_SITE_URL") ??
+    envValue("FRONTEND_BASE_URL");
+  const normalized = value?.replace(/\/$/, "");
+  if (normalized && normalized.length > 0) return normalized;
+  return process.env.NODE_ENV === "production"
+    ? "https://boxmag.eu"
+    : "http://localhost:3006";
+}
+
+/**
+ * Persist the submission so it shows up in the admin panel. Best-effort.
+ * Returns the created message id when the backend reports one.
+ */
+async function persistContactMessage(body: ContactPayload): Promise<number | null> {
+  try {
+    const response = await fetch(`${getBackendBaseUrl()}/api/contact`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        firstName: body.firstName,
+        surname: body.surname,
+        companyName: body.companyName,
+        vatNumber: body.vatNumber,
+        email: body.email,
+        phone: body.phone,
+        country: body.country,
+        message: body.message,
+        attachmentNames: body.fileName ?? "",
+      }),
+    });
+    const payload = (await response.json()) as {
+      data?: { id?: number };
+    };
+    const id = payload?.data?.id;
+    return typeof id === "number" ? id : null;
+  } catch (error) {
+    console.error("Failed to persist contact message to backend", error);
+    return null;
+  }
+}
+
 let sharedTransporter: nodemailer.Transporter | null = null;
 
 function getTransporter(smtpHost: string, smtpPort: number, smtpUser: string, smtpPass: string) {
@@ -63,6 +119,15 @@ function getTransporter(smtpHost: string, smtpPort: number, smtpUser: string, sm
 
 function isNonEmpty(value: string): boolean {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -183,10 +248,18 @@ export async function POST(req: Request): Promise<Response> {
       });
     }
 
+    // Persist first so the notification email can link straight to the message.
+    const messageId = await persistContactMessage(body);
+    const adminMessagesUrl = messageId
+      ? `${getSiteBaseUrl()}/admin/messages/${messageId}`
+      : `${getSiteBaseUrl()}/admin/messages`;
+
+    const replyNotice =
+      "Nu raspunde direct la acest email. Raspunsul se trimite de pe website, din panoul de administrare:";
+
     await transporter.sendMail({
       from: `"Boxmag Contact Form" <${contactTo}>`,
       to: contactTo,
-      replyTo: body.email,
       subject: `New contact request from ${body.firstName} ${body.surname}`,
       text: [
         `First Name: ${body.firstName}`,
@@ -200,7 +273,37 @@ export async function POST(req: Request): Promise<Response> {
         "",
         "Message:",
         body.message,
+        "",
+        "---",
+        replyNotice,
+        adminMessagesUrl,
       ].join("\n"),
+      html: `
+        <div style="font-family:Arial,Helvetica,sans-serif;color:#111827;line-height:1.5;max-width:640px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 16px;">
+            <tr><td style="padding:4px 0;color:#6b7280;width:150px;">First Name</td><td style="padding:4px 0;font-weight:600;">${escapeHtml(body.firstName)}</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;">Surname</td><td style="padding:4px 0;font-weight:600;">${escapeHtml(body.surname)}</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;">Company Name</td><td style="padding:4px 0;">${escapeHtml(body.companyName || "-")}</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;">VAT Number</td><td style="padding:4px 0;">${escapeHtml(body.vatNumber || "-")}</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;">Email</td><td style="padding:4px 0;">${escapeHtml(body.email)}</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;">Phone</td><td style="padding:4px 0;">${escapeHtml(body.phone)}</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;">Country</td><td style="padding:4px 0;">${escapeHtml(body.country)}</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;">Attachments</td><td style="padding:4px 0;">${escapeHtml(body.fileName || "-")}</td></tr>
+          </table>
+          <div style="margin:0 0 16px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+            <p style="margin:0 0 8px;font-weight:700;">Message</p>
+            <p style="margin:0;white-space:pre-line;">${escapeHtml(body.message)}</p>
+          </div>
+          <div style="margin:0;padding:14px 16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;">
+            <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#9a3412;font-weight:700;">
+              ${replyNotice}
+            </p>
+            <a href="${adminMessagesUrl}" style="display:inline-block;padding:10px 18px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;background:#ef6b56;border-radius:8px;">
+              Raspunde din panou
+            </a>
+          </div>
+        </div>
+      `,
       attachments,
     });
 

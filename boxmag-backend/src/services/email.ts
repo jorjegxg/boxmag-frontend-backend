@@ -1124,6 +1124,86 @@ export async function sendOrderConfirmationEmailToCustomer(
   });
 }
 
+export type ContactReplyParams = {
+  fromKey: OrderOfferFromKey;
+  to: string;
+  customerName: string;
+  originalMessage: string;
+  replyMessage: string;
+};
+
+export async function sendContactReplyEmail(
+  params: ContactReplyParams,
+): Promise<void> {
+  if (!isEmailTransportConfigured()) {
+    throw new Error("Email transport is not configured");
+  }
+
+  const fromAddress = resolveOrderOfferFromAddress(params.fromKey);
+  if (!fromAddress) {
+    throw new Error("Selected sender address is not configured");
+  }
+
+  const replyMessage = params.replyMessage.trim();
+  if (!replyMessage) {
+    throw new Error("Reply message is empty");
+  }
+
+  const originalMessage = params.originalMessage.trim();
+  const greetingName = params.customerName.trim() || "client";
+
+  const { transport, headers } = getOfferMailDelivery(params.fromKey);
+  await transport.sendMail({
+    ...headers,
+    to: params.to,
+    subject: "Răspuns la mesajul tău - Boxmag",
+    text: [
+      `Salut ${greetingName},`,
+      "",
+      replyMessage,
+      "",
+      originalMessage ? "--- Mesajul tău original ---" : "",
+      originalMessage,
+      "",
+      "Cu respect,",
+      "Echipa Boxmag",
+    ]
+      .filter((line, index, arr) => !(line === "" && arr[index - 1] === ""))
+      .join("\n"),
+    html: `
+      <div style="margin:0;background:#f5f7fb;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px;margin:0 auto;border-collapse:separate;border-spacing:0;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+          <tr>
+            <td style="background:#ef6b56;padding:18px 24px;">
+              <h1 style="margin:0;font-size:20px;line-height:1.3;color:#ffffff;font-weight:700;">Răspuns Boxmag</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px;">
+              <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#374151;">
+                Salut ${escapeHtml(greetingName)},
+              </p>
+              <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;white-space:pre-line;">${escapeHtml(replyMessage)}</p>
+              ${
+                originalMessage
+                  ? `<div style="margin-top:20px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+                <p style="margin:0 0 8px;font-weight:700;color:#6b7280;font-size:13px;">Mesajul tău original</p>
+                <p style="margin:0;white-space:pre-line;color:#4b5563;">${escapeHtml(originalMessage)}</p>
+              </div>`
+                  : ""
+              }
+              <p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#374151;">
+                Cu respect,<br />
+                <strong>Echipa Boxmag</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `,
+  });
+}
+
 export type OrderOfferFromKey = "info" | "b2b" | "orders";
 
 export function resolveOrderOfferFromAddress(

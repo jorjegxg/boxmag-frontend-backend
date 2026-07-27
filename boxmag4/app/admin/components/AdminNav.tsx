@@ -15,6 +15,11 @@ const NAV_ITEMS = [
     label: "Metode de livrare",
     match: "/admin/shipping-methods",
   },
+  {
+    href: "/admin/messages",
+    label: "Mesaje contact",
+    match: "/admin/messages",
+  },
 ] as const;
 
 export default function AdminNav() {

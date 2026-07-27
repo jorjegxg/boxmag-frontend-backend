@@ -683,12 +683,12 @@ export default function ContactUsPage() {
                 className={`${inputClass} resize-y min-h-[120px]`}
               />
             </div>
-            <label className="flex gap-3 items-start cursor-pointer">
+            <label className="flex gap-3 items-center cursor-pointer">
               <input
                 type="checkbox"
                 checked={acceptTerms}
                 onChange={(e) => setAcceptTerms(e.target.checked)}
-                className="mt-1 h-5 w-5 rounded border-2 border-gray-300 bg-white accent-my-red focus:ring-my-red"
+                className="h-5 w-5 rounded border-2 border-gray-300 bg-white accent-my-red focus:ring-my-red"
               />
               <span className="text-sm text-gray-700">
                 {t("contact.termsPrefix")}
