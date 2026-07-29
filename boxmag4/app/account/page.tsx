@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { B2b } from "../global/components/b2b";
@@ -98,9 +98,11 @@ type UserOrder = {
 
 function LoginRequiredView({
   t,
+  sessionExpired = false,
   onLoginSuccess,
 }: {
   t: (key: string) => string;
+  sessionExpired?: boolean;
   onLoginSuccess: (email: string) => void;
 }) {
   const [email, setEmail] = useState(
@@ -165,6 +167,11 @@ function LoginRequiredView({
       <p className="mt-2 text-sm text-gray-600">
         Sign in to access your account details, addresses, billing and orders.
       </p>
+      {sessionExpired ? (
+        <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+          Your session has expired. Please sign in again.
+        </p>
+      ) : null}
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         <div>
           <label
@@ -1103,6 +1110,34 @@ export default function AccountPage() {
   const [isAddressesLoading, setIsAddressesLoading] = useState(false);
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Clears all local sign-in state and notifies the header. Does NOT call the
+  // backend logout endpoint (used both for manual sign-out and expired sessions).
+  const clearLocalSession = useCallback(() => {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(AUTH_EMAIL_STORAGE_KEY);
+    window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+    setIsLoggedIn(false);
+    setLoggedInEmail("");
+    setAccountProfile({
+      firstName: "",
+      lastName: "",
+      phone: "",
+      email: "",
+      companyName: "",
+      vatNumber: "",
+    });
+    setActiveTab("account");
+    router.push("/account#account");
+  }, [router]);
+
+  // Called when an authenticated request returns 401: sign the user out locally
+  // and surface the login view with an "expired session" notice.
+  const handleSessionExpired = useCallback(() => {
+    setSessionExpired(true);
+    clearLocalSession();
+  }, [clearLocalSession]);
 
   const selectTab = (tab: Tab) => {
     setActiveTab(tab);
@@ -1161,6 +1196,10 @@ export default function AccountPage() {
           credentials: "include",
           signal: controller.signal,
         });
+        if (response.status === 401) {
+          if (!controller.signal.aborted) handleSessionExpired();
+          return;
+        }
         const payload = (await response.json()) as {
           ok?: boolean;
           data?: {
@@ -1203,7 +1242,7 @@ export default function AccountPage() {
 
     void loadProfile();
     return () => controller.abort();
-  }, [isLoggedIn, loggedInEmail]);
+  }, [isLoggedIn, loggedInEmail, handleSessionExpired]);
 
   useEffect(() => {
     if (!isLoggedIn || !loggedInEmail) {
@@ -1223,6 +1262,10 @@ export default function AccountPage() {
           `${backendBaseUrl}/api/orders?email=${encodeURIComponent(loggedInEmail)}`,
           { credentials: "include", signal: controller.signal },
         );
+        if (response.status === 401) {
+          if (!controller.signal.aborted) handleSessionExpired();
+          return;
+        }
         const payload = (await response.json()) as {
           ok?: boolean;
           data?: UserOrder[];
@@ -1247,7 +1290,7 @@ export default function AccountPage() {
 
     void loadOrders();
     return () => controller.abort();
-  }, [isLoggedIn, loggedInEmail]);
+  }, [isLoggedIn, loggedInEmail, handleSessionExpired]);
 
   useEffect(() => {
     if (!isLoggedIn || !loggedInEmail) {
@@ -1267,6 +1310,10 @@ export default function AccountPage() {
           credentials: "include",
           signal: controller.signal,
         });
+        if (response.status === 401) {
+          if (!controller.signal.aborted) handleSessionExpired();
+          return;
+        }
         const payload = (await response.json()) as {
           ok?: boolean;
           data?: UserAddress[];
@@ -1291,7 +1338,7 @@ export default function AccountPage() {
 
     void loadAddresses();
     return () => controller.abort();
-  }, [isLoggedIn, loggedInEmail]);
+  }, [isLoggedIn, loggedInEmail, handleSessionExpired]);
 
   const saveProfile = async (payload: {
     firstName: string;
@@ -1315,6 +1362,10 @@ export default function AccountPage() {
         ...payload,
       }),
     });
+    if (response.status === 401) {
+      handleSessionExpired();
+      return;
+    }
     const json = (await response.json()) as {
       ok?: boolean;
       message?: string;
@@ -1373,6 +1424,10 @@ export default function AccountPage() {
         ...payload,
       }),
     });
+    if (response.status === 401) {
+      handleSessionExpired();
+      return;
+    }
     const json = (await response.json()) as { ok?: boolean; message?: string };
     if (!response.ok || json.ok !== true) {
       throw new Error(json.message ?? "Failed to save address");
@@ -1428,6 +1483,10 @@ export default function AccountPage() {
         }),
       },
     );
+    if (response.status === 401) {
+      handleSessionExpired();
+      return;
+    }
     const json = (await response.json()) as { ok?: boolean; message?: string };
     if (!response.ok || json.ok !== true) {
       throw new Error(json.message ?? "Failed to update address");
@@ -1457,6 +1516,10 @@ export default function AccountPage() {
       `${backendBaseUrl}/api/addresses/${addressId}`,
       { method: "DELETE", credentials: "include" },
     );
+    if (response.status === 401) {
+      handleSessionExpired();
+      return;
+    }
     const json = (await response.json()) as { ok?: boolean; message?: string };
     if (!response.ok || json.ok !== true) {
       throw new Error(json.message ?? "Failed to delete address");
@@ -1538,7 +1601,9 @@ export default function AccountPage() {
         {!isLoggedIn ? (
           <LoginRequiredView
             t={t}
+            sessionExpired={sessionExpired}
             onLoginSuccess={(email) => {
+              setSessionExpired(false);
               setLoggedInEmail(email);
               setIsLoggedIn(true);
             }}
@@ -1571,6 +1636,7 @@ export default function AccountPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    setSessionExpired(false);
                     void fetch(`${getBackendBaseUrl()}/api/auth/logout`, {
                       method: "POST",
                       credentials: "include",
@@ -1579,21 +1645,7 @@ export default function AccountPage() {
                         // Keep local sign-out behavior even if backend is unavailable.
                       })
                       .finally(() => {
-                        localStorage.removeItem(AUTH_STORAGE_KEY);
-                        localStorage.removeItem(AUTH_EMAIL_STORAGE_KEY);
-                        window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
-                        setIsLoggedIn(false);
-                        setLoggedInEmail("");
-                        setAccountProfile({
-                          firstName: "",
-                          lastName: "",
-                          phone: "",
-                          email: "",
-                          companyName: "",
-                          vatNumber: "",
-                        });
-                        setActiveTab("account");
-                        router.push("/account#account");
+                        clearLocalSession();
                       });
                   }}
                   className="w-full flex items-center gap-3 px-5 py-3.5 text-sm font-bold uppercase tracking-wide text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
