@@ -98,15 +98,6 @@ describe("Account address → checkout (coș)", () => {
       cy.contains("Str. Depozit 15").should("exist");
       cy.contains("Ana Popescu").should("exist");
     });
-
-    it("linkul Manage account duce la /account", () => {
-      cy.visitCheckoutLoggedIn({ addresses: [sampleWarehouseAddress] });
-      cy.contains("h2", "Shipping Information")
-        .parent()
-        .contains("a", "MANAGE ACCOUNT")
-        .click();
-      cy.location("pathname").should("eq", "/account");
-    });
   });
 
   describe("flux account → checkout", () => {

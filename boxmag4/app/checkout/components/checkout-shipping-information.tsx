@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useLanguage } from "../../i18n/language-context";
 import {
@@ -483,12 +482,6 @@ export function CheckoutShippingInformation({
             )}
           </p>
         ) : null}
-        <p className="text-my-red font-semibold text-sm flex items-center gap-2 mt-3">
-          <span>•</span>{" "}
-          <Link href="/account" className="hover:underline">
-            {t("checkout.manageAccount")}
-          </Link>
-        </p>
       </div>
     </div>
   );
