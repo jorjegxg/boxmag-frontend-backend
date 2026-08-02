@@ -14,7 +14,10 @@ import { useCurrency } from "../currency/currency-context";
 import { useCartStore, type CartItem } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
 import { FaTrashAlt } from "react-icons/fa";
-import { isDevelopmentAppEnv } from "../../lib/app-env";
+import {
+  AUTH_EMAIL_STORAGE_KEY,
+  clearCustomerAuthLocalState,
+} from "../../lib/customer-auth";
 import { rememberVatCompany } from "../../lib/vat-company";
 import { CheckoutShippingInformation } from "./components/checkout-shipping-information";
 
@@ -46,7 +49,6 @@ type ManualAddress = {
   country: string;
 };
 
-const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const GUEST_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SHIPPING_METHODS_CACHE_KEY = "boxmag.checkout.shippingMethods.v2";
 const SHIPPING_METHODS_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
@@ -54,7 +56,6 @@ const CART_QTY_STEP = 10;
 const MAX_ATTACHMENT_MB = 18;
 const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_MB * 1024 * 1024;
 const VAT_NUMBER_REGEX = /^([A-Z]{2})?[A-Z0-9]{2,12}$/i;
-const shouldAutofillCheckout = isDevelopmentAppEnv();
 
 function normalizeVatNumber(value: string): string {
   return value.trim().toUpperCase().replace(/\s+/g, "");
@@ -134,9 +135,7 @@ export default function CheckoutPage() {
   );
   const [accountEmail, setAccountEmail] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
-  const [vatNumber, setVatNumber] = useState(
-    shouldAutofillCheckout ? "RO4534966" : "",
-  );
+  const [vatNumber, setVatNumber] = useState("");
   const [vatNumberError, setVatNumberError] = useState(false);
   const [vatFormatError, setVatFormatError] = useState(false);
   const [isVatLookupInProgress, setIsVatLookupInProgress] = useState(false);
@@ -269,6 +268,20 @@ export default function CheckoutPage() {
             signal: controller.signal,
           }),
         ]);
+
+        if (
+          addressesResponse.status === 401 ||
+          profileResponse.status === 401
+        ) {
+          clearCustomerAuthLocalState();
+          setAccountEmail("");
+          setAddresses([]);
+          setSelectedAddressId(null);
+          setAddressType("another");
+          setVatNumber("");
+          return;
+        }
+
         const payload = (await addressesResponse.json()) as {
           ok?: boolean;
           data?: UserAddress[];

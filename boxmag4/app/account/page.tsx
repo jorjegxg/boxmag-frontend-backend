@@ -17,6 +17,12 @@ import {
   FaEyeSlash,
 } from "react-icons/fa";
 import { isDevelopmentAppEnv } from "../../lib/app-env";
+import {
+  AUTH_CHANGED_EVENT,
+  AUTH_EMAIL_STORAGE_KEY,
+  AUTH_STORAGE_KEY,
+  clearCustomerAuthLocalState,
+} from "../../lib/customer-auth";
 import { siteEmails } from "../../lib/site-emails";
 import {
   fetchVatLookup,
@@ -52,9 +58,6 @@ function normalizeVatNumber(value: string): string {
   return value.trim().toUpperCase().replace(/\s+/g, "");
 }
 
-const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
-const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
-const AUTH_CHANGED_EVENT = "boxmag-auth-changed";
 const isDevelopment = isDevelopmentAppEnv();
 
 function getBackendBaseUrl(): string {
@@ -1115,9 +1118,7 @@ export default function AccountPage() {
   // Clears all local sign-in state and notifies the header. Does NOT call the
   // backend logout endpoint (used both for manual sign-out and expired sessions).
   const clearLocalSession = useCallback(() => {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    localStorage.removeItem(AUTH_EMAIL_STORAGE_KEY);
-    window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+    clearCustomerAuthLocalState();
     setIsLoggedIn(false);
     setLoggedInEmail("");
     setAccountProfile({
