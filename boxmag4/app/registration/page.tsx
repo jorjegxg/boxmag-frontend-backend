@@ -36,7 +36,8 @@ function RegistrationPageContent() {
   const queryPhone = searchParams.get("phone")?.trim() ?? "";
   const queryVatNumber = searchParams.get("vatNumber")?.trim() ?? "";
   const returnTo = searchParams.get("returnTo")?.trim() || "/account#orders";
-  const fromB2bOrder = searchParams.get("from") === "b2b-order";
+  const fromSource = searchParams.get("from")?.trim() ?? "";
+  const fromOrderFlow = fromSource === "b2b-order" || fromSource === "checkout";
   const hasQueryPrefill = Boolean(queryEmail);
 
   const [email, setEmail] = useState(
@@ -75,7 +76,7 @@ function RegistrationPageContent() {
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isEmailLocked, setIsEmailLocked] = useState(fromB2bOrder && Boolean(queryEmail));
+  const [isEmailLocked, setIsEmailLocked] = useState(fromOrderFlow && Boolean(queryEmail));
 
   const backendBaseUrl = useMemo(() => {
     const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -90,9 +91,9 @@ function RegistrationPageContent() {
     if (queryCompanyName) setCompanyName(queryCompanyName);
     if (queryPhone) setPhone(queryPhone);
     if (queryVatNumber) setVatNumber(queryVatNumber);
-    setIsEmailLocked(fromB2bOrder && Boolean(queryEmail));
+    setIsEmailLocked(fromOrderFlow && Boolean(queryEmail));
   }, [
-    fromB2bOrder,
+    fromOrderFlow,
     queryCompanyName,
     queryEmail,
     queryFirstName,
@@ -244,7 +245,7 @@ function RegistrationPageContent() {
         throw new Error(payload.message ?? "Registration failed");
       }
 
-      if (fromB2bOrder) {
+      if (fromSource === "b2b-order") {
         clearB2bOrderSuccessPayload();
       }
 
@@ -295,9 +296,13 @@ function RegistrationPageContent() {
 
       <section className="w-full px-4 sm:px-6 lg:px-20 pb-12">
         <div className="max-w-4xl mx-auto rounded-lg border-2 border-gray-200 bg-white px-6 py-6 sm:px-8 sm:py-8">
-          {fromB2bOrder ? (
+          {fromSource === "b2b-order" ? (
             <p className="text-gray-600 text-sm mb-6">
               Create an account to save your B2B quote request and track it from your account.
+            </p>
+          ) : fromSource === "checkout" ? (
+            <p className="text-gray-600 text-sm mb-6">
+              Create an account to save this order and track it from your account.
             </p>
           ) : (
             <p className="text-gray-600 text-sm mb-6">

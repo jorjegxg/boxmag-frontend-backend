@@ -442,12 +442,39 @@ describe("payments routes", () => {
             created_at: new Date("2026-05-28T10:00:00.000Z"),
           },
         ],
+      ])
+      .mockResolvedValueOnce([
+        [
+          {
+            first_name: "Jane",
+            surname: "Doe",
+            company_name: "Demo SRL",
+            vat_number: "RO12345678",
+            email: "buyer@example.com",
+            phone: "799000000",
+            address: "Str Test 1",
+            postcode: "725400",
+            city: "Radauti",
+            country: "RO",
+            create_account: 0,
+            consent_phone: 1,
+            consent_email: 1,
+          },
+        ],
       ]);
 
     const response = await request(app).get("/api/payments/sessions/cs_poll_1");
 
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
+    expect(response.body.data.contact).toEqual({
+      firstName: "Jane",
+      surname: "Doe",
+      companyName: "Demo SRL",
+      vatNumber: "RO12345678",
+      phone: "799000000",
+      email: "buyer@example.com",
+    });
     expect(sendOrderConfirmationEmailToCustomerMock).toHaveBeenCalledTimes(1);
     expect(sendNewOrderNotificationEmailMock).toHaveBeenCalledTimes(1);
   });

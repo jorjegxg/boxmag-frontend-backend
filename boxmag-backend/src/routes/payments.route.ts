@@ -656,6 +656,39 @@ paymentsRouter.get("/sessions/:sessionId", async (req, res) => {
 
     const order = orderRows[0] ?? null;
 
+    let contact: {
+      firstName: string;
+      surname: string;
+      companyName: string;
+      vatNumber: string;
+      phone: string;
+      email: string;
+    } | null = null;
+
+    if (order) {
+      const [contactRows] = await mysqlPool.query<ContactRow[]>(
+        `SELECT first_name, surname, company_name, vat_number, email, phone,
+                address, postcode, city, country,
+                create_account, consent_phone, consent_email
+         FROM contacts WHERE order_id = ? LIMIT 1`,
+        [order.id],
+      );
+      const contactRow = contactRows[0];
+      if (contactRow) {
+        contact = {
+          firstName: contactRow.first_name ?? "",
+          surname: contactRow.surname ?? "",
+          companyName: contactRow.company_name ?? "",
+          vatNumber: contactRow.vat_number ?? "",
+          phone: contactRow.phone ?? "",
+          email: contactRow.email ?? "",
+        };
+      }
+    }
+
+    const customerEmail =
+      session.customer_details?.email ?? contact?.email ?? null;
+
     res.json({
       ok: true,
       data: {
@@ -663,7 +696,8 @@ paymentsRouter.get("/sessions/:sessionId", async (req, res) => {
         paymentStatus: session.payment_status,
         amountTotal: session.amount_total,
         currency: session.currency,
-        customerEmail: session.customer_details?.email ?? null,
+        customerEmail,
+        contact,
         order: order
           ? {
               id: order.id,
