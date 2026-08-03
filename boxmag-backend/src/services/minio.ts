@@ -12,7 +12,8 @@ const minioClient = new MinioClient({
 
 let ensureBucketPromise: Promise<void> | null = null;
 
-function buildPublicReadPolicy(bucketName: string): string {
+/** Public-read only for catalog images under boxes/. Attachments stay private. */
+export function buildPublicReadPolicy(bucketName: string): string {
   return JSON.stringify({
     Version: "2012-10-17",
     Statement: [
@@ -20,13 +21,13 @@ function buildPublicReadPolicy(bucketName: string): string {
         Effect: "Allow",
         Principal: { AWS: ["*"] },
         Action: ["s3:GetObject"],
-        Resource: [`arn:aws:s3:::${bucketName}/*`],
+        Resource: [`arn:aws:s3:::${bucketName}/boxes/*`],
       },
     ],
   });
 }
 
-async function ensurePublicBucket(): Promise<void> {
+async function ensureBucket(): Promise<void> {
   if (!ensureBucketPromise) {
     ensureBucketPromise = (async () => {
       const bucketName = env.minioBucketName;
@@ -82,13 +83,41 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+/**
+ * If URL points at our bucket under orders/attachments/, return object key.
+ * Used for legacy rows that stored a public MinIO URL before attachments were private.
+ */
+export function parseOrderAttachmentObjectNameFromUrl(
+  attachmentUrl: string,
+): string | null {
+  const trimmed = attachmentUrl.trim();
+  if (!trimmed) return null;
+
+  let pathname: string;
+  try {
+    pathname = new URL(trimmed).pathname;
+  } catch {
+    return null;
+  }
+
+  const bucketPrefix = `/${env.minioBucketName}/`;
+  const bucketIndex = pathname.indexOf(bucketPrefix);
+  if (bucketIndex < 0) return null;
+
+  const objectName = decodeURIComponent(
+    pathname.slice(bucketIndex + bucketPrefix.length),
+  );
+  if (!objectName.startsWith("orders/attachments/")) return null;
+  return objectName;
+}
+
 export async function uploadBoxImageToMinio(args: {
   fileBuffer: Buffer;
   originalFileName: string;
   mimeType: string;
   extensionOverride?: string;
 }): Promise<string> {
-  await ensurePublicBucket();
+  await ensureBucket();
 
   const objectName = sanitizeObjectName(
     args.originalFileName,
@@ -113,8 +142,8 @@ export async function uploadOrderAttachmentToMinio(args: {
   fileBuffer: Buffer;
   originalFileName: string;
   mimeType?: string;
-}): Promise<{ objectName: string; url: string }> {
-  await ensurePublicBucket();
+}): Promise<{ objectName: string }> {
+  await ensureBucket();
 
   const objectName = sanitizeOrderAttachmentObjectName(args.originalFileName);
   await minioClient.putObject(
@@ -129,11 +158,7 @@ export async function uploadOrderAttachmentToMinio(args: {
       : undefined,
   );
 
-  const baseUrl = env.minioPublicBaseUrl.replace(/\/+$/, "");
-  return {
-    objectName,
-    url: `${baseUrl}/${env.minioBucketName}/${objectName}`,
-  };
+  return { objectName };
 }
 
 export async function getObjectBufferFromMinio(

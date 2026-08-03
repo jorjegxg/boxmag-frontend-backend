@@ -76,7 +76,7 @@ function buildPublicReadPolicy(bucketName) {
         Effect: "Allow",
         Principal: { AWS: ["*"] },
         Action: ["s3:GetObject"],
-        Resource: [`arn:aws:s3:::${bucketName}/*`],
+        Resource: [`arn:aws:s3:::${bucketName}/boxes/*`],
       },
     ],
   });

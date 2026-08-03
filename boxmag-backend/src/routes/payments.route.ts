@@ -407,7 +407,6 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
   let createdOrderId: number | null = null;
   let attachmentName: string | null = null;
   let attachmentObjectName: string | null = null;
-  let attachmentUrl: string | null = null;
   if (attachmentPayload) {
     const attachmentBuffer = parseAttachmentBase64(attachmentPayload.contentBase64);
     if (!attachmentBuffer) {
@@ -432,7 +431,6 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
       });
       attachmentName = attachmentPayload.fileName;
       attachmentObjectName = uploaded.objectName;
-      attachmentUrl = uploaded.url;
     } catch (uploadError) {
       console.error("Failed to upload checkout attachment to MinIO", uploadError);
       res.status(502).json({
@@ -478,7 +476,7 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
         0,
         attachmentName,
         attachmentObjectName,
-        attachmentUrl,
+        null,
         orderMessageLines.join("\n"),
         itemsJson,
         1,

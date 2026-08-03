@@ -8,6 +8,7 @@ import {
 import { requireAdminOrUserEmail } from "../middleware/require-admin-or-user-email";
 import {
   getOrderAttachmentFromMinio,
+  parseOrderAttachmentObjectNameFromUrl,
   uploadOrderAttachmentToMinio,
 } from "../services/minio";
 import {
@@ -409,7 +410,6 @@ ordersRouter.get("/", requireAdminOrUserEmail, async (req, res) => {
         transport: row.transport,
         quantity: row.quantity,
         attachmentName: row.attachment_name,
-        attachmentUrl: row.attachment_url,
         hasAttachment: orderHasStoredAttachment(row),
         message: row.message ?? "",
         items: parseCartItemsJson(row.items_json),
@@ -611,10 +611,14 @@ ordersRouter.get("/:orderId/attachment", requireAdminOrUserEmail, async (req, re
     let buffer: Buffer;
     let contentType: string | null = null;
 
-    if (row.attachment_object_name?.trim()) {
-      const attachment = await getOrderAttachmentFromMinio(
-        row.attachment_object_name.trim(),
-      );
+    const objectNameFromRow = row.attachment_object_name?.trim() || null;
+    const objectNameFromUrl = row.attachment_url?.trim()
+      ? parseOrderAttachmentObjectNameFromUrl(row.attachment_url.trim())
+      : null;
+    const minioObjectName = objectNameFromRow || objectNameFromUrl;
+
+    if (minioObjectName) {
+      const attachment = await getOrderAttachmentFromMinio(minioObjectName);
       buffer = attachment.buffer;
       contentType = attachment.contentType;
     } else if (row.attachment_url?.trim()) {
@@ -729,7 +733,6 @@ ordersRouter.get("/:orderId", requireAdminOrUserEmail, async (req, res) => {
         transport: row.transport,
         quantity: row.quantity,
         attachmentName: row.attachment_name,
-        attachmentUrl: row.attachment_url,
         hasAttachment: orderHasStoredAttachment(row),
         message: row.message ?? "",
         items: parseCartItemsJson(row.items_json),
@@ -818,7 +821,6 @@ ordersRouter.post("/", async (req, res) => {
     toOptionalString(attachmentPayload?.mimeType ?? null);
   const effectiveAttachmentName = attachmentName ?? attachmentPayload?.fileName ?? null;
   let attachmentObjectName: string | null = null;
-  let attachmentUrl: string | null = null;
   if (attachmentBuffer && attachmentBuffer.length > MAX_ORDER_ATTACHMENT_BYTES) {
     res.status(400).json({
       ok: false,
@@ -834,7 +836,6 @@ ordersRouter.post("/", async (req, res) => {
         ...(attachmentMimeType ? { mimeType: attachmentMimeType } : {}),
       });
       attachmentObjectName = uploaded.objectName;
-      attachmentUrl = uploaded.url;
     } catch (uploadError) {
       console.error("Failed to upload order attachment to MinIO", uploadError);
       res.status(502).json({
@@ -878,7 +879,7 @@ ordersRouter.post("/", async (req, res) => {
         ftl ? 1 : 0,
         effectiveAttachmentName,
         attachmentObjectName,
-        attachmentUrl,
+        null,
         message,
         1,
       ]
@@ -938,7 +939,7 @@ ordersRouter.post("/", async (req, res) => {
       ftl,
       attachmentName: effectiveAttachmentName,
       attachmentObjectName,
-      attachmentUrl,
+      attachmentUrl: null,
       boxTypeName,
       message,
       items: null,

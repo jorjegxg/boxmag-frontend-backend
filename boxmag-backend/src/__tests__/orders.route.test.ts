@@ -10,6 +10,7 @@ const {
   isOrderEmailTransportConfiguredMock,
   sendOrderCreationEmailsMock,
   sendOrderOfferEmailToCustomerMock,
+  getOrderAttachmentFromMinioMock,
 } = vi.hoisted(() => ({
   queryMock: vi.fn(),
   executeMock: vi.fn(),
@@ -21,6 +22,11 @@ const {
     errors: [],
   })),
   sendOrderOfferEmailToCustomerMock: vi.fn(async () => undefined),
+  getOrderAttachmentFromMinioMock: vi.fn(async () => ({
+    buffer: Buffer.from("sample attachment"),
+    contentType: "application/pdf",
+    size: 17,
+  })),
 }));
 
 vi.mock("../db/mysql", () => ({
@@ -44,21 +50,31 @@ vi.mock("../services/email", () => ({
 vi.mock("../services/minio", () => ({
   uploadOrderAttachmentToMinio: vi.fn(async () => ({
     objectName: "orders/attachments/test.pdf",
-    url: "http://localhost:9000/bucket/orders/attachments/test.pdf",
   })),
-  getOrderAttachmentFromMinio: vi.fn(async () => ({
-    buffer: Buffer.from("sample attachment"),
-    contentType: "application/pdf",
-    size: 17,
-  })),
+  getOrderAttachmentFromMinio: getOrderAttachmentFromMinioMock,
+  parseOrderAttachmentObjectNameFromUrl: vi.fn(
+    (attachmentUrl: string) => {
+      const marker = "/orders/attachments/";
+      const index = attachmentUrl.indexOf(marker);
+      if (index < 0) return null;
+      return attachmentUrl.slice(index + 1);
+    },
+  ),
 }));
 
 import { app } from "../app";
+import { getOrderAttachmentFromMinio } from "../services/minio";
 
 describe("orders routes", () => {
   beforeEach(() => {
     queryMock.mockReset();
     executeMock.mockReset();
+    getOrderAttachmentFromMinioMock.mockReset();
+    getOrderAttachmentFromMinioMock.mockResolvedValue({
+      buffer: Buffer.from("sample attachment"),
+      contentType: "application/pdf",
+      size: 17,
+    });
     sendOrderCreationEmailsMock.mockReset();
     sendOrderCreationEmailsMock.mockResolvedValue({
       notification: true,
@@ -136,6 +152,38 @@ describe("orders routes", () => {
     expect(response.status).toBe(200);
     expect(response.headers["content-type"]).toContain("application/pdf");
     expect(response.headers["content-disposition"]).toContain("specs.pdf");
+    expect(Buffer.from(response.body).toString()).toBe("sample attachment");
+    expect(getOrderAttachmentFromMinio).toHaveBeenCalledWith(
+      "orders/attachments/specs.pdf",
+    );
+  });
+
+  it("loads legacy attachment via MinIO SDK when only public URL is stored", async () => {
+    const userEmail = "customer@example.com";
+    const token = createUserSessionToken(7, userEmail);
+    if (!token) throw new Error("Failed to create user session token");
+
+    queryMock.mockResolvedValueOnce([
+      [
+        {
+          id: 15,
+          attachment_name: "legacy.pdf",
+          attachment_object_name: null,
+          attachment_url:
+            "http://localhost:9000/boxmag4-images/orders/attachments/legacy.pdf",
+        },
+      ],
+    ]);
+
+    const response = await request(app)
+      .get("/api/orders/15/attachment")
+      .query({ email: userEmail })
+      .set("Cookie", `${USER_COOKIE_NAME}=${token}`);
+
+    expect(response.status).toBe(200);
+    expect(getOrderAttachmentFromMinio).toHaveBeenCalledWith(
+      "orders/attachments/legacy.pdf",
+    );
     expect(Buffer.from(response.body).toString()).toBe("sample attachment");
   });
 
