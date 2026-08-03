@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  test:
+  test-backend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,8 +28,29 @@ jobs:
           npm ci
           npm test
 
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: boxmag4/package-lock.json
+
+      - name: Build frontend
+        working-directory: boxmag4
+        env:
+          NEXT_PUBLIC_BACKEND_URL: http://localhost:3005
+          NEXT_PUBLIC_APP_ENV: production
+          NEXT_PUBLIC_TAX_PERCENT: "21"
+        run: |
+          npm ci
+          npm run build
+
   deploy:
-    needs: test
+    needs: [test-backend, build-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Deploy over SSH

@@ -26,6 +26,7 @@ import {
   resolveCheckoutCartItems,
   resolveShippingMethod,
 } from "../services/checkout-pricing";
+import { checkoutRateLimiter } from "../middleware/rate-limit";
 
 type CartItemPayload = {
   itemNo: string;
@@ -258,7 +259,7 @@ type ContactRow = RowDataPacket & {
 
 export const paymentsRouter = Router();
 
-paymentsRouter.post("/create-checkout-session", async (req, res) => {
+paymentsRouter.post("/create-checkout-session", checkoutRateLimiter, async (req, res) => {
   if (!isStripeConfigured()) {
     res.status(503).json({
       ok: false,

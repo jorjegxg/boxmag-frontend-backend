@@ -3,11 +3,17 @@ import "./env";
 
 export const USER_COOKIE_NAME = "boxmag-user-session";
 const USER_COOKIE_SALT = "boxmag-user-v1";
+/** Embedded token TTL (must stay ≤ cookie maxAge). */
+export const USER_SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
 
-/** HMAC secret for signed user session cookies. Falls back to ADMIN_PASSWORD in dev. */
+/**
+ * HMAC secret for signed user session cookies.
+ * Production requires USER_SESSION_SECRET (no ADMIN_PASSWORD fallback).
+ */
 export function getUserSessionSecret(): string | undefined {
   const dedicated = process.env.USER_SESSION_SECRET?.trim();
   if (dedicated) return dedicated;
+  if (process.env.NODE_ENV === "production") return undefined;
   const adminPassword = process.env.ADMIN_PASSWORD?.trim();
   return adminPassword || undefined;
 }
@@ -38,12 +44,14 @@ export type VerifiedUserSession = {
 export function createUserSessionToken(
   userId: number,
   email: string,
+  nowSeconds: number = Math.floor(Date.now() / 1000),
 ): string | null {
   const secret = getUserSessionSecret();
   if (!secret || !Number.isInteger(userId) || userId <= 0) return null;
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail) return null;
-  const payload = `${userId}:${normalizedEmail}`;
+  const exp = nowSeconds + USER_SESSION_TTL_SECONDS;
+  const payload = `${userId}:${normalizedEmail}:${exp}`;
   return `${payload}.${signPayload(payload, secret)}`;
 }
 
@@ -64,11 +72,20 @@ export function verifyUserSessionToken(
   const expectedSignature = signPayload(payload, secret);
   if (!safeEqualStrings(signature, expectedSignature)) return null;
 
-  const colonIndex = payload.indexOf(":");
-  if (colonIndex <= 0) return null;
+  const lastColon = payload.lastIndexOf(":");
+  if (lastColon <= 0) return null;
 
-  const userId = Number(payload.slice(0, colonIndex));
-  const email = payload.slice(colonIndex + 1).trim().toLowerCase();
+  const exp = Number(payload.slice(lastColon + 1));
+  if (!Number.isFinite(exp) || Math.floor(Date.now() / 1000) >= exp) {
+    return null;
+  }
+
+  const withoutExp = payload.slice(0, lastColon);
+  const firstColon = withoutExp.indexOf(":");
+  if (firstColon <= 0) return null;
+
+  const userId = Number(withoutExp.slice(0, firstColon));
+  const email = withoutExp.slice(firstColon + 1).trim().toLowerCase();
   if (!Number.isInteger(userId) || userId <= 0 || !email) return null;
 
   return { userId, email };
@@ -88,7 +105,7 @@ export function buildUserSessionCookieOptions(): {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 14 * 1000,
+    maxAge: USER_SESSION_TTL_SECONDS * 1000,
     ...(domain ? { domain } : {}),
   };
 }

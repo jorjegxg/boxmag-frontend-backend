@@ -7,9 +7,13 @@ import "./env";
  * Admin session cookie issued by the Next.js frontend (`/api/admin/auth`).
  * The backend validates the very same cookie so that direct API calls are
  * subject to the same admin gate as the UI.
+ *
+ * Token format: `v2.{expUnix}.{sha256Hex}` where the digest is over
+ * `boxmag-admin-v1:password:v2.{exp}` (must match boxmag4/lib/admin-auth.ts).
  */
 export const ADMIN_COOKIE_NAME = "boxmag-admin-session";
 const ADMIN_COOKIE_SALT = "boxmag-admin-v1";
+export const ADMIN_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 /** Server-side admin password (never exposed to the browser). */
 export function getAdminPassword(): string | undefined {
@@ -19,21 +23,17 @@ export function getAdminPassword(): string | undefined {
 
 /**
  * Optional shared secret for server-to-server / scripted admin access via the
- * `Authorization: Bearer <token>` or `x-admin-token` header.
+ * `Authorization: Bearer <token>` or the `x-admin-token` header.
  */
 export function getAdminApiToken(): string | undefined {
   const value = process.env.ADMIN_API_TOKEN?.trim();
   return value || undefined;
 }
 
-/**
- * Must produce the identical hex digest as the Next.js implementation in
- * `boxmag4/lib/admin-auth.ts` (WebCrypto SHA-256 over `salt:password`).
- */
-export function createAdminSessionToken(password: string): string {
+function signAdminPayload(password: string, payload: string): string {
   return crypto
     .createHash("sha256")
-    .update(`${ADMIN_COOKIE_SALT}:${password}`)
+    .update(`${ADMIN_COOKIE_SALT}:${password}:${payload}`)
     .digest("hex");
 }
 
@@ -45,10 +45,31 @@ export function safeEqualStrings(a: string, b: string): boolean {
   return crypto.timingSafeEqual(bufferA, bufferB);
 }
 
+export function createAdminSessionToken(
+  password: string,
+  nowSeconds: number = Math.floor(Date.now() / 1000),
+): string {
+  const exp = nowSeconds + ADMIN_SESSION_TTL_SECONDS;
+  const payload = `v2.${exp}`;
+  return `${payload}.${signAdminPayload(password, payload)}`;
+}
+
 export function isAdminSessionValid(
   token: string | undefined,
   password: string | undefined,
 ): boolean {
   if (!token || !password) return false;
-  return safeEqualStrings(token, createAdminSessionToken(password));
+
+  const parts = token.split(".");
+  if (parts.length !== 3 || parts[0] !== "v2") return false;
+
+  const exp = Number(parts[1]);
+  const signature = parts[2] ?? "";
+  if (!Number.isFinite(exp) || Math.floor(Date.now() / 1000) >= exp) {
+    return false;
+  }
+
+  const payload = `v2.${exp}`;
+  const expected = signAdminPayload(password, payload);
+  return safeEqualStrings(signature, expected);
 }

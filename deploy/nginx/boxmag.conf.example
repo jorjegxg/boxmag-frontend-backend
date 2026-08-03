@@ -78,6 +78,8 @@ server {
     ssl_certificate     /etc/letsencrypt/live/boxmag.eu/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/boxmag.eu/privkey.pem;
 
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
     client_max_body_size 25m;
 
     location / {
@@ -101,6 +103,8 @@ server {
     ssl_certificate     /etc/letsencrypt/live/boxmag.eu/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/boxmag.eu/privkey.pem;
 
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
     # Necesar pentru atasamente PDF (base64 in JSON, pana la ~18 MB fisier)
     client_max_body_size 25m;
 
@@ -120,6 +124,7 @@ server {
 
 # MinIO — bucket public (poze cutii din catalog)
 # URL-uri in DB: https://storage.boxmag.eu/boxmag4-images/boxes/...
+# Order attachments under orders/attachments/ are private (API proxy only).
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -127,6 +132,8 @@ server {
 
     ssl_certificate     /etc/letsencrypt/live/boxmag.eu/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/boxmag.eu/privkey.pem;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
     client_max_body_size 25m;
 

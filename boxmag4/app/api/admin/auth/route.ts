@@ -1,16 +1,37 @@
 import { NextResponse } from "next/server";
 import {
   ADMIN_COOKIE_NAME,
+  ADMIN_SESSION_TTL_SECONDS,
   createAdminSessionToken,
   getAdminPassword,
   safeEqualStrings,
 } from "../../../../lib/admin-auth";
+import { consumeRateLimit } from "../../../../lib/rate-limit";
 
 type AuthBody = {
   password?: string;
 };
 
+function clientKey(request: Request): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    return forwarded.split(",")[0]?.trim() || "unknown";
+  }
+  return request.headers.get("x-real-ip")?.trim() || "unknown";
+}
+
 export async function POST(request: Request) {
+  const rate = consumeRateLimit(`admin-auth:${clientKey(request)}`);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { ok: false, message: "Prea multe încercări. Încearcă din nou mai târziu." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rate.retryAfterSec) },
+      },
+    );
+  }
+
   const configuredPassword = getAdminPassword();
   if (!configuredPassword) {
     return NextResponse.json(
@@ -48,7 +69,7 @@ export async function POST(request: Request) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: ADMIN_SESSION_TTL_SECONDS,
     ...(cookieDomain ? { domain: cookieDomain } : {}),
   });
   return response;

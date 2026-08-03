@@ -1,6 +1,7 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
+import helmet from "helmet";
 import { buildCorsOptions } from "./config/cors";
 import { JSON_BODY_LIMIT } from "./config/uploads";
 import { healthRouter } from "./routes/health.route";
@@ -16,9 +17,23 @@ import {
 } from "./routes/payments.route";
 import { exchangeRateRouter } from "./routes/exchange-rate.route";
 import { contactRouter } from "./routes/contact.route";
+import {
+  authRateLimiter,
+  publicFormRateLimiter,
+} from "./middleware/rate-limit";
 
 export const app = express();
 
+// Rate-limit and reverse-proxy headers (nginx) — safe for local/tests too.
+app.set("trust proxy", 1);
+
+app.use(
+  helmet({
+    // API serves JSON to the Next.js app on another origin; CSP is handled at nginx/frontend.
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
 app.use(cors(buildCorsOptions()));
 app.use(cookieParser());
 
@@ -62,10 +77,10 @@ app.use("/api/health", healthRouter);
 app.use("/api/box-types", boxTypesRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/addresses", addressesRouter);
-app.use("/api/newsletter", newsletterRouter);
-app.use("/api/auth", authRouter);
+app.use("/api/newsletter", publicFormRateLimiter, newsletterRouter);
+app.use("/api/auth", authRateLimiter, authRouter);
 app.use("/api/shipping-methods", shippingMethodsRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/exchange-rate", exchangeRateRouter);
-app.use("/api/contact", contactRouter);
+app.use("/api/contact", publicFormRateLimiter, contactRouter);
 
