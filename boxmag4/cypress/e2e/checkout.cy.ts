@@ -229,6 +229,7 @@ describe("/checkout", () => {
     cy.contains("Express Delivery").click();
 
     cy.intercept("POST", "**/api/payments/create-checkout-session", (req) => {
+      expect(req.body.shipping.key).to.eq("express");
       expect(req.body.shipping.name).to.eq("Express Delivery");
       expect(req.body.shipping.price).to.eq(40);
       req.reply({

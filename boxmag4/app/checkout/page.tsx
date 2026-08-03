@@ -456,6 +456,7 @@ export default function CheckoutPage() {
               imageUrl: item.imageUrl ?? null,
             })),
             shipping: {
+              key: selectedShippingMethod.key,
               name: shippingDisplay.name,
               etaText: shippingDisplay.etaText,
               price: orderShipping,

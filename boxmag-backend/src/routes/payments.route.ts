@@ -22,6 +22,10 @@ import {
   getEurRonRate,
   roundMoney,
 } from "../services/exchange-rate.service";
+import {
+  resolveCheckoutCartItems,
+  resolveShippingMethod,
+} from "../services/checkout-pricing";
 
 type CartItemPayload = {
   itemNo: string;
@@ -49,6 +53,7 @@ type CreateCheckoutSessionPayload = {
   cartItems?: unknown;
   currency?: unknown;
   shipping?: {
+    key?: unknown;
     name?: unknown;
     etaText?: unknown;
     price?: unknown;
@@ -267,13 +272,10 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
   const email = toRequiredString(payload.email);
   const cartItems = parseCartItems(payload.cartItems);
   const address = parseAddress(payload.address);
-  const shippingName = toRequiredString(payload.shipping?.name);
-  const shippingEta = toRequiredString(payload.shipping?.etaText) ?? "";
-  const shippingPrice = toNonNegativeNumber(payload.shipping?.price);
-  const vatPercentRaw = toNonNegativeNumber(payload.vatPercent);
+  const shippingKey = toRequiredString(payload.shipping?.key);
   const attachmentPayload = parseAttachmentPayload(payload.attachment);
-  const vatPercent =
-    vatPercentRaw != null ? vatPercentRaw : env.taxPercent ?? 0;
+  // Always use server TAX_PERCENT — never trust client vatPercent.
+  const vatPercent = env.taxPercent ?? 0;
   const vatNumber = parseVatNumber(payload.vatNumber);
 
   if (
@@ -281,14 +283,13 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
     !cartItems ||
     cartItems.length === 0 ||
     !address ||
-    !shippingName ||
-    shippingPrice == null ||
+    !shippingKey ||
     !vatNumber
   ) {
     res.status(400).json({
       ok: false,
       message:
-        "Invalid checkout payload. Provide email, VAT number, address, shipping and at least one cart item.",
+        "Invalid checkout payload. Provide email, VAT number, address, shipping key and at least one cart item.",
     });
     return;
   }
@@ -302,11 +303,46 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
     return;
   }
 
-  const totalQuantity = cartItems.reduce(
+  let resolvedCartItems;
+  let resolvedShipping;
+  try {
+    const cartResult = await resolveCheckoutCartItems(
+      cartItems.map((item) => ({
+        itemNo: item.itemNo,
+        quantity: item.quantity,
+        ...(item.imageUrl ? { imageUrl: item.imageUrl } : {}),
+      })),
+    );
+    if (!cartResult.ok) {
+      res.status(400).json({ ok: false, message: cartResult.message });
+      return;
+    }
+    resolvedCartItems = cartResult.items;
+
+    const shippingResult = await resolveShippingMethod(shippingKey);
+    if (!shippingResult.ok) {
+      res.status(400).json({ ok: false, message: shippingResult.message });
+      return;
+    }
+    resolvedShipping = shippingResult.shipping;
+  } catch (pricingError) {
+    console.error("Failed to resolve checkout prices", pricingError);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to verify checkout prices.",
+    });
+    return;
+  }
+
+  const shippingName = resolvedShipping.name;
+  const shippingEta = resolvedShipping.etaText;
+  const shippingPrice = resolvedShipping.price;
+
+  const totalQuantity = resolvedCartItems.reduce(
     (sum, item) => sum + item.quantity,
     0,
   );
-  const subtotalEur = +cartItems
+  const subtotalEur = +resolvedCartItems
     .reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
     .toFixed(2);
   const vatAmountEur = +((subtotalEur * vatPercent) / 100).toFixed(2);
@@ -336,7 +372,7 @@ paymentsRouter.post("/create-checkout-session", async (req, res) => {
       ? convertEurToRon(amountEur, eurRonRate)
       : roundMoney(amountEur);
 
-  const chargedCartItems = cartItems.map((item) => ({
+  const chargedCartItems = resolvedCartItems.map((item) => ({
     ...item,
     unitPrice: convertForCharge(item.unitPrice),
     lineTotal: convertForCharge(item.unitPrice * item.quantity),

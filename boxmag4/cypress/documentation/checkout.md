@@ -12,7 +12,7 @@
 
 | Acțiune | Efect |
 |--------|--------|
-| Place order | `POST create-checkout-session` → order `payment_status=pending` + contact email → redirect Stripe |
+| Place order | `POST create-checkout-session` with `shipping.key` → server resolves catalog tier `300` + shipping method price + `TAX_PERCENT` → order `payment_status=pending` → redirect Stripe |
 | Stripe pay OK | Webhook `checkout.session.completed` **sau** success page poll `GET sessions/:id` |
 | First mark paid | `markOrderPaidBySession` → SMTP confirmation + internal notification emails |
 | Success paid (logged-in) | UI "Thank you", View my orders + Continue shopping, cart cleared |
@@ -45,7 +45,7 @@ If you always open `/checkout/success?session_id=…` after pay, poll path still
 3. Invalid / missing VAT → **CHECK:** format / required errors
 4. VAT lookup → **CHECK:** `#checkout-companyName` = company from mock
 5. Shipping express / own / standard → **CHECK:** totals `€ 1552.50` / `€ 1512.50` / `€ 1537.50`
-6. Guest + logged-in place order → **CHECK:** `create-checkout-session` body (email, address, VAT, shipping)
+6. Guest + logged-in place order → **CHECK:** `create-checkout-session` body (email, address, VAT, `shipping.key` / name / price)
 7. API 500 → **CHECK:** error message
 8. Slow submit → **CHECK:** button disabled
 

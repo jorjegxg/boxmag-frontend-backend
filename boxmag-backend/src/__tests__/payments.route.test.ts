@@ -56,6 +56,7 @@ vi.mock("../config/env", async (importOriginal) => {
     env: {
       ...actual.env,
       stripeWebhookSecret: "whsec_test_secret",
+      taxPercent: 21,
     },
   };
 });
@@ -76,6 +77,55 @@ vi.mock("../services/stripe", () => ({
 }));
 
 import { app } from "../app";
+
+const checkoutAddress = {
+  firstName: "Jane",
+  lastName: "Doe",
+  companyName: "Demo SRL",
+  phone: "799000000",
+  address: "Str Test 1",
+  postcode: "725400",
+  city: "Radauti",
+  country: "RO",
+};
+
+function mockCatalogAndShipping(options?: {
+  itemNo?: string;
+  unitPrice?: number;
+  productName?: string;
+  shippingKey?: string;
+  shippingPrice?: number;
+  shippingName?: string;
+  emptyCatalog?: boolean;
+  emptyShipping?: boolean;
+}) {
+  const itemNo = options?.itemNo ?? "STD-001";
+  const catalogRows = options?.emptyCatalog
+    ? []
+    : [
+        {
+          item_no: itemNo,
+          product_name: options?.productName ?? "Standard Box",
+          price_name: "300",
+          price_without_tax: options?.unitPrice ?? 10,
+        },
+      ];
+  const shippingRows = options?.emptyShipping
+    ? []
+    : [
+        {
+          id: 1,
+          method_key: options?.shippingKey ?? "standard",
+          name: options?.shippingName ?? "Standard",
+          eta_text: "3-5 days",
+          price: options?.shippingPrice ?? 30,
+        },
+      ];
+
+  queryMock
+    .mockResolvedValueOnce([catalogRows])
+    .mockResolvedValueOnce([shippingRows]);
+}
 
 describe("payments routes", () => {
   beforeEach(() => {
@@ -121,27 +171,20 @@ describe("payments routes", () => {
           },
         ],
         shipping: {
+          key: "standard",
           name: "Standard",
           etaText: "3-5 days",
           price: 30,
         },
         vatPercent: 21,
         vatNumber: "RO12345678",
-        address: {
-          firstName: "Jane",
-          lastName: "Doe",
-          companyName: "Demo SRL",
-          phone: "799000000",
-          address: "Str Test 1",
-          postcode: "725400",
-          city: "Radauti",
-          country: "RO",
-        },
+        address: checkoutAddress,
       });
 
     expect(response.status).toBe(400);
     expect(response.body.ok).toBe(false);
     expect(response.body.message).toContain("Minimum order quantity");
+    expect(stripeCreateMock).not.toHaveBeenCalled();
   });
 
   it("returns 400 when VAT number is missing or invalid", async () => {
@@ -158,21 +201,13 @@ describe("payments routes", () => {
           },
         ],
         shipping: {
+          key: "standard",
           name: "Standard",
           etaText: "3-5 days",
           price: 30,
         },
         vatPercent: 21,
-        address: {
-          firstName: "Jane",
-          lastName: "Doe",
-          companyName: "Demo SRL",
-          phone: "799000000",
-          address: "Str Test 1",
-          postcode: "725400",
-          city: "Radauti",
-          country: "RO",
-        },
+        address: checkoutAddress,
       });
 
     expect(response.status).toBe(400);
@@ -191,6 +226,8 @@ describe("payments routes", () => {
   });
 
   it("creates Stripe checkout session in RON when requested", async () => {
+    mockCatalogAndShipping({ unitPrice: 10, shippingPrice: 30 });
+
     const response = await request(app)
       .post("/api/payments/create-checkout-session")
       .send({
@@ -205,22 +242,14 @@ describe("payments routes", () => {
           },
         ],
         shipping: {
+          key: "standard",
           name: "Standard",
           etaText: "3-5 days",
           price: 30,
         },
         vatPercent: 21,
         vatNumber: "RO12345678",
-        address: {
-          firstName: "Jane",
-          lastName: "Doe",
-          companyName: "Demo SRL",
-          phone: "799000000",
-          address: "Str Test 1",
-          postcode: "725400",
-          city: "Radauti",
-          country: "RO",
-        },
+        address: checkoutAddress,
       });
 
     expect(response.status).toBe(200);
@@ -231,6 +260,107 @@ describe("payments routes", () => {
     expect(stripePayload.line_items[0].price_data.unit_amount).toBe(5000);
     expect(stripePayload.metadata.charge_currency).toBe("ron");
     expect(stripePayload.metadata.eur_ron_rate).toBe("5.0000");
+  });
+
+  it("overwrites client unitPrice and shipping.price with catalog values", async () => {
+    mockCatalogAndShipping({ unitPrice: 10, shippingPrice: 25 });
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({
+        email: "buyer@example.com",
+        currency: "eur",
+        cartItems: [
+          {
+            itemNo: "STD-001",
+            name: "Hacked Name",
+            unitPrice: 0.01,
+            quantity: 100,
+          },
+        ],
+        shipping: {
+          key: "standard",
+          name: "Free shipping",
+          etaText: "today",
+          price: 0,
+        },
+        vatPercent: 0,
+        vatNumber: "RO12345678",
+        address: checkoutAddress,
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    const stripePayload = stripeCreateMock.mock.calls[0]?.[0];
+    // Product line: catalog unit 10 EUR → 1000 cents
+    expect(stripePayload.line_items[0].price_data.unit_amount).toBe(1000);
+    expect(stripePayload.line_items[0].price_data.product_data.name).toBe(
+      "Standard Box",
+    );
+    // VAT line: 21% of 1000 = 210 EUR → 21000 cents (qty 100 * 10 = 1000 subtotal)
+    expect(stripePayload.line_items[1].price_data.unit_amount).toBe(21000);
+    // Shipping line: catalog 25 EUR → 2500 cents
+    expect(stripePayload.line_items[2].price_data.unit_amount).toBe(2500);
+  });
+
+  it("returns 400 when product itemNo is unknown", async () => {
+    mockCatalogAndShipping({ emptyCatalog: true });
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({
+        email: "buyer@example.com",
+        cartItems: [
+          {
+            itemNo: "MISSING-001",
+            name: "Ghost",
+            unitPrice: 1,
+            quantity: 100,
+          },
+        ],
+        shipping: {
+          key: "standard",
+          name: "Standard",
+          etaText: "3-5 days",
+          price: 30,
+        },
+        vatNumber: "RO12345678",
+        address: checkoutAddress,
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain("Unknown or unpriced product");
+    expect(stripeCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when shipping key is unknown", async () => {
+    mockCatalogAndShipping({ emptyShipping: true });
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({
+        email: "buyer@example.com",
+        cartItems: [
+          {
+            itemNo: "STD-001",
+            name: "Standard Box",
+            unitPrice: 10,
+            quantity: 100,
+          },
+        ],
+        shipping: {
+          key: "not-a-method",
+          name: "Fake",
+          etaText: "never",
+          price: 0,
+        },
+        vatNumber: "RO12345678",
+        address: checkoutAddress,
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain("Unknown or inactive shipping method");
+    expect(stripeCreateMock).not.toHaveBeenCalled();
   });
 
   it("webhook checkout.session.completed marks paid and sends confirmation emails", async () => {
