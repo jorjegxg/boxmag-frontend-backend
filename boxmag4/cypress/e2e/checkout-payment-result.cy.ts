@@ -397,7 +397,9 @@ describe("Guest checkout → create account", () => {
     cy.get("#reg-surname").clear().type("Marin");
     cy.get("#reg-vat").clear().type("RO12345678");
     cy.get("#reg-phone").clear().type("799888777");
-    cy.get("#reg-company").clear().type("Guest Checkout SRL");
+    // Company is readonly — filled by VAT lookup/cache after typing VAT.
+    cy.get("#reg-company").should("have.attr", "readonly");
+    cy.get("#reg-company").should("have.value", "Guest Checkout SRL");
 
     cy.intercept("POST", "**/api/auth/register", {
       statusCode: 201,

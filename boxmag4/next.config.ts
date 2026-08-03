@@ -57,6 +57,13 @@ const nextConfig: NextConfig = {
       process.env.NEXT_PUBLIC_APP_ENV ??
       readRootEnvValue("NEXT_PUBLIC_APP_ENV") ??
       (process.env.NODE_ENV === "production" ? "production" : "development"),
+    // Compose / checklist use BACKEND_PUBLIC_URL; bake it as NEXT_PUBLIC for the client.
+    NEXT_PUBLIC_BACKEND_URL:
+      process.env.NEXT_PUBLIC_BACKEND_URL ??
+      readRootEnvValue("NEXT_PUBLIC_BACKEND_URL") ??
+      process.env.BACKEND_PUBLIC_URL ??
+      readRootEnvValue("BACKEND_PUBLIC_URL") ??
+      "",
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:
       process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ??
       readRootEnvValue("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY") ??

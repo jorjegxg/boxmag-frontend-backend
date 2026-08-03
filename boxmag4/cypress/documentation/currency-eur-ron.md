@@ -58,10 +58,10 @@ Viewport ≥ `lg` (TopBar selectors `max-md:hidden`). Cypress default: 1280×800
 
 ### 5. Checkout trimite `currency: ron`
 
-1. Set RON + cart seed + logged-in + adresă salvată
-2. Completează VAT (`#checkout-vatNumber`) — lookup mock
+1. Set RON + cart seed + logged-in profile mock (VAT/company) + adresă salvată
+2. **CHECK:** profile seeds `#checkout-vatNumber` / `#checkout-companyName` (fără re-type / `@vatLookup`)
 3. Place order (mock `create-checkout-session`)
-4. **CHECK:** `req.body.currency === "ron"`
+4. **CHECK:** `req.body.currency === "ron"` și `req.body.shipping.key === "standard"`
 
 ---
 

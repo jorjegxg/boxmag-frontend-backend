@@ -17,6 +17,7 @@ import {
   CART_STORAGE_KEY,
   sampleWarehouseAddress,
   TEST_EMAIL,
+  VAT_COMPANY_CACHE_KEY,
 } from "../support/commands";
 
 const CURRENCY_STORAGE = "boxmag.currency";
@@ -228,10 +229,20 @@ describe("Monedă EUR / RON", () => {
       statusCode: 200,
       body: { ok: true, data: [sampleWarehouseAddress] },
     }).as("getCheckoutAddresses");
-    cy.intercept("GET", "**/api/vat-lookup*", {
+    cy.intercept("GET", "**/api/auth/profile*", {
       statusCode: 200,
-      body: { ok: true, companyName: "Boxmag SRL", vatNumber: "RO12345678" },
-    }).as("vatLookup");
+      body: {
+        ok: true,
+        data: {
+          firstName: "John",
+          lastName: "Doe",
+          phone: "799111222",
+          email: TEST_EMAIL,
+          companyName: "Boxmag SRL",
+          vatNumber: "RO12345678",
+        },
+      },
+    }).as("getCheckoutProfile");
 
     cy.visit("/checkout", {
       onBeforeLoad(win) {
@@ -239,24 +250,24 @@ describe("Monedă EUR / RON", () => {
         win.localStorage.setItem(AUTH_EMAIL_STORAGE_KEY, TEST_EMAIL);
         win.localStorage.setItem(CURRENCY_STORAGE, "ron");
         win.localStorage.setItem(CART_STORAGE_KEY, seedRonCart());
+        win.localStorage.removeItem(VAT_COMPANY_CACHE_KEY);
       },
     });
     cy.wait([
       "@getExchangeRate",
       "@getShippingMethods",
       "@getCheckoutAddresses",
+      "@getCheckoutProfile",
     ]);
 
     currencySelect().should("have.value", "RON");
-    cy.get("#checkout-vatNumber").clear().type("RO12345678", { delay: 0 });
-    cy.wait("@vatLookup");
+    // Profile seeds VAT + company (cache); no need to re-type / wait lookup.
+    cy.get("#checkout-vatNumber").should("have.value", "RO12345678");
     cy.get("#checkout-companyName").should("have.value", "Boxmag SRL");
-    cy.contains(/verify the VAT number|verificăm numărul de TVA/i).should(
-      "not.exist",
-    );
 
     cy.intercept("POST", "**/api/payments/create-checkout-session", (req) => {
       expect(req.body.currency).to.eq("ron");
+      expect(req.body.shipping.key).to.eq("standard");
       req.reply({
         statusCode: 200,
         body: {

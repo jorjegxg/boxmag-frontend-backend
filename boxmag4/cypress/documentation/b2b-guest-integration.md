@@ -19,7 +19,7 @@
 2. Plasează comandă B2B guest
 3. **CHECK:** response `201` și `emailsSent.notification === true`
 4. **CHECK:** response `emailsSent.customerConfirmation === true`
-5. **CHECK:** log backend `order_notification_email_sent` pentru `orderId` include `orders@boxmag.eu`
+5. **CHECK:** log backend `order_notification_email_sent` pentru `orderId` include `orders@boxmag.eu` (skip soft pe Windows când `boxmag4-backend` nu rulează în Docker — API `emailsSent.notification` rămâne assert-ul principal)
 6. Skip account („No, thanks”)
 7. Login admin → tabel Comenzi + detalii
 8. **MANUAL CHECK:** inbox `orders@` / `info@` + confirmare pe emailul guest

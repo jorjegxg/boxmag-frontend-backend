@@ -45,16 +45,18 @@ Put printed `whsec_…` into root `.env` as `STRIPE_WEBHOOK_SECRET`, restart bac
 3. Invalid / missing VAT → **CHECK:** format / required errors
 4. VAT lookup → **CHECK:** `#checkout-companyName` = company from mock
 5. Shipping express / own / standard → **CHECK:** totals `€ 1552.50` / `€ 1512.50` / `€ 1537.50`
-6. Guest + logged-in place order → **CHECK:** `create-checkout-session` body (email, address, VAT, `shipping.key` / name / price)
+6. Guest + logged-in place order → **CHECK:** `create-checkout-session` body (email, address, VAT, `shipping.key` / name / price). VAT helper clears `boxmag.vatCompanyCache.v1` before typing so `@vatLookup` always fires (profile load otherwise seeds the cache).
 7. API 500 → **CHECK:** error message
 8. Slow submit → **CHECK:** button disabled
+
+`visitCheckoutLoggedIn` waits for profile VAT + company before returning (avoids Place order race).
 
 ### checkout-payment-result.cy.ts
 
 1. Paid session (logged-in) → **CHECK:** thank you, order number, email, links `/account#orders` + `/shop`; no create-account CTA
 2. Paid session (guest) → **CHECK:** create-account card; CTA href includes `from=checkout`, email prefill only, `returnTo=/account#orders`; no View my orders
 3. Guest skip → **CHECK:** navigates to `/shop`
-4. Guest checkout → success → Create account → Register → **CHECK:** email locked from poll; other fields filled manually; register body matches; success modal `returnTo=/account#orders`
+4. Guest checkout → success → Create account → Register → **CHECK:** email locked from poll; company readonly from VAT; other fields filled manually; register body matches; success modal `returnTo=/account#orders`
 5. Paid session → **CHECK:** cart localStorage emptied
 6. Unpaid session → **CHECK:** pending copy; cart kept
 7. Session API fail / missing `session_id` → **CHECK:** error UI

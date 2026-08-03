@@ -379,7 +379,7 @@ export async function setEmailVerificationToken(options: {
 export function assertOrderNotificationEmailLog(options: {
   orderId: number;
   mustIncludeRecipient?: string;
-}): null {
+}): { skipped?: boolean; reason?: string } | null {
   const orderId = Number(options.orderId);
   if (!Number.isFinite(orderId) || orderId <= 0) {
     throw new Error(`Invalid orderId for email log check: ${options.orderId}`);
@@ -394,6 +394,19 @@ export function assertOrderNotificationEmailLog(options: {
     "orders@boxmag.eu";
 
   const logs = readBackendContainerLogs(200);
+  if (logs == null) {
+    // Host-run backend (typical Windows + Docker Desktop for MySQL/MinIO only):
+    // no boxmag4-backend container to `docker logs`. Specs already assert
+    // `emailsSent.notification` from the API response.
+    console.warn(
+      `[cypress] Skipping order_notification_email_sent log check for orderId=${orderId} (backend container logs unavailable).`,
+    );
+    return {
+      skipped: true,
+      reason: "backend container logs unavailable",
+    };
+  }
+
   const needle = `"event":"order_notification_email_sent","orderId":${orderId}`;
   const matchingLines = logs
     .split("\n")
@@ -416,7 +429,26 @@ export function assertOrderNotificationEmailLog(options: {
   return null;
 }
 
-function readBackendContainerLogs(tail: number): string {
+function dockerLogsUnavailable(stderr: string, errorMessage: string): boolean {
+  const text = `${stderr}\n${errorMessage}`.toLowerCase();
+  return (
+    text.includes("no such container") ||
+    text.includes("no such object") ||
+    text.includes("is not running") ||
+    text.includes("enoent") ||
+    text.includes("docker.sock") ||
+    text.includes("cannot connect to the docker daemon") ||
+    text.includes("error during connect")
+  );
+}
+
+/**
+ * Read backend process logs.
+ * Prefers `docker logs boxmag4-backend`. On Windows Docker Desktop, falls back
+ * to the named-pipe Docker Engine API. Returns null when logs are unavailable
+ * (host-run backend without a container) so callers can soft-skip.
+ */
+function readBackendContainerLogs(tail: number): string | null {
   const dockerResult = spawnSync(
     "docker",
     ["logs", "boxmag4-backend", "--tail", String(tail)],
@@ -426,12 +458,61 @@ function readBackendContainerLogs(tail: number): string {
     return `${dockerResult.stdout ?? ""}\n${dockerResult.stderr ?? ""}`;
   }
 
-  // Fallback for Cypress-in-Docker: Node HTTP over the mounted docker.sock
-  const nodeRead = spawnSync(
-    "node",
-    [
-      "-e",
-      `
+  const dockerErr =
+    dockerResult.error?.message || String(dockerResult.stderr || "");
+
+  // Windows Docker Desktop: Engine API via named pipe (not /var/run/docker.sock).
+  if (process.platform === "win32") {
+    const nodeRead = spawnSync(
+      "node",
+      [
+        "-e",
+        `
+const http = require('http');
+const chunks = [];
+const req = http.request({
+  socketPath: '\\\\\\\\.\\\\pipe\\\\docker_engine',
+  path: '/containers/boxmag4-backend/logs?stdout=1&stderr=1&tail=${tail}',
+  method: 'GET',
+}, (res) => {
+  if (res.statusCode && res.statusCode >= 400) {
+    console.error('docker api status ' + res.statusCode);
+    process.exit(1);
+  }
+  res.on('data', (c) => chunks.push(c));
+  res.on('end', () => {
+    const buf = Buffer.concat(chunks);
+    let out = '';
+    let i = 0;
+    while (i + 8 <= buf.length) {
+      const size = buf.readUInt32BE(i + 4);
+      const start = i + 8;
+      const end = start + size;
+      if (end > buf.length) break;
+      out += buf.slice(start, end).toString('utf8');
+      i = end;
+    }
+    if (!out) out = buf.toString('utf8');
+    process.stdout.write(out);
+  });
+});
+req.on('error', (e) => { console.error(e.message); process.exit(1); });
+req.end();
+`,
+      ],
+      { encoding: "utf8" },
+    );
+
+    if (!nodeRead.error && nodeRead.status === 0 && (nodeRead.stdout ?? "").trim()) {
+      return nodeRead.stdout ?? "";
+    }
+  } else {
+    // Fallback for Cypress-in-Docker: Node HTTP over the mounted docker.sock
+    const nodeRead = spawnSync(
+      "node",
+      [
+        "-e",
+        `
 const http = require('http');
 const chunks = [];
 const req = http.request({
@@ -459,18 +540,33 @@ const req = http.request({
 req.on('error', (e) => { console.error(e.message); process.exit(1); });
 req.end();
 `,
-    ],
-    { encoding: "utf8" },
-  );
-
-  if (nodeRead.error || nodeRead.status !== 0) {
-    const dockerErr = dockerResult.error?.message || dockerResult.stderr || "";
-    throw new Error(
-      `Failed to read backend logs via docker/node socket: ${
-        nodeRead.error?.message || nodeRead.stderr || dockerErr || "unknown error"
-      }`,
+      ],
+      { encoding: "utf8" },
     );
+
+    if (!nodeRead.error && nodeRead.status === 0) {
+      return nodeRead.stdout ?? "";
+    }
+
+    if (
+      !dockerLogsUnavailable(
+        dockerErr,
+        nodeRead.error?.message || String(nodeRead.stderr || ""),
+      )
+    ) {
+      throw new Error(
+        `Failed to read backend logs via docker/node socket: ${
+          nodeRead.error?.message || nodeRead.stderr || dockerErr || "unknown error"
+        }`,
+      );
+    }
   }
 
-  return nodeRead.stdout ?? "";
+  if (dockerLogsUnavailable(dockerErr, "")) {
+    return null;
+  }
+
+  throw new Error(
+    `Failed to read backend logs via docker: ${dockerErr || "unknown error"}`,
+  );
 }

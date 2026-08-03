@@ -48,7 +48,7 @@ Dev mode pre-completează formularul (email demo, VAT, parole). Testele mock-uie
 2. Mock login + `GET /api/auth/profile` cu aceleași valori (`surname` → `lastName`)
 3. Visit `/account#account` → Sign in
 4. **CHECK:** `#acc-first` = firstName; `#acc-last` = surname; `#acc-phone` = phone
-5. **CHECK:** `#acc-vat` = vatNumber; `#acc-company` = companyName; email afișat (read-only)
+5. **CHECK:** `#acc-vat` = vatNumber; `#acc-company` = companyName; `#acc-email` = email (readonly)
 
 ### 4. Parole diferite
 

@@ -9,7 +9,11 @@
  * (Stripe webhook POST /api/payments/webhook). Success-page poll is read-only.
  */
 
-import { TEST_EMAIL, sampleWarehouseAddress } from "../support/commands";
+import {
+  TEST_EMAIL,
+  VAT_COMPANY_CACHE_KEY,
+  sampleWarehouseAddress,
+} from "../support/commands";
 
 const fillManualAddress = (overrides: Partial<Record<string, string>> = {}) => {
   const data = {
@@ -67,6 +71,13 @@ const fillValidVat = (
     companyName: expectCompany || "Boxmag SRL",
     vatNumber: vat,
   });
+
+  // Profile load + prior tests seed localStorage VAT cache; cache hits skip
+  // /api/vat-lookup and make cy.wait("@vatLookup") hang.
+  cy.window().then((win) => {
+    win.localStorage.removeItem(VAT_COMPANY_CACHE_KEY);
+  });
+
   cy.get("#checkout-vatNumber").clear().type(vat, { delay: 0 });
 
   // VAT lookup fires after a 600ms debounce — wait for the actual request so
@@ -153,6 +164,7 @@ describe("/checkout", () => {
       expect(req.body.vatNumber).to.eq("RO12345678");
       expect(req.body.address.firstName).to.eq("Elena");
       expect(req.body.address.lastName).to.eq("Marin");
+      expect(req.body.shipping.key).to.eq("standard");
       expect(req.body.consentEmail).to.eq(true);
       req.reply({
         statusCode: 200,
@@ -189,6 +201,7 @@ describe("/checkout", () => {
       expect(req.body.address.postcode).to.eq("725400");
       expect(req.body.address.city).to.eq("Radauti");
       expect(req.body.address.country).to.eq("RO");
+      expect(req.body.shipping.key).to.eq("standard");
       expect(req.body.shipping.name).to.eq("Standard Delivery");
       req.reply({
         statusCode: 200,
@@ -212,6 +225,7 @@ describe("/checkout", () => {
       expect(req.body.address.address).to.eq("Str. Depozit 15");
       expect(req.body.address.city).to.eq("Radauti");
       expect(req.body.address.country).to.eq("RO");
+      expect(req.body.shipping.key).to.eq("standard");
       req.reply({
         statusCode: 200,
         body: { ok: true, data: { url: "/checkout#payment-redirect", orderId: 8 } },
@@ -258,8 +272,10 @@ describe("/checkout", () => {
 
   it("butonul Place order arată stare submitting în timpul request-ului", () => {
     cy.visitCheckoutLoggedIn({ addresses: [sampleWarehouseAddress] });
-    // Saved address already has companyName — skip flake on read-only VAT company field
-    fillValidVat("RO12345678", { expectCompany: null });
+    // Profile + saved address already supply VAT/company — avoid re-typing VAT
+    // (lookup race can block Place order via isVatLookupInProgress).
+    cy.get("#checkout-vatNumber").should("have.value", "RO12345678");
+    cy.get("#checkout-companyName").should("not.have.value", "");
 
     cy.intercept("POST", "**/api/payments/create-checkout-session", {
       delay: 2000,
@@ -268,7 +284,9 @@ describe("/checkout", () => {
     }).as("slowCheckout");
 
     cy.contains("button", "Place order").click();
-    cy.contains("button", "Placing order...").should("be.disabled");
+    cy.contains("button", /Placing order|Se trimite comanda|Bestellung wird gesendet/i).should(
+      "be.disabled",
+    );
     cy.wait("@slowCheckout");
     cy.location("hash").should("eq", "#payment-redirect");
   });

@@ -170,16 +170,19 @@ describe("/account – tab My Account (logat)", () => {
     cy.get("#acc-first").should("have.value", "John");
   });
 
-  it("permite modificarea numelui, telefonului și emailului", () => {
+  it("permite modificarea numelui și telefonului (email e readonly)", () => {
+    cy.get("#acc-email")
+      .should("have.value", TEST_EMAIL)
+      .and("have.attr", "readonly");
+
     cy.get("#acc-first").clear().type("Elena");
     cy.get("#acc-last").clear().type("Ionescu");
     cy.get("#acc-phone").clear().type("721234567");
-    cy.get("#acc-email").clear().type("elena@example.com");
 
     cy.get("#acc-first").should("have.value", "Elena");
     cy.get("#acc-last").should("have.value", "Ionescu");
     cy.get("#acc-phone").should("have.value", "721234567");
-    cy.get("#acc-email").should("have.value", "elena@example.com");
+    cy.get("#acc-email").should("have.value", TEST_EMAIL);
   });
 });
 

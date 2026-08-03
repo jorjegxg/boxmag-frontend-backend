@@ -184,7 +184,9 @@ describe("Registration page", () => {
     cy.get("#acc-phone").should("have.value", data.phone);
     cy.get("#acc-vat").should("have.value", data.vatNumber);
     cy.get("#acc-company").should("have.value", data.companyName);
-    cy.contains(data.email).should("exist");
+    cy.get("#acc-email")
+      .should("have.value", data.email)
+      .and("have.attr", "readonly");
   });
 
   it("shows validation error when passwords do not match", () => {

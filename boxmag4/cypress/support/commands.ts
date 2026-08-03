@@ -4,7 +4,14 @@ export const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
 export const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 export const CART_STORAGE_KEY = "boxmag.cart";
 export const SHIPPING_METHODS_CACHE_KEY = "boxmag.checkout.shippingMethods.v2";
+/** Must match `VAT_COMPANY_CACHE_KEY` in `boxmag4/lib/vat-company.ts`. */
+export const VAT_COMPANY_CACHE_KEY = "boxmag.vatCompanyCache.v1";
 export const TEST_EMAIL = "test@example.com";
+
+/** Clear VAT→company localStorage cache so Cypress can wait on `@vatLookup`. */
+export function clearVatCompanyCacheInWindow(win: Window) {
+  win.localStorage.removeItem(VAT_COMPANY_CACHE_KEY);
+}
 
 export const MOCK_SHIPPING_METHODS = [
   {
@@ -286,6 +293,7 @@ Cypress.Commands.add("visitCheckoutLoggedOut", (options: { cartItems?: SeedCartI
       win.localStorage.removeItem(AUTH_STORAGE_KEY);
       win.localStorage.removeItem(AUTH_EMAIL_STORAGE_KEY);
       win.localStorage.removeItem(SHIPPING_METHODS_CACHE_KEY);
+      clearVatCompanyCacheInWindow(win);
       win.localStorage.setItem(CART_STORAGE_KEY, buildCartStorage(cartItems));
     },
   });
@@ -323,11 +331,17 @@ Cypress.Commands.add(
       onBeforeLoad(win) {
         setAuthInWindow(win, email);
         win.localStorage.removeItem(SHIPPING_METHODS_CACHE_KEY);
+        // Keep cache empty until profile load seeds it — tests that need a
+        // network VAT lookup must clear again before typing (see fillValidVat).
+        clearVatCompanyCacheInWindow(win);
         win.localStorage.setItem(CART_STORAGE_KEY, buildCartStorage(cartItems));
       },
     });
 
     cy.wait(["@getShippingMethods", "@getCheckoutAddresses", "@getCheckoutProfile"]);
+    // Profile seeds VAT into the form; wait so Place order is not raced.
+    cy.get("#checkout-vatNumber").should("have.value", "RO12345678");
+    cy.get("#checkout-companyName").should("not.have.value", "");
   },
 );
 

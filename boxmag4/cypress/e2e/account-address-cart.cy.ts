@@ -200,6 +200,7 @@ describe("Account address → checkout (coș)", () => {
         expect(req.body.address.city).to.eq("Radauti");
         expect(req.body.address.country).to.eq("RO");
         expect(req.body.email).to.eq(TEST_EMAIL);
+        expect(req.body.shipping.key).to.eq("standard");
 
         req.reply({
           statusCode: 200,
@@ -210,6 +211,8 @@ describe("Account address → checkout (coș)", () => {
         });
       }).as("createCheckout");
 
+      cy.get("#checkout-vatNumber").should("have.value", "RO12345678");
+      cy.get("#checkout-companyName").should("not.have.value", "");
       cy.contains("button", "Place order").click();
       cy.wait("@createCheckout");
       cy.location("hash").should("eq", "#payment-redirect");

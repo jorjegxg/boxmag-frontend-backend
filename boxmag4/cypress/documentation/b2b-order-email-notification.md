@@ -18,6 +18,8 @@
 3. **CHECK:** `emailsSent.notification === true`
 4. **CHECK:** `emailsSent.customerConfirmation === true`
 5. **CHECK:** log `order_notification_email_sent` pentru `orderId` conține `orders@boxmag.eu`
+   - Soft-skip când containerul `boxmag4-backend` lipsește (host-run pe Windows); assert-ul API `emailsSent.notification` rămâne obligatoriu
+   - Pe Linux/CI cu Docker: `docker logs` sau socket `/var/run/docker.sock`; pe Windows Desktop încearcă și named pipe `\\.\pipe\docker_engine`
 6. **MANUAL CHECK:** Inbox/Spam `orders@` / `info@`
 
 ## Rulare

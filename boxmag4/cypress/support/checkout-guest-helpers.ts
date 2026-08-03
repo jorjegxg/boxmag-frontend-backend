@@ -169,6 +169,7 @@ export const visitCheckoutWithCart = (
       win.localStorage.removeItem(AUTH_STORAGE_KEY);
       win.localStorage.removeItem(AUTH_EMAIL_STORAGE_KEY);
       win.localStorage.removeItem(SHIPPING_METHODS_CACHE_KEY);
+      win.localStorage.removeItem("boxmag.vatCompanyCache.v1");
       win.localStorage.setItem(
         CART_STORAGE_KEY,
         JSON.stringify({
@@ -196,6 +197,9 @@ export const fillGuestCheckoutForm = () => {
   cy.get('input[placeholder="Country"]').clear().type(COUNTRY);
   cy.get('input[placeholder="Phone"]').clear().type(PHONE);
 
+  cy.window().then((win) => {
+    win.localStorage.removeItem("boxmag.vatCompanyCache.v1");
+  });
   cy.get("#checkout-vatNumber").clear().type(VAT_NUMBER, { delay: 0 });
   cy.wait("@vatLookupCheckout", { timeout: 15000 });
   cy.get("#checkout-companyName", { timeout: 15000 }).should(
