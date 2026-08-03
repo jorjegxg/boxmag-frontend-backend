@@ -13,14 +13,14 @@
 | Acțiune | Efect |
 |--------|--------|
 | Place order | `POST create-checkout-session` with `shipping.key` → server resolves catalog tier `300` + shipping method price + `TAX_PERCENT` → order `payment_status=pending` → redirect Stripe |
-| Stripe pay OK | Webhook `checkout.session.completed` **sau** success page poll `GET sessions/:id` |
-| First mark paid | `markOrderPaidBySession` → SMTP confirmation + internal notification emails |
-| Success paid (logged-in) | UI "Thank you", View my orders + Continue shopping, cart cleared |
-| Success paid (guest) | UI "Thank you" + create-account card (CTA → `/registration?from=checkout`), no View my orders |
+| Stripe pay OK | Webhook `checkout.session.completed` marks paid; success page poll is read-only |
+| First mark paid | `markOrderPaidBySession` (webhook only) → SMTP confirmation + internal notification emails |
+| Success paid (logged-in) | UI "Thank you", order number, View my orders + Continue shopping, cart cleared |
+| Success paid (guest) | UI "Thank you" + create-account card (CTA → `/registration?from=checkout&email=…`), no View my orders |
 | Success unpaid | UI "Payment is still pending", cart kept |
 | Cancel | Cart preserved |
 
-**Emails:** frontend never sends mail. Backend only after payment flips pending→paid. Needs SMTP (`EMAIL_ORDERS_*` / `SMTP_*`) + either webhook delivery or success-page poll.
+**Emails:** frontend never sends mail. Backend only after payment flips pending→paid via webhook. Needs SMTP (`EMAIL_ORDERS_*` / `SMTP_*`) + webhook delivery.
 
 **Local webhook:** Stripe Dashboard cannot reach `localhost`. Run:
 
@@ -30,7 +30,7 @@ stripe listen --forward-to localhost:3005/api/payments/webhook
 
 Put printed `whsec_…` into root `.env` as `STRIPE_WEBHOOK_SECRET`, restart backend.
 
-If you always open `/checkout/success?session_id=…` after pay, poll path still marks paid + sends emails even without webhook.
+`GET /api/payments/sessions/:id` returns only `paymentStatus`, `customerEmail`, and `order.id` / `orderNumber` — no contact PII, no paid-mark side effects.
 
 **Account orders:** listed by contact email (`GET /api/orders?email=`). Checkout email must match login email.
 
@@ -52,9 +52,9 @@ If you always open `/checkout/success?session_id=…` after pay, poll path still
 ### checkout-payment-result.cy.ts
 
 1. Paid session (logged-in) → **CHECK:** thank you, order number, email, links `/account#orders` + `/shop`; no create-account CTA
-2. Paid session (guest) → **CHECK:** create-account card; CTA href includes `from=checkout`, email prefill, `returnTo=/account#orders`; no View my orders
+2. Paid session (guest) → **CHECK:** create-account card; CTA href includes `from=checkout`, email prefill only, `returnTo=/account#orders`; no View my orders
 3. Guest skip → **CHECK:** navigates to `/shop`
-4. Guest checkout → success → Create account → Register → **CHECK:** prefill `from=checkout`, email locked, register body matches checkout contact, success modal `returnTo=/account#orders`
+4. Guest checkout → success → Create account → Register → **CHECK:** email locked from poll; other fields filled manually; register body matches; success modal `returnTo=/account#orders`
 5. Paid session → **CHECK:** cart localStorage emptied
 6. Unpaid session → **CHECK:** pending copy; cart kept
 7. Session API fail / missing `session_id` → **CHECK:** error UI

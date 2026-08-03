@@ -183,7 +183,7 @@ Each section follows: **Purpose → What to expect → Key files → Backend/API
 
 **Backend/API:** `GET /api/payments/sessions/:sessionId`
 
-**Gotchas:** Payment may also be confirmed via Stripe webhook asynchronously. Page should handle pending state.
+**Gotchas:** Payment confirmed via Stripe webhook asynchronously. Success poll is read-only (status + order number + email). Page should handle pending state.
 
 ---
 
@@ -572,7 +572,7 @@ Route files in `boxmag-backend/src/routes/`:
 
 ### `/api/payments` (`payments.route.ts`)
 - `POST /create-checkout-session` — B2C Stripe checkout
-- `GET /sessions/:sessionId` — Poll session status
+- `GET /sessions/:sessionId` — Poll session status (read-only: paymentStatus, order id/number, customerEmail; no PII contact; webhook marks paid)
 - `POST /webhook` — Stripe webhook (raw body in `app.ts`)
 
 ### `/api/addresses` (`addresses.route.ts`)

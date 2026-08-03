@@ -669,82 +669,24 @@ paymentsRouter.get("/sessions/:sessionId", async (req, res) => {
     const stripe = getStripeClient();
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-    const paid =
-      session.payment_status === "paid" ||
-      session.payment_status === "no_payment_required";
-
-    if (paid) {
-      try {
-        await markOrderPaidBySession(session);
-      } catch (markError) {
-        console.error("Failed to mark order paid from session lookup", markError);
-      }
-    }
-
+    // Read-only poll: do not mark paid here. Webhook is the sole paid-mark path.
     const [orderRows] = await mysqlPool.query<OrderRow[]>(
-      `SELECT id, status, payment_status, stripe_session_id, stripe_payment_intent_id,
-              total_amount_cents, currency, box_type_name, cardboard_type, cardboard_colour,
-              box_print, size_type, transport, quantity, attachment_name, attachment_object_name,
-              attachment_url, message, created_at
-       FROM orders WHERE stripe_session_id = ? LIMIT 1`,
+      `SELECT id FROM orders WHERE stripe_session_id = ? LIMIT 1`,
       [session.id],
     );
 
     const order = orderRows[0] ?? null;
-
-    let contact: {
-      firstName: string;
-      surname: string;
-      companyName: string;
-      vatNumber: string;
-      phone: string;
-      email: string;
-    } | null = null;
-
-    if (order) {
-      const [contactRows] = await mysqlPool.query<ContactRow[]>(
-        `SELECT first_name, surname, company_name, vat_number, email, phone,
-                address, postcode, city, country,
-                create_account, consent_phone, consent_email
-         FROM contacts WHERE order_id = ? LIMIT 1`,
-        [order.id],
-      );
-      const contactRow = contactRows[0];
-      if (contactRow) {
-        contact = {
-          firstName: contactRow.first_name ?? "",
-          surname: contactRow.surname ?? "",
-          companyName: contactRow.company_name ?? "",
-          vatNumber: contactRow.vat_number ?? "",
-          phone: contactRow.phone ?? "",
-          email: contactRow.email ?? "",
-        };
-      }
-    }
-
-    const customerEmail =
-      session.customer_details?.email ?? contact?.email ?? null;
 
     res.json({
       ok: true,
       data: {
         sessionId: session.id,
         paymentStatus: session.payment_status,
-        amountTotal: session.amount_total,
-        currency: session.currency,
-        customerEmail,
-        contact,
+        customerEmail: session.customer_details?.email ?? null,
         order: order
           ? {
               id: order.id,
               orderNumber: `ORD-${String(order.id).padStart(4, "0")}`,
-              status: order.status,
-              paymentStatus: order.payment_status,
-              totalAmountCents: order.total_amount_cents,
-              currency: order.currency,
-              quantity: order.quantity,
-              transport: order.transport,
-              createdAt: order.created_at,
             }
           : null,
       },

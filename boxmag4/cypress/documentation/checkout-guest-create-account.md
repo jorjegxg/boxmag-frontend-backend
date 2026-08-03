@@ -27,7 +27,7 @@ Nu trece prin Stripe UI. Persistarea comenzii + link-ul la cont sunt reale (back
 1. Health check backend (`GET /api/health`) — skip dacă down
 2. Guest place order (cart + form)
 3. **CHECK:** success „Thank you”, order number, create-account CTA
-4. Create account → registration prefill `from=checkout`, email readonly
+4. Create account → registration email prefill `from=checkout` (email readonly; other fields typed)
 5. Register → ensure pending + `/verify-email?token=…`
 6. Login `/account#orders`
 7. **CHECK:** order în listă + detaliu (produs, qty, adresă, PAID)

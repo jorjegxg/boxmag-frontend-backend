@@ -10,7 +10,6 @@ import { ServicesSection } from "../../global/components/services-section";
 import { HaveAQuestion } from "../../global/components/have-a-question";
 import { NewsletterSubscribe } from "../../global/components/newsletter-subscribe";
 import { useCartStore } from "../../stores/cart_store";
-import { formatMoneyAmount } from "../../../lib/format-price";
 import { buildRegistrationUrlFromCheckout } from "../../../lib/checkout-order-success";
 import { AUTH_STORAGE_KEY } from "../../../lib/customer-auth";
 import { useLanguage } from "../../i18n/language-context";
@@ -18,22 +17,6 @@ import { useLanguage } from "../../i18n/language-context";
 type OrderInfo = {
   id: number;
   orderNumber: string;
-  status: string;
-  paymentStatus: string;
-  totalAmountCents: number | null;
-  currency: string | null;
-  quantity: number;
-  transport: string;
-  createdAt: string;
-};
-
-type ContactInfo = {
-  firstName: string;
-  surname: string;
-  companyName: string;
-  vatNumber: string;
-  phone: string;
-  email: string;
 };
 
 type SessionResponse = {
@@ -42,10 +25,7 @@ type SessionResponse = {
   data?: {
     sessionId: string;
     paymentStatus: string;
-    amountTotal: number | null;
-    currency: string | null;
     customerEmail: string | null;
-    contact: ContactInfo | null;
     order: OrderInfo | null;
   };
 };
@@ -138,27 +118,11 @@ function CheckoutSuccessPageContent() {
   const isPaid =
     data?.paymentStatus === "paid" ||
     data?.paymentStatus === "no_payment_required";
-  const totalCents =
-    data?.amountTotal ?? data?.order?.totalAmountCents ?? null;
-  const orderCurrency =
-    data?.order?.currency?.trim().toLowerCase() === "ron" ? "ron" : "eur";
-  const totalDisplay =
-    totalCents != null
-      ? formatMoneyAmount(totalCents / 100, orderCurrency)
-      : null;
 
-  const registrationEmail =
-    data?.customerEmail?.trim() || data?.contact?.email?.trim() || "";
+  const registrationEmail = data?.customerEmail?.trim() || "";
   const registrationUrl =
     registrationEmail.length > 0
-      ? buildRegistrationUrlFromCheckout({
-          email: registrationEmail,
-          firstName: data?.contact?.firstName,
-          surname: data?.contact?.surname,
-          companyName: data?.contact?.companyName,
-          vatNumber: data?.contact?.vatNumber,
-          phone: data?.contact?.phone,
-        })
+      ? buildRegistrationUrlFromCheckout({ email: registrationEmail })
       : "/registration?from=checkout&returnTo=%2Faccount%23orders";
 
   return (
@@ -222,39 +186,13 @@ function CheckoutSuccessPageContent() {
                 </p>
                 <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 px-4 py-4 text-left text-sm">
                   {data?.order ? (
-                    <>
-                      <div className="flex justify-between border-b border-gray-200 py-1.5">
-                        <span className="font-semibold text-gray-700">
-                          {t("checkoutSuccess.order")}
-                        </span>
-                        <span className="text-gray-800">
-                          {data.order.orderNumber}
-                        </span>
-                      </div>
-                      <div className="flex justify-between border-b border-gray-200 py-1.5">
-                        <span className="font-semibold text-gray-700">
-                          {t("checkoutSuccess.shipping")}
-                        </span>
-                        <span className="text-gray-800">
-                          {data.order.transport}
-                        </span>
-                      </div>
-                      <div className="flex justify-between border-b border-gray-200 py-1.5">
-                        <span className="font-semibold text-gray-700">
-                          {t("checkoutSuccess.quantity")}
-                        </span>
-                        <span className="text-gray-800">
-                          {data.order.quantity}
-                        </span>
-                      </div>
-                    </>
-                  ) : null}
-                  {totalDisplay ? (
-                    <div className="flex justify-between py-1.5">
+                    <div className="flex justify-between border-b border-gray-200 py-1.5">
                       <span className="font-semibold text-gray-700">
-                        {t("checkoutSuccess.total")}
+                        {t("checkoutSuccess.order")}
                       </span>
-                      <span className="text-gray-800">{totalDisplay}</span>
+                      <span className="text-gray-800">
+                        {data.order.orderNumber}
+                      </span>
                     </div>
                   ) : null}
                   {data?.customerEmail ? (

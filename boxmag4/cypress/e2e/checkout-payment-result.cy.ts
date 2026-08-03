@@ -4,9 +4,9 @@
  * Docs: cypress/documentation/checkout.md
  *
  * Coverage:
- * - /checkout/success with paid session (server marks paid + sends emails)
+ * - /checkout/success with paid session (UI only; webhook marks paid + emails)
  * - /checkout/success clears cart after paid
- * - /checkout/success unpaid/pending (no cart clear — emails not sent yet)
+ * - /checkout/success unpaid/pending (no cart clear)
  * - /checkout/success with backend error / missing session_id
  * - /checkout/success guest create-account prompt (like B2B)
  * - /checkout/success logged-in: View my orders, no create-account card
@@ -14,10 +14,10 @@
  * - /checkout/cancel content and links
  *
  * Note: confirmation emails are NOT sent by the frontend. Backend sends them
- * inside markOrderPaidBySession when payment first flips to paid — either via
- * Stripe webhook POST /api/payments/webhook OR via GET /api/payments/sessions/:id
- * when this success page polls. Locally you need `stripe listen --forward-to
- * localhost:3005/api/payments/webhook` OR visit success after pay.
+ * inside markOrderPaidBySession when payment first flips to paid — via
+ * Stripe webhook POST /api/payments/webhook only. Success-page poll is
+ * read-only (status + order number + email). Locally run
+ * `stripe listen --forward-to localhost:3005/api/payments/webhook`.
  */
 
 import {
@@ -31,27 +31,10 @@ const paidSessionBody = {
   data: {
     sessionId: "sess_paid_1",
     paymentStatus: "paid",
-    amountTotal: 263375,
-    currency: "eur",
     customerEmail: "buyer@example.com",
-    contact: {
-      firstName: "Jane",
-      surname: "Doe",
-      companyName: "Demo SRL",
-      vatNumber: "RO12345678",
-      phone: "799000000",
-      email: "buyer@example.com",
-    },
     order: {
       id: 101,
       orderNumber: "ORD-0101",
-      status: "new",
-      paymentStatus: "paid",
-      totalAmountCents: 263375,
-      currency: "eur",
-      quantity: 200,
-      transport: "Standard Delivery",
-      createdAt: "2026-05-28T10:00:00.000Z",
     },
   },
 };
@@ -107,7 +90,6 @@ describe("Checkout success page", () => {
 
     cy.contains("Thank you! Payment received.").should("exist");
     cy.contains("ORD-0101").should("exist");
-    cy.contains("Standard Delivery").should("exist");
     cy.contains("buyer@example.com").should("exist");
     cy.contains("a", "View my orders")
       .should("have.attr", "href")
@@ -147,7 +129,6 @@ describe("Checkout success page", () => {
       .should("have.attr", "href")
       .and("include", "/registration?")
       .and("include", "email=buyer%40example.com")
-      .and("include", "firstName=Jane")
       .and("include", "from=checkout")
       .and("include", "returnTo=%2Faccount%23orders");
   });
@@ -179,20 +160,10 @@ describe("Checkout success page", () => {
         data: {
           sessionId: "sess_paid_clear",
           paymentStatus: "paid",
-          amountTotal: 10000,
-          currency: "eur",
           customerEmail: "buyer@example.com",
-          contact: null,
           order: {
             id: 102,
             orderNumber: "ORD-0102",
-            status: "new",
-            paymentStatus: "paid",
-            totalAmountCents: 10000,
-            currency: "eur",
-            quantity: 100,
-            transport: "Standard Delivery",
-            createdAt: "2026-05-28T10:00:00.000Z",
           },
         },
       },
@@ -221,20 +192,10 @@ describe("Checkout success page", () => {
         data: {
           sessionId: "sess_pending_1",
           paymentStatus: "unpaid",
-          amountTotal: 10000,
-          currency: "eur",
           customerEmail: "buyer@example.com",
-          contact: null,
           order: {
             id: 103,
             orderNumber: "ORD-0103",
-            status: "new",
-            paymentStatus: "pending",
-            totalAmountCents: 10000,
-            currency: "eur",
-            quantity: 100,
-            transport: "Standard Delivery",
-            createdAt: "2026-05-28T10:00:00.000Z",
           },
         },
       },
@@ -346,27 +307,10 @@ describe("Guest checkout → create account", () => {
           data: {
             sessionId: GUEST_CHECKOUT_SESSION,
             paymentStatus: "paid",
-            amountTotal: 153750,
-            currency: "eur",
             customerEmail: GUEST_CHECKOUT_EMAIL,
-            contact: {
-              firstName: "Elena",
-              surname: "Marin",
-              companyName: "Guest Checkout SRL",
-              vatNumber: "RO12345678",
-              phone: "799888777",
-              email: GUEST_CHECKOUT_EMAIL,
-            },
             order: {
               id: 501,
               orderNumber: "ORD-0501",
-              status: "new",
-              paymentStatus: "paid",
-              totalAmountCents: 153750,
-              currency: "eur",
-              quantity: 100,
-              transport: "Standard Delivery",
-              createdAt: "2026-05-28T10:00:00.000Z",
             },
           },
         },
@@ -449,11 +393,11 @@ describe("Guest checkout → create account", () => {
     cy.get("#reg-email")
       .should("have.value", GUEST_CHECKOUT_EMAIL)
       .and("have.attr", "readonly");
-    cy.get("#reg-firstName").should("have.value", "Elena");
-    cy.get("#reg-surname").should("have.value", "Marin");
-    cy.get("#reg-vat").should("have.value", "RO12345678");
-    cy.get("#reg-phone").should("have.value", "799888777");
-    cy.get("#reg-company").should("have.value", "Guest Checkout SRL");
+    cy.get("#reg-firstName").clear().type("Elena");
+    cy.get("#reg-surname").clear().type("Marin");
+    cy.get("#reg-vat").clear().type("RO12345678");
+    cy.get("#reg-phone").clear().type("799888777");
+    cy.get("#reg-company").clear().type("Guest Checkout SRL");
 
     cy.intercept("POST", "**/api/auth/register", {
       statusCode: 201,

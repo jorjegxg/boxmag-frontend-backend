@@ -485,8 +485,7 @@ describe("payments routes", () => {
     expect(sendOrderConfirmationEmailToCustomerMock).not.toHaveBeenCalled();
   });
 
-  it("session poll marks paid and sends emails when Stripe reports paid", async () => {
-    isOrderEmailTransportConfiguredMock.mockReturnValue(true);
+  it("session poll returns slim status without marking paid or leaking contact PII", async () => {
     stripeRetrieveMock.mockResolvedValue({
       id: "cs_poll_1",
       payment_status: "paid",
@@ -495,118 +494,23 @@ describe("payments routes", () => {
       currency: "eur",
       customer_details: { email: "buyer@example.com" },
     });
-    executeMock.mockResolvedValueOnce([{ affectedRows: 1 }]);
-    queryMock
-      .mockResolvedValueOnce([
-        [
-          {
-            id: 66,
-            status: "new",
-            payment_status: "paid",
-            stripe_session_id: "cs_poll_1",
-            stripe_payment_intent_id: "pi_poll_1",
-            total_amount_cents: 12100,
-            subtotal_cents: 10000,
-            vat_percent: 21,
-            vat_cents: 2100,
-            shipping_cents: 0,
-            shipping_method: "Standard",
-            shipping_eta: "3-5 days",
-            currency: "eur",
-            box_type_name: "Checkout Cart Order",
-            cardboard_type: "N/A",
-            cardboard_colour: "N/A",
-            box_print: "N/A",
-            size_type: "N/A",
-            transport: "Standard",
-            quantity: 100,
-            attachment_name: null,
-            attachment_object_name: null,
-            attachment_url: null,
-            message: "Stripe checkout cart order",
-            items_json: "[]",
-            created_at: new Date("2026-05-28T10:00:00.000Z"),
-          },
-        ],
-      ])
-      .mockResolvedValueOnce([
-        [
-          {
-            first_name: "Jane",
-            surname: "Doe",
-            company_name: "Demo SRL",
-            vat_number: "RO12345678",
-            email: "buyer@example.com",
-            phone: "799000000",
-            address: "Str Test 1",
-            postcode: "725400",
-            city: "Radauti",
-            country: "RO",
-            create_account: 0,
-            consent_phone: 1,
-            consent_email: 1,
-          },
-        ],
-      ])
-      .mockResolvedValueOnce([
-        [
-          {
-            id: 66,
-            status: "new",
-            payment_status: "paid",
-            stripe_session_id: "cs_poll_1",
-            stripe_payment_intent_id: "pi_poll_1",
-            total_amount_cents: 12100,
-            currency: "eur",
-            box_type_name: "Checkout Cart Order",
-            cardboard_type: "N/A",
-            cardboard_colour: "N/A",
-            box_print: "N/A",
-            size_type: "N/A",
-            transport: "Standard",
-            quantity: 100,
-            attachment_name: null,
-            attachment_object_name: null,
-            attachment_url: null,
-            message: null,
-            created_at: new Date("2026-05-28T10:00:00.000Z"),
-          },
-        ],
-      ])
-      .mockResolvedValueOnce([
-        [
-          {
-            first_name: "Jane",
-            surname: "Doe",
-            company_name: "Demo SRL",
-            vat_number: "RO12345678",
-            email: "buyer@example.com",
-            phone: "799000000",
-            address: "Str Test 1",
-            postcode: "725400",
-            city: "Radauti",
-            country: "RO",
-            create_account: 0,
-            consent_phone: 1,
-            consent_email: 1,
-          },
-        ],
-      ]);
+    queryMock.mockResolvedValueOnce([[{ id: 66 }]]);
 
     const response = await request(app).get("/api/payments/sessions/cs_poll_1");
 
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
-    expect(response.body.data.contact).toEqual({
-      firstName: "Jane",
-      surname: "Doe",
-      companyName: "Demo SRL",
-      vatNumber: "RO12345678",
-      phone: "799000000",
-      email: "buyer@example.com",
+    expect(response.body.data).toEqual({
+      sessionId: "cs_poll_1",
+      paymentStatus: "paid",
+      customerEmail: "buyer@example.com",
+      order: { id: 66, orderNumber: "ORD-0066" },
     });
-    expect(sendOrderConfirmationEmailToCustomerMock).toHaveBeenCalledTimes(1);
-    expect(sendNewOrderNotificationEmailMock).toHaveBeenCalledTimes(1);
+    expect(response.body.data.contact).toBeUndefined();
+    expect(response.body.data.amountTotal).toBeUndefined();
+    expect(executeMock).not.toHaveBeenCalled();
+    expect(sendOrderConfirmationEmailToCustomerMock).not.toHaveBeenCalled();
+    expect(sendNewOrderNotificationEmailMock).not.toHaveBeenCalled();
   });
 
   it("returns 503 from create-checkout-session when Stripe is not configured", async () => {

@@ -6,7 +6,7 @@
  * Focus: empty cart, guest/logged-in place order, VAT, shipping totals,
  * payload shape (email + address). Stripe redirect + webhook are mocked —
  * confirmation emails fire server-side only after payment is marked paid
- * (webhook OR GET /api/payments/sessions/:id on success page).
+ * (Stripe webhook POST /api/payments/webhook). Success-page poll is read-only.
  */
 
 import { TEST_EMAIL, sampleWarehouseAddress } from "../support/commands";

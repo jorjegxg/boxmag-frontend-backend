@@ -69,11 +69,11 @@ describe("checkout-guest-create-account", () => {
     cy.get("#reg-email")
       .should("have.value", GUEST_EMAIL)
       .and("have.attr", "readonly");
-    cy.get("#reg-firstName").should("have.value", FIRST_NAME);
-    cy.get("#reg-surname").should("have.value", SURNAME);
-    cy.get("#reg-vat").should("have.value", VAT_NUMBER);
-    cy.get("#reg-phone").should("have.value", PHONE);
-    cy.get("#reg-company").should("have.value", COMPANY_NAME);
+    cy.get("#reg-firstName").clear().type(FIRST_NAME);
+    cy.get("#reg-surname").clear().type(SURNAME);
+    cy.get("#reg-vat").clear().type(VAT_NUMBER);
+    cy.get("#reg-phone").clear().type(PHONE);
+    cy.get("#reg-company").clear().type(COMPANY_NAME);
 
     cy.get("#reg-password").clear().type(ACCOUNT_PASSWORD);
     cy.get("#reg-confirm").clear().type(ACCOUNT_PASSWORD);
