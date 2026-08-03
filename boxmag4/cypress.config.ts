@@ -1,10 +1,12 @@
 import { defineConfig } from "cypress";
 import {
+  createPaidCheckoutOrder,
   ensurePendingRegistrationForTest,
   resetB2bGuestUser,
   resetDatabaseForTests,
   setEmailVerificationToken,
   assertOrderNotificationEmailLog,
+  type CreatePaidCheckoutOrderInput,
 } from "./cypress/plugins/db-tasks";
 import { readRootEnvValue } from "./lib/root-env";
 
@@ -51,6 +53,9 @@ export default defineConfig({
         },
         resetB2bGuestUser(email: string) {
           return resetB2bGuestUser(email);
+        },
+        createPaidCheckoutOrder(input: CreatePaidCheckoutOrderInput) {
+          return createPaidCheckoutOrder(input);
         },
         setEmailVerificationToken(options: { email: string; token: string }) {
           return setEmailVerificationToken(options);

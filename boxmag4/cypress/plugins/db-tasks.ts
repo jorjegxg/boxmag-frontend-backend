@@ -108,6 +108,182 @@ export async function resetB2bGuestUser(email: string): Promise<null> {
   return null;
 }
 
+export type CreatePaidCheckoutOrderInput = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  companyName: string;
+  vatNumber: string;
+  phone: string;
+  address: string;
+  postcode: string;
+  city: string;
+  country: string;
+  shippingName: string;
+  shippingEta: string;
+  shippingPrice: number;
+  vatPercent: number;
+  currency?: string;
+  cartItems: Array<{
+    itemNo: string;
+    name: string;
+    unitPrice: number;
+    quantity: number;
+    imageUrl?: string | null;
+  }>;
+};
+
+export type CreatePaidCheckoutOrderResult = {
+  orderId: number;
+  orderNumber: string;
+  sessionId: string;
+  totalAmountCents: number;
+};
+
+function toCents(amount: number): number {
+  return Math.round(amount * 100);
+}
+
+/** Insert paid B2C cart order + contact (Stripe session stubbed for Cypress). */
+export async function createPaidCheckoutOrder(
+  input: CreatePaidCheckoutOrderInput,
+): Promise<CreatePaidCheckoutOrderResult> {
+  const email = input.email.trim().toLowerCase();
+  const cartItems = input.cartItems ?? [];
+  if (!email || cartItems.length === 0) {
+    throw new Error("createPaidCheckoutOrder requires email and cartItems");
+  }
+
+  const currency = (input.currency ?? "eur").trim().toLowerCase() || "eur";
+  const vatPercent = Number(input.vatPercent) || 0;
+  const shippingPrice = Number(input.shippingPrice) || 0;
+  const chargedCartItems = cartItems.map((item) => {
+    const unitPrice = Number(item.unitPrice);
+    const quantity = Number(item.quantity);
+    const lineTotal = +(unitPrice * quantity).toFixed(2);
+    return {
+      itemNo: String(item.itemNo),
+      name: String(item.name),
+      unitPrice,
+      quantity,
+      lineTotal,
+      imageUrl: item.imageUrl ?? null,
+    };
+  });
+
+  const totalQuantity = chargedCartItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0,
+  );
+  const subtotal = +chargedCartItems
+    .reduce((sum, item) => sum + item.lineTotal, 0)
+    .toFixed(2);
+  const vatAmount = +((subtotal * vatPercent) / 100).toFixed(2);
+  const total = +(subtotal + vatAmount + shippingPrice).toFixed(2);
+  const sessionId = `cs_test_cypress_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
+
+  const orderMessageLines = [
+    "Stripe checkout cart order",
+    "",
+    "Items:",
+    ...chargedCartItems.map(
+      (item) =>
+        `- ${item.itemNo} | ${item.name} | qty ${item.quantity} | unit ${item.unitPrice.toFixed(2)} | line ${item.lineTotal.toFixed(2)}`,
+    ),
+    "",
+    `Shipping method: ${input.shippingName} (${input.shippingEta})`,
+    `Subtotal: ${subtotal.toFixed(2)} ${currency.toUpperCase()}`,
+    `VAT (${vatPercent}%): ${vatAmount.toFixed(2)} ${currency.toUpperCase()}`,
+    `Shipping: ${shippingPrice.toFixed(2)} ${currency.toUpperCase()}`,
+    `Total: ${total.toFixed(2)} ${currency.toUpperCase()}`,
+  ];
+
+  const itemsJson = JSON.stringify(
+    chargedCartItems.map((item) => ({
+      itemNo: item.itemNo,
+      name: item.name,
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+      lineTotal: item.lineTotal,
+      imageUrl: item.imageUrl,
+    })),
+  );
+
+  const totalAmountCents = toCents(total);
+
+  const orderId = await withConnection(async (connection) => {
+    const [orderInsertResult] = await connection.execute(
+      `INSERT INTO orders
+        (box_type_name, cardboard_type, cardboard_colour, box_print,
+         size_type, transport, quantity, ftl, message, items_json,
+         accepted_terms, status, payment_status, stripe_session_id,
+         total_amount_cents, subtotal_cents, vat_percent, vat_cents,
+         shipping_cents, shipping_method, shipping_eta, currency)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        "Checkout Cart Order",
+        "N/A",
+        "N/A",
+        "N/A",
+        "N/A",
+        input.shippingName,
+        totalQuantity || 1,
+        0,
+        orderMessageLines.join("\n"),
+        itemsJson,
+        1,
+        "new",
+        "paid",
+        sessionId,
+        totalAmountCents,
+        toCents(subtotal),
+        vatPercent,
+        toCents(vatAmount),
+        toCents(shippingPrice),
+        input.shippingName,
+        input.shippingEta,
+        currency,
+      ],
+    );
+
+    const insertId = Number(
+      (orderInsertResult as { insertId?: number }).insertId ?? 0,
+    );
+    if (!Number.isInteger(insertId) || insertId <= 0) {
+      throw new Error("Failed to insert checkout order for Cypress");
+    }
+
+    await connection.execute(
+      `INSERT INTO contacts
+        (order_id, first_name, surname, company_name, vat_number, email, phone,
+         address, postcode, city, country, create_account, consent_phone, consent_email)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+      [
+        insertId,
+        input.firstName,
+        input.lastName,
+        input.companyName || `${input.firstName} ${input.lastName}`.trim(),
+        input.vatNumber,
+        email,
+        input.phone || "N/A",
+        input.address,
+        input.postcode,
+        input.city,
+        input.country,
+      ],
+    );
+
+    return insertId;
+  });
+
+  return {
+    orderId,
+    orderNumber: `ORD-${String(orderId).padStart(4, "0")}`,
+    sessionId,
+    totalAmountCents,
+  };
+}
+
 function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString("hex");
   const hash = crypto.scryptSync(password, salt, 64).toString("hex");

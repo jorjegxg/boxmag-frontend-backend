@@ -36,7 +36,8 @@ Reset DB automat înainte de rulare (`CYPRESS_RESET_DB=false` ca să-l dezactive
 | Spec | Scenarii | Ce testează |
 | --- | --- | --- |
 | `checkout.cy.ts` | 13 | Coș gol, email obligatoriu pentru guest, validare VAT (invalid/lipsă), lookup VAT completează firma automat, cele 3 metode de shipping schimbă totalul, place order guest + logat trimite body-ul corect la `create-checkout-session`, eroare API 500, buton dezactivat în timpul submit-ului |
-| `checkout-payment-result.cy.ts` | 6 | `/checkout/success`: sesiune plătită → mulțumire + golește coșul; sesiune „unpaid” → păstrează coșul; eroare la verificarea sesiunii / `session_id` lipsă; `/checkout/cancel`: coșul rămâne, linkuri către checkout și boxesfetco |
+| `checkout-payment-result.cy.ts` | 6+ | `/checkout/success`: sesiune plătită → mulțumire + golește coșul; guest create-account CTA; guest → register (mock); sesiune „unpaid”; erori session; `/checkout/cancel` |
+| `checkout-guest-create-account.cy.ts` | 1 | Guest cumpără → success → Create account → verify email → login → comanda + produsul apar în `/account#orders` (+ admin). Order paid inserat via `createPaidCheckoutOrder` (Stripe UI stubbed) |
 | `currency-eur-ron.cy.ts` | 5 | Switch EUR→RON recalculează prețurile pe shop/PDP/checkout, apelul la `/api/exchange-rate/eur-ron`, fallback grațios dacă API-ul de curs cade, moneda persistă după reload, `Place order` trimite `currency: "ron"` |
 | `account-address-cart.cy.ts` | 9 | Adresele salvate în cont apar ca „Shipping Information” la checkout (adresa default shipping, nu altele), comutare adresă salvată ↔ manuală, adresă nouă salvată în cont apare pe checkout, ștergerea adresei o elimină din checkout, `Place order` trimite adresa din cont către `create-checkout-session` |
 

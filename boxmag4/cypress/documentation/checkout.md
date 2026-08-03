@@ -1,9 +1,10 @@
 # Checkout B2C (Stripe)
 
-**Spec:** `cypress/e2e/checkout.cy.ts`, `cypress/e2e/checkout-payment-result.cy.ts`  
+**Spec:** `cypress/e2e/checkout.cy.ts`, `cypress/e2e/checkout-payment-result.cy.ts`, `cypress/e2e/checkout-guest-create-account.cy.ts`  
 **UI:** `boxmag4/app/checkout/page.tsx`, `success/page.tsx`, `cancel/page.tsx`  
 **State:** `boxmag.cart`, `boxmag.auth.*`, shipping cache `boxmag.checkout.shippingMethods.v2`  
-**API:** `POST /api/payments/create-checkout-session`, `GET /api/payments/sessions/:id`, webhook `POST /api/payments/webhook`
+**API:** `POST /api/payments/create-checkout-session`, `GET /api/payments/sessions/:id`, webhook `POST /api/payments/webhook`  
+**Integration (account link):** see `checkout-guest-create-account.md`
 
 ---
 
@@ -59,6 +60,10 @@ If you always open `/checkout/success?session_id=…` after pay, poll path still
 7. Session API fail / missing `session_id` → **CHECK:** error UI
 8. Cancel → **CHECK:** links to checkout + boxesfetco
 
+### checkout-guest-create-account.cy.ts
+
+Full guest buy → create account → verify → login → order+product on account (and admin). Stripe stubbed via `createPaidCheckoutOrder`. Details: `checkout-guest-create-account.md`.
+
 ---
 
 ## Selectori utili
@@ -80,5 +85,5 @@ Helpers: `cy.visitCheckoutLoggedIn`, `cy.visitCheckoutLoggedOut`, `cy.mockChecko
 
 ```bash
 cd boxmag4
-npx cypress run --spec "cypress/e2e/checkout.cy.ts,cypress/e2e/checkout-payment-result.cy.ts"
+npx cypress run --spec "cypress/e2e/checkout.cy.ts,cypress/e2e/checkout-payment-result.cy.ts,cypress/e2e/checkout-guest-create-account.cy.ts"
 ```
