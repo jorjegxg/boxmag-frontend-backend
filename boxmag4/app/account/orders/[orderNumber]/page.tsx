@@ -11,6 +11,7 @@ import { NewsletterSubscribe } from "../../../global/components/newsletter-subsc
 import { useCartStore } from "../../../stores/cart_store";
 import { useNotification } from "../../../global/components/notification-center";
 import { OrderAttachmentActions } from "../../../global/components/order-attachment-actions";
+import { getBackendBaseUrl } from "../../../../lib/backend-url";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const FALLBACK_PRODUCT_IMAGE = "/b2b/boxes/box.png";
 
@@ -140,9 +141,7 @@ export default function AccountOrderDetailsPage() {
     }
 
     const loggedInEmail = localStorage.getItem(AUTH_EMAIL_STORAGE_KEY) ?? "";
-    const backendBaseUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
-      "http://localhost:3005";
+    const backendBaseUrl = getBackendBaseUrl();
     const controller = new AbortController();
 
     const loadOrder = async () => {

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useLanguage } from "../../i18n/language-context";
+import { getBackendBaseUrl } from "../../../lib/backend-url";
 
 export function NewsletterSubscribe() {
   const [email, setEmail] = useState("");
@@ -13,11 +14,7 @@ export function NewsletterSubscribe() {
     null
   );
   const { t, language } = useLanguage();
-  const backendBaseUrl = useMemo(() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
   const handleSubscribe = async () => {
     const normalizedEmail = email.trim().toLowerCase();

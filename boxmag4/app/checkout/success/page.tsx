@@ -13,6 +13,7 @@ import { useCartStore } from "../../stores/cart_store";
 import { buildRegistrationUrlFromCheckout } from "../../../lib/checkout-order-success";
 import { AUTH_STORAGE_KEY } from "../../../lib/customer-auth";
 import { useLanguage } from "../../i18n/language-context";
+import { getBackendBaseUrl } from "../../../lib/backend-url";
 
 type OrderInfo = {
   id: number;
@@ -46,11 +47,7 @@ function CheckoutSuccessPageContent() {
   const sessionId = searchParams.get("session_id");
   const clearCart = useCartStore((s) => s.clearCart);
 
-  const backendBaseUrl = useMemo(() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

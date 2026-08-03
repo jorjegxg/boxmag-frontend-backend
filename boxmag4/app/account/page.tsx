@@ -29,6 +29,7 @@ import {
   getCachedVatCompany,
   rememberVatCompany,
 } from "../../lib/vat-company";
+import { getBackendBaseUrl } from "../../lib/backend-url";
 
 type Tab = "account" | "address" | "orders";
 
@@ -59,13 +60,6 @@ function normalizeVatNumber(value: string): string {
 }
 
 const isDevelopment = isDevelopmentAppEnv();
-
-function getBackendBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
-    "http://localhost:3005"
-  );
-}
 
 type UserProfile = {
   firstName: string;
@@ -124,9 +118,7 @@ function LoginRequiredView({
       return;
     }
 
-    const backendBaseUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
-      "http://localhost:3005";
+    const backendBaseUrl = getBackendBaseUrl();
     setIsSubmitting(true);
     setError(null);
     try {
@@ -1185,9 +1177,7 @@ export default function AccountPage() {
       return;
     }
 
-    const backendBaseUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
-      "http://localhost:3005";
+    const backendBaseUrl = getBackendBaseUrl();
     const controller = new AbortController();
 
     const loadProfile = async () => {
@@ -1251,9 +1241,7 @@ export default function AccountPage() {
       return;
     }
 
-    const backendBaseUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
-      "http://localhost:3005";
+    const backendBaseUrl = getBackendBaseUrl();
     const controller = new AbortController();
 
     const loadOrders = async () => {
@@ -1299,9 +1287,7 @@ export default function AccountPage() {
       return;
     }
 
-    const backendBaseUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
-      "http://localhost:3005";
+    const backendBaseUrl = getBackendBaseUrl();
     const controller = new AbortController();
 
     const loadAddresses = async () => {
@@ -1411,9 +1397,7 @@ export default function AccountPage() {
       throw new Error("Missing account email.");
     }
 
-    const backendBaseUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
-      "http://localhost:3005";
+    const backendBaseUrl = getBackendBaseUrl();
     const response = await fetch(`${backendBaseUrl}/api/addresses`, {
       method: "POST",
       credentials: "include",
@@ -1467,9 +1451,7 @@ export default function AccountPage() {
       throw new Error("Missing account email.");
     }
 
-    const backendBaseUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
-      "http://localhost:3005";
+    const backendBaseUrl = getBackendBaseUrl();
     const response = await fetch(
       `${backendBaseUrl}/api/addresses/${addressId}`,
       {
@@ -1510,9 +1492,7 @@ export default function AccountPage() {
       throw new Error("Missing account email.");
     }
 
-    const backendBaseUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
-      "http://localhost:3005";
+    const backendBaseUrl = getBackendBaseUrl();
     const response = await fetch(
       `${backendBaseUrl}/api/addresses/${addressId}`,
       { method: "DELETE", credentials: "include" },

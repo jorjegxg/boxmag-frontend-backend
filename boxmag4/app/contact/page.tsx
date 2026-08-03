@@ -25,6 +25,7 @@ import {
   normalizeContactCountry,
   VAT_SUPPORTED_COUNTRIES,
 } from "../../lib/vat-countries";
+import { getBackendBaseUrl } from "../../lib/backend-url";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -42,13 +43,6 @@ const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const AUTH_CHANGED_EVENT = "boxmag-auth-changed";
 const shouldAutofillContactForm = isDevelopmentAppEnv();
-
-function getBackendBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_BACKEND_URL?.trim()?.replace(/\/$/, "") ??
-    "http://localhost:3005"
-  );
-}
 
 function getLoggedInEmail(): string {
   if (typeof window === "undefined") return "";

@@ -8,6 +8,10 @@ COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 ENSURE_DOCKER_SCRIPT="$ROOT_DIR/scripts/ensure-docker.sh"
 RESET_SCRIPT="$BACKEND_DIR/db/reset_and_seed.sh"
 
+# shellcheck source=refuse-prod-wipe.sh
+BOXMAG_ROOT="$ROOT_DIR" source "$ROOT_DIR/scripts/refuse-prod-wipe.sh"
+refuse_prod_wipe
+
 if ! command -v npm >/dev/null 2>&1; then
   echo "Eroare: npm nu este instalat sau nu este in PATH."
   exit 1

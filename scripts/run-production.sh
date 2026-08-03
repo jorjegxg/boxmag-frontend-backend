@@ -3,17 +3,22 @@
 # then build and start backend + frontend (docker compose --profile app).
 #
 # Safe redeploy without data wipe: use scripts/deploy.sh instead.
+# Never wipe a live DB. This script requires ALLOW_PROD_WIPE=1 when NODE_ENV=production.
 #
 # Usage (from repo root, on the production host):
-#   bash scripts/run-production.sh              # interactive confirm
-#   bash scripts/run-production.sh --yes        # non-interactive
-#   bash scripts/run-production.sh --pull --yes # git pull main first
-#   bash scripts/run-production.sh --no-cache --yes
+#   ALLOW_PROD_WIPE=1 bash scripts/run-production.sh              # interactive confirm
+#   ALLOW_PROD_WIPE=1 bash scripts/run-production.sh --yes        # non-interactive
+#   ALLOW_PROD_WIPE=1 bash scripts/run-production.sh --pull --yes # git pull main first
+#   ALLOW_PROD_WIPE=1 bash scripts/run-production.sh --no-cache --yes
 #
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+
+# shellcheck source=refuse-prod-wipe.sh
+BOXMAG_ROOT="$ROOT_DIR" source "$ROOT_DIR/scripts/refuse-prod-wipe.sh"
+refuse_prod_wipe
 
 COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 SEED_SQL="$ROOT_DIR/boxmag-backend/db/reset_and_seed.sql"

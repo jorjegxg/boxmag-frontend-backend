@@ -53,7 +53,7 @@ type AdminBoxTypesState = {
 };
 
 export const useAdminBoxTypesStore = create<AdminBoxTypesState>((set, get) => ({
-  backendBaseUrl: "http://localhost:3005",
+  backendBaseUrl: "",
   boxTypes: [],
   isLoadingBoxTypes: true,
   boxTypesError: null,

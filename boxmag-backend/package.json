@@ -10,6 +10,7 @@
     "check": "tsc --noEmit",
     "test": "vitest run",
     "db:reset": "bash ../scripts/reset-db.sh",
+    "db:migrate": "bash ./db/migrate.sh",
     "db:dev": "bash ./db/dev_seed_orders.sh",
     "db:seed:images": "node ./db/seed_minio_images.js"
   },

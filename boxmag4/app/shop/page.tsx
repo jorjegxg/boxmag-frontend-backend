@@ -10,6 +10,7 @@ import { useCartStore } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
 import { getMinOrderUnitPrice, getShopPriceTiers } from "../constants/price-tiers";
 import { normalizeImageUrl } from "@/app/utils/normalize-image-url";
+import { getBackendBaseUrl } from "../../lib/backend-url";
 
 type BoxType = {
   id: number;
@@ -62,11 +63,7 @@ function ShopPageContent() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [animatedProductId, setAnimatedProductId] = useState<number | null>(null);
   const animationTimeoutRef = useRef<number | null>(null);
-  const backendBaseUrl = useMemo(() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
   const selectedBoxTypeId = useMemo(() => {
     const param = searchParams.get("boxTypeId");

@@ -12,6 +12,18 @@ dotenv.config({ path: path.join(repoRoot, ".env") });
 
 const shouldPurgeBucket = process.argv.includes("--purge");
 
+if (
+  shouldPurgeBucket &&
+  (process.env.NODE_ENV || "").trim() === "production" &&
+  process.env.ALLOW_PROD_WIPE !== "1"
+) {
+  console.error(
+    "Refusing MinIO purge: NODE_ENV=production without ALLOW_PROD_WIPE=1.",
+  );
+  console.error("Safe redeploy: bash scripts/deploy.sh");
+  process.exit(1);
+}
+
 /** When true, keep compose DNS names (mysql/minio) — seed runs inside the Docker network. */
 const seedInDocker = process.env.SEED_IN_DOCKER === "1";
 

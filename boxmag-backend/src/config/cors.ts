@@ -8,6 +8,7 @@ export function buildCorsOptions(): CorsOptions {
   // Credentials are required so the browser sends the admin session cookie on
   // cross-origin (same-site) requests to the API. `origin: true` reflects the
   // request origin, which is compatible with credentialed requests.
+  // CORS_ORIGIN=* is development-only; assertProductionEnv rejects it in prod.
   if (env.corsOrigins === "*") {
     return { origin: true, credentials: true };
   }

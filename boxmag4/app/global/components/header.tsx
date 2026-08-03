@@ -7,6 +7,7 @@ import { FaBars, FaSearch, FaTimes } from "react-icons/fa";
 import { useLanguage } from "../../i18n/language-context";
 import { useCurrency } from "../../currency/currency-context";
 import { useCartStore } from "../../stores/cart_store";
+import { getBackendBaseUrl } from "../../../lib/backend-url";
 
 type BoxType = {
   id: number;
@@ -47,11 +48,7 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const searchContainerRef = useRef<HTMLFormElement | null>(null);
   const menuContainerRef = useRef<HTMLDivElement | null>(null);
-  const backendBaseUrl = useMemo(() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
   const loadDefaultBoxTypes = async () => {
     if (defaultBoxTypes.length > 0) return;

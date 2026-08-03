@@ -10,6 +10,7 @@ import { NewsletterSubscribe } from "../../global/components/newsletter-subscrib
 import { useCartStore } from "../../stores/cart_store";
 import { MIN_ORDER_QTY } from "../../constants/order";
 import { getMinOrderUnitPrice, getShopPriceTiers } from "../../constants/price-tiers";
+import { getBackendBaseUrl } from "../../../lib/backend-url";
 import { FaCheck } from "react-icons/fa";
 import { normalizeImageUrl } from "@/app/utils/normalize-image-url";
 import type { PriceTier } from "../../types/product";
@@ -77,11 +78,7 @@ function ProductByKeyPageContent() {
   const addToCartAnimationTimeoutRef = useRef<number | null>(null);
   const addCartItem = useCartStore((s) => s.addItem);
 
-  const backendBaseUrl = useMemo(() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
   const formatSizeLabel = (product: BoxTypeProductApi): string => {
     const dims = product.internalDimensionsMM;

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Ruleaza pe serverul de productie (manual sau automat via GitHub Actions la push pe main).
+# Production redeploy (manual or GitHub Actions on push to main).
+# This is the ONLY safe prod path — never wipe/reset the live DB.
+# Wipe/bootstrap: ALLOW_PROD_WIPE=1 bash scripts/run-production.sh (empty hosts only).
+# Host nginx must proxy to 127.0.0.1 upstreams as in deploy/nginx/boxmag.conf.example.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -29,6 +32,9 @@ git pull --ff-only origin main
 
 echo "==> Pornesc dependinte (MySQL, MinIO)..."
 docker compose up -d mysql minio
+
+echo "==> Aplic migrari schema (boxmag-backend/db/migrations)..."
+bash "$ROOT_DIR/boxmag-backend/db/migrate.sh"
 
 echo "==> Build si restart aplicatie (backend + frontend)..."
 docker compose --profile app up -d --build --remove-orphans

@@ -8,6 +8,7 @@ import { B2b } from "../global/components/b2b";
 import { ServicesSection } from "../global/components/services-section";
 import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
+import { getBackendBaseUrl } from "../../lib/backend-url";
 
 type VerifyState = "loading" | "success" | "error";
 
@@ -17,11 +18,7 @@ function VerifyEmailPageContent() {
   const [state, setState] = useState<VerifyState>("loading");
   const [message, setMessage] = useState("Verifying your email...");
 
-  const backendBaseUrl = useMemo(() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
   useEffect(() => {
     const runVerification = async () => {

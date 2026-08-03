@@ -14,6 +14,7 @@ import {
   type OrderStatusValue,
   type PaymentStatusValue,
 } from "../../admin-ro";
+import { getBackendBaseUrl } from "../../components/admin-types";
 
 type OrderItem = {
   itemNo: string;
@@ -179,11 +180,7 @@ export default function AdminOrderDetailsPage() {
   const [offerError, setOfferError] = useState<string | null>(null);
   const [offerSuccess, setOfferSuccess] = useState<string | null>(null);
 
-  const backendBaseUrl = useMemo(() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
   useEffect(() => {
     if (!Number.isInteger(orderId) || orderId <= 0) {

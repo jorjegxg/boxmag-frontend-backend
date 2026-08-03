@@ -23,6 +23,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import useBusinessStore from "./store/business_store";
 import useBusinessOrderStore from "../stores/business_order_store";
 import { useNotification } from "../global/components/notification-center";
+import { getBackendBaseUrl } from "../../lib/backend-url";
 import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { siteEmails } from "../../lib/site-emails";
 import { useLanguage } from "../i18n/language-context";
@@ -68,11 +69,7 @@ const BussinessPage = () => {
   );
   const { notify } = useNotification();
   const { t } = useLanguage();
-  const backendBaseUrl = useMemo(() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
   useEffect(() => {
     void loadBoxes(backendBaseUrl);

@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import fs from "fs";
 import path from "path";
 import { checkVAT, countries } from "jsvat";
+import { getBackendBaseUrl } from "../../../lib/backend-url";
 
 type ContactPayload = {
   firstName: string;
@@ -42,17 +43,6 @@ const rootEnv =
 function envValue(key: string): string | undefined {
   const value = process.env[key] ?? rootEnv[key];
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
-}
-
-function getBackendBaseUrl(): string {
-  const value =
-    process.env.NEXT_PUBLIC_BACKEND_URL?.trim() ??
-    envValue("NEXT_PUBLIC_BACKEND_URL") ??
-    envValue("BACKEND_URL");
-  const normalized = value?.replace(/\/$/, "");
-  return normalized && normalized.length > 0
-    ? normalized
-    : "http://localhost:3005";
 }
 
 /** Public site origin, used to link admins to the message in the admin panel. */

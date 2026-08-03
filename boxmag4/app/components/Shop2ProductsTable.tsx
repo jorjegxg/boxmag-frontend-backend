@@ -5,6 +5,7 @@ import { FaShoppingCart } from "react-icons/fa";
 import { useCartStore } from "../stores/cart_store";
 import { useCurrency } from "../currency/currency-context";
 import { MIN_ORDER_QTY } from "../constants/order";
+import { getBackendBaseUrl } from "../../lib/backend-url";
 
 type Shop2Row = {
   id: number;
@@ -33,11 +34,7 @@ export function Shop2ProductsTable() {
   const [rows, setRows] = useState<Shop2Row[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const backendBaseUrl = useMemo(() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
   const addCartItem = useCartStore((s) => s.addItem);
 
   useEffect(() => {

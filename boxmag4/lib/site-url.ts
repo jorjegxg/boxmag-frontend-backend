@@ -1,3 +1,4 @@
+import { getBackendBaseUrl as getClientSafeBackendBaseUrl } from "./backend-url";
 import { readRootEnvValue } from "./root-env";
 
 function trimTrailingSlash(value: string): string {
@@ -16,15 +17,19 @@ export function getSiteBaseUrl(): string {
   return "http://localhost:3006";
 }
 
-/** Backend API origin for server-side fetches (sitemap product URLs). */
+/**
+ * Backend API origin for server-side fetches (sitemap product URLs).
+ * Prefers process env, then root .env, then client-safe helper rules.
+ */
 export function getBackendBaseUrl(): string {
   const fromEnv =
     process.env.NEXT_PUBLIC_BACKEND_URL?.trim() ||
     process.env.BACKEND_PUBLIC_URL?.trim() ||
-    readRootEnvValue("BACKEND_PUBLIC_URL");
+    readRootEnvValue("BACKEND_PUBLIC_URL") ||
+    readRootEnvValue("NEXT_PUBLIC_BACKEND_URL");
 
   if (fromEnv) return trimTrailingSlash(fromEnv);
-  return "http://localhost:3005";
+  return getClientSafeBackendBaseUrl();
 }
 
 /**
@@ -39,3 +44,5 @@ export function getSitemapBackendBaseUrl(): string {
   if (internal) return trimTrailingSlash(internal);
   return getBackendBaseUrl();
 }
+
+export { getBackendBaseUrl as getPublicBackendBaseUrl } from "./backend-url";

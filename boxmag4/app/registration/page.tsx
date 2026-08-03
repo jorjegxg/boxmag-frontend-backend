@@ -14,6 +14,7 @@ import { siteEmails } from "../../lib/site-emails";
 import { clearB2bOrderSuccessPayload } from "../../lib/b2b-order-success";
 import { checkVAT, countries } from "jsvat";
 import { fetchVatLookup, getCachedVatCompany } from "../../lib/vat-company";
+import { getBackendBaseUrl } from "../../lib/backend-url";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -78,11 +79,7 @@ function RegistrationPageContent() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isEmailLocked, setIsEmailLocked] = useState(fromOrderFlow && Boolean(queryEmail));
 
-  const backendBaseUrl = useMemo(() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
   useEffect(() => {
     if (queryEmail) setEmail(queryEmail);

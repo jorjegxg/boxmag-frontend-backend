@@ -6,6 +6,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMPOSE_FILE="$REPO_ROOT/docker-compose.yml"
 SEED_FILE="$SCRIPT_DIR/reset_and_seed.sql"
 
+# shellcheck source=../../scripts/refuse-prod-wipe.sh
+BOXMAG_ROOT="$REPO_ROOT" source "$REPO_ROOT/scripts/refuse-prod-wipe.sh"
+refuse_prod_wipe
+
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker command not found"
   exit 1

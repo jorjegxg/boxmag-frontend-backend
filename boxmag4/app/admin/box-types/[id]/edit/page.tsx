@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { B2b } from "../../../../global/components/b2b";
 import { useAdminBoxTypesStore } from "../../../use-admin-box-types-store";
+import { getBackendBaseUrl } from "../../../components/admin-types";
 
 type EditablePrice = {
   id?: number;
@@ -66,11 +67,7 @@ export default function EditBoxTypePage() {
   );
   const loadBoxTypes = useAdminBoxTypesStore((state) => state.loadBoxTypes);
 
-  const backendBaseUrl = useMemo(() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
   const taxPercent = useMemo(() => {
     const value = Number(process.env.NEXT_PUBLIC_TAX_PERCENT ?? "21");

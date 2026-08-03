@@ -20,6 +20,7 @@ import {
 } from "../../lib/customer-auth";
 import { rememberVatCompany } from "../../lib/vat-company";
 import { CheckoutShippingInformation } from "./components/checkout-shipping-information";
+import { getBackendBaseUrl } from "../../lib/backend-url";
 
 type UserAddress = {
   id: number;
@@ -162,11 +163,7 @@ export default function CheckoutPage() {
   const [attachmentName, setAttachmentName] = useState("");
   const [attachmentBase64, setAttachmentBase64] = useState("");
   const [attachmentMimeType, setAttachmentMimeType] = useState("");
-  const backendBaseUrl = useMemo(() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
   const taxPercent = useMemo(() => {
     const value = Number(process.env.NEXT_PUBLIC_TAX_PERCENT ?? "21");
     return Number.isFinite(value) ? value : 21;

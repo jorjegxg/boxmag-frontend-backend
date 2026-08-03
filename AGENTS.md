@@ -608,7 +608,7 @@ Route files in `boxmag-backend/src/routes/`:
 
 ## Database (MySQL)
 
-Schema: `boxmag-backend/db/reset_and_seed.sql` (+ incremental SQL migrations in same folder).
+Schema: `boxmag-backend/db/reset_and_seed.sql` (+ ordered migrations in `boxmag-backend/db/migrations/`, applied by `npm run db:migrate` / `scripts/deploy.sh`).
 
 | Table | Purpose |
 |-------|---------|
@@ -618,6 +618,7 @@ Schema: `boxmag-backend/db/reset_and_seed.sql` (+ incremental SQL migrations in 
 | `addresses` | Saved customer addresses |
 | `shipping_methods` | Checkout shipping options |
 | `newsletter_subscribers` | Newsletter |
+| `schema_migrations` | Applied migration filenames |
 
 **Order statuses:** `new`, `in progress`, `completed`, `done`  
 **Payment statuses:** `pending`, `paid`, `failed`
@@ -633,6 +634,7 @@ Schema: `boxmag-backend/db/reset_and_seed.sql` (+ incremental SQL migrations in 
 - Use backend port **3005** (not 4000 from code default)
 - Run backend tests: `cd boxmag-backend && npm test` (Vitest)
 - Run e2e tests: `cd boxmag4 && npx cypress run` (Cypress)
+- Production redeploy: **only** [`scripts/deploy.sh`](scripts/deploy.sh) (or GH Actions → that script). Schema changes: add a numbered file under `boxmag-backend/db/migrations/` and mirror into `reset_and_seed.sql` for fresh local DBs; deploy runs `db:migrate`
 
 ### Don't
 
@@ -641,6 +643,7 @@ Schema: `boxmag-backend/db/reset_and_seed.sql` (+ incremental SQL migrations in 
 - Assume route-based i18n (`/ro/about` redirects to `/about`)
 - Break B2B flow guards on `/order-summary` or `/business/order-success`
 - Manually change payment status for Stripe orders in admin
+- **Never wipe a live DB** — `reset_and_seed.sql` / `db:reset` / MinIO `--purge` are local/dev only. Wipe scripts refuse `NODE_ENV=production` unless `ALLOW_PROD_WIPE=1`. Empty-host bootstrap only: `ALLOW_PROD_WIPE=1 bash scripts/run-production.sh`
 
 ### Key shared components
 

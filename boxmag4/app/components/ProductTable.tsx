@@ -14,6 +14,7 @@ import {
   SHOP_PRICE_TIER_NAMES,
 } from "../constants/price-tiers";
 import { useNotification } from "../global/components/notification-center";
+import { getBackendBaseUrl } from "../../lib/backend-url";
 
 const TABLE_COLUMN_COUNT = 14;
 
@@ -55,11 +56,7 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
     }, 350);
   };
 
-  const backendBaseUrl = useMemo(() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  }, []);
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
   useEffect(() => {
     void loadProducts({ backendBaseUrl, boxTypeId });

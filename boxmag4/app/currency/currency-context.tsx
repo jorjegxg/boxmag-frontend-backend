@@ -14,6 +14,7 @@ import {
   formatPriceFromEur,
   type DisplayCurrency,
 } from "../../lib/format-price";
+import { getBackendBaseUrl } from "../../lib/backend-url";
 
 type ExchangeRateData = {
   rate: number;
@@ -37,12 +38,6 @@ const CurrencyContext = createContext<CurrencyContextType | null>(null);
 
 const STORAGE_KEY = "boxmag.currency";
 const RATE_REFRESH_MS = 60 * 60 * 1000;
-
-function getBackendBaseUrl(): string {
-  const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-  if (!value) return "http://localhost:3005";
-  return value.endsWith("/") ? value.slice(0, -1) : value;
-}
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   const [currency, setCurrencyState] = useState<DisplayCurrency>("eur");

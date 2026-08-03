@@ -34,8 +34,4 @@ export type AdminShippingMethod = {
   sortOrder: number;
 };
 
-export function getBackendBaseUrl(): string {
-  const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-  if (!value) return "http://localhost:3005";
-  return value.endsWith("/") ? value.slice(0, -1) : value;
-}
+export { getBackendBaseUrl } from "../../../lib/backend-url";

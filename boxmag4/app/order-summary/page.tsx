@@ -21,6 +21,7 @@ import {
   fetchVatLookup,
   getCachedVatCompany,
 } from "../../lib/vat-company";
+import { getBackendBaseUrl } from "../../lib/backend-url";
 import {
   formatOrderNumber,
   writeB2bOrderSuccessPayload,
@@ -142,11 +143,7 @@ export default function OrderSummaryPage() {
     Boolean(draft.height) &&
     Boolean(draft.quantity) &&
     draft.acceptedTerms;
-  const backendBaseUrl = (() => {
-    const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-    if (!value) return "http://localhost:3005";
-    return value.endsWith("/") ? value.slice(0, -1) : value;
-  })();
+  const backendBaseUrl = getBackendBaseUrl();
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem(AUTH_STORAGE_KEY) === "true";

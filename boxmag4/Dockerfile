@@ -15,6 +15,13 @@ ENV NEXT_PUBLIC_APP_ENV=$NEXT_PUBLIC_APP_ENV
 ENV NEXT_PUBLIC_INFO_EMAIL=$NEXT_PUBLIC_INFO_EMAIL
 ENV NEXT_PUBLIC_B2B_EMAIL=$NEXT_PUBLIC_B2B_EMAIL
 ENV NEXT_PUBLIC_ORDERS_EMAIL=$NEXT_PUBLIC_ORDERS_EMAIL
+# Fail closed: production image must bake a public API URL (not localhost).
+RUN if [ "$NEXT_PUBLIC_APP_ENV" = "production" ]; then \
+      if [ -z "$NEXT_PUBLIC_BACKEND_URL" ] || echo "$NEXT_PUBLIC_BACKEND_URL" | grep -qiE 'localhost|127\.0\.0\.1'; then \
+        echo "ERROR: NEXT_PUBLIC_BACKEND_URL must be a public URL when NEXT_PUBLIC_APP_ENV=production (got: '${NEXT_PUBLIC_BACKEND_URL:-empty}')" >&2; \
+        exit 1; \
+      fi; \
+    fi
 RUN npm run build
 
 FROM node:22-alpine AS production

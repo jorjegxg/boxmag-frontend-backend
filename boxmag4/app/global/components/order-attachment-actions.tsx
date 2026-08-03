@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { getBackendBaseUrl } from "../../../lib/backend-url";
 
 type OrderAttachmentActionsProps = {
   orderId: number;
@@ -13,18 +14,12 @@ type OrderAttachmentActionsProps = {
   downloadText?: string;
 };
 
-function resolveBackendBaseUrl(): string {
-  const value = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-  if (!value) return "http://localhost:3005";
-  return value.endsWith("/") ? value.slice(0, -1) : value;
-}
-
 function buildAttachmentUrl(
   orderId: number,
   ownerEmail: string | undefined,
   download: boolean,
 ): string {
-  const backendBaseUrl = resolveBackendBaseUrl();
+  const backendBaseUrl = getBackendBaseUrl();
   const params = new URLSearchParams();
   if (ownerEmail?.trim()) {
     params.set("email", ownerEmail.trim());

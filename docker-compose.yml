@@ -4,15 +4,16 @@ services:
     container_name: boxmag4-mysql
     restart: unless-stopped
     mem_limit: 512m
+    # Bind to loopback only — host nginx proxies; never publish on 0.0.0.0.
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
     env_file:
       - ./.env
     environment:
-      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}"
       MYSQL_DATABASE: "${MYSQL_DATABASE:-boxmag4}"
       MYSQL_USER: "${MYSQL_USER:-boxmag4}"
-      MYSQL_PASSWORD: "${MYSQL_PASSWORD:-boxmag4}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}"
       TZ: "${TZ:-UTC}"
     # Cap memory on a 4GB VPS — default MySQL can balloon under load.
     command:
@@ -27,7 +28,7 @@ services:
     volumes:
       - boxmag4_mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 5s
       timeout: 3s
       retries: 30
@@ -38,11 +39,11 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     ports:
-      - "${MINIO_PORT_API:-9000}:9000"
-      - "${MINIO_PORT_CONSOLE:-9001}:9001"
+      - "127.0.0.1:${MINIO_PORT_API:-9000}:9000"
+      - "127.0.0.1:${MINIO_PORT_CONSOLE:-9001}:9001"
     environment:
       MINIO_ROOT_USER: "${MINIO_ROOT_USER:-boxmagadmin}"
-      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-change-me-minio-password}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}"
     command: server /data --console-address ":9001"
     volumes:
       - boxmag4_minio_data:/data
@@ -58,7 +59,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     ports:
-      - "${PORT:-3005}:3005"
+      - "127.0.0.1:${PORT:-3005}:3005"
     env_file:
       - ./.env
     environment:
@@ -68,7 +69,7 @@ services:
       DB_PORT: 3306
       MINIO_ENDPOINT: minio
       MINIO_PORT_API: 9000
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3006,https://boxmag.eu,https://www.boxmag.eu}
+      CORS_ORIGIN: ${CORS_ORIGIN:?set CORS_ORIGIN in .env}
     depends_on:
       mysql:
         condition: service_healthy
@@ -88,7 +89,7 @@ services:
       dockerfile: Dockerfile
       target: production
       args:
-        NEXT_PUBLIC_BACKEND_URL: ${BACKEND_PUBLIC_URL:-http://localhost:3005}
+        NEXT_PUBLIC_BACKEND_URL: ${BACKEND_PUBLIC_URL:?set BACKEND_PUBLIC_URL in .env}
         NEXT_PUBLIC_TAX_PERCENT: ${NEXT_PUBLIC_TAX_PERCENT:-21}
         NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:-production}
         NEXT_PUBLIC_INFO_EMAIL: ${NEXT_PUBLIC_INFO_EMAIL:-}
@@ -100,7 +101,7 @@ services:
     # next-server has repeatedly OOM-killed at ~700MB–1.2GB on this 4GB host.
     mem_limit: 512m
     ports:
-      - "3006:3006"
+      - "127.0.0.1:3006:3006"
     env_file:
       - ./.env
     environment:
