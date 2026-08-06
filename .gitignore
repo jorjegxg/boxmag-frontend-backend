@@ -8,6 +8,16 @@ build/
 out/
 coverage/
 
+# Cypress artifacts
+boxmag4/cypress/videos/
+boxmag4/cypress/screenshots/
+boxmag4/cypress/downloads/
+
+# Playwright demo videos
+boxmag4/demo-videos/
+boxmag4/test-results/
+boxmag4/playwright-report/
+
 # Logs
 *.log
 npm-debug.log*

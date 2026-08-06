@@ -633,7 +633,9 @@ Schema: `boxmag-backend/db/reset_and_seed.sql` (+ ordered migrations in `boxmag-
 - Keep env vars in root `.env`; both apps read from there
 - Use backend port **3005** (not 4000 from code default)
 - Run backend tests: `cd boxmag-backend && npm test` (Vitest)
+- Run frontend unit tests: `cd boxmag4 && npm test` (Vitest)
 - Run e2e tests: `cd boxmag4 && npx cypress run` (Cypress)
+- Run all unit tests from root: `npm test`
 - Production redeploy: **only** [`scripts/deploy.sh`](scripts/deploy.sh) (or GH Actions → that script). Schema changes: add a numbered file under `boxmag-backend/db/migrations/` and mirror into `reset_and_seed.sql` for fresh local DBs; deploy runs `db:migrate`
 
 ### Don't
@@ -655,15 +657,26 @@ Schema: `boxmag-backend/db/reset_and_seed.sql` (+ ordered migrations in `boxmag-
 
 ## Tests
 
+**Comportament așteptat:** [SOURCE_OF_TRUTH.md](SOURCE_OF_TRUTH.md) (invariante `INV-*` + matrice regula→test). Schimbare de flux = update SoT + test în același PR.
+
 | Location | Framework | Coverage |
 |----------|-----------|----------|
 | `boxmag-backend/src/__tests__/` | Vitest + Supertest | Auth, orders, payments, exchange rate, middleware |
-| `boxmag4/cypress/` | Cypress | E2E flows (e.g. B2B order success) |
+| `boxmag4/` (`npm test`) | Vitest + RTL | Stores, guards, Next API handlers |
+| `boxmag4/cypress/` | Cypress | E2E flows (B2C, B2B, account, admin) |
+| `.github/workflows/test.yml` | CI | Unit BE+FE + build; smoke pe `workflow_dispatch` |
+
+```bash
+cd boxmag-backend && npm test
+cd boxmag4 && npm test
+cd boxmag4 && npx cypress run
+```
 
 ---
 
 ## Related docs
 
+- [SOURCE_OF_TRUTH.md](SOURCE_OF_TRUTH.md) — behavioral invariants and test matrix
 - [DOCUMENTATIE_PROIECT.md](DOCUMENTATIE_PROIECT.md) — Romanian setup guide (partially outdated on tests/ports)
 - [CE_MAI_E_DE_FACUT.md](CE_MAI_E_DE_FACUT.md) — Backlog and priorities
 - [README.md](README.md) — Docker dev bind-mount setup

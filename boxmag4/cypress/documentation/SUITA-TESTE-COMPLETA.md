@@ -4,7 +4,7 @@ Acest fișier descrie, în limba română, **tot** ce testează suita Cypress di
 
 Vezi și dashboard-ul grafic: `cypress/documentation/suita-teste-dashboard.html`.
 
-**Stare la 2026-07-19:** 23 fișiere spec · ~186 scenarii de test (`it(...)`) · toate rulează contra frontend-ului de pe `:3006` (backend `:3005`, DB resetat automat înainte de rulare, vezi `cypress.config.ts`).
+**Stare la 2026-08-04:** ~29 fișiere spec · ~210+ scenarii · frontend `:3006` (backend `:3005` pentru spec-uri non-mock). Comportament: [SOURCE_OF_TRUTH.md](../../../SOURCE_OF_TRUTH.md).
 
 ---
 
@@ -79,25 +79,27 @@ Reset DB automat înainte de rulare (`CYPRESS_RESET_DB=false` ca să-l dezactive
 | --- | --- | --- |
 | `admin-orders.cy.ts` | 3 | `/admin/orders`: tabelul de comenzi din API, schimbare status direct din listă (`PATCH`), deschidere detaliu comandă (`/admin/orders/[id]`) + schimbare status acolo |
 | `admin-box-types.cy.ts` | 1 (flux amplu) | Creare tip de cutie cu titlu + upload imagine (`POST /api/box-types/upload-images` → `POST /api/box-types`), apare în tabelul admin ca „Activ”, apoi apare în search-ul din header pe `/shop` |
+| `admin-login.cy.ts` | 3 | Redirect middleware fără sesiune, parolă greșită, login → hub `/admin` |
+| `admin-shipping-methods.cy.ts` | 2 | Tabel metode + `POST` metodă nouă (API mock) |
+| `admin-box-type-edit.cy.ts` | 1 | Smoke editare tip cutie (produse + Salvează) |
+| `account-order-detail.cy.ts` | 1 | Detaliu comandă + „Add this order to cart” |
+| `static-pages.cy.ts` | 6 | Smoke `/about`, `/delivery`, `/how-to-buy`, legal pages |
+| `smoke.cy.ts` | 2 | Home CTA + redirect `/ro/about` (INV-I18N-COOKIE) |
 
 ## 8. Pagini statice / smoke
 
-Nu au încă spec dedicat — vezi secțiunea „Ce nu e acoperit” mai jos (`/about`, `/delivery`, `/how-to-buy`, `/privacy-policy`, `/regulations`, `/complaints-and-returns`).
+Acoperite de `static-pages.cy.ts` + `smoke.cy.ts`. Vezi și [SOURCE_OF_TRUTH.md](../../../SOURCE_OF_TRUTH.md).
 
 ---
 
 ## Ce nu e acoperit încă
 
-Lista completă cu bife e în `cypress/PAGES_TESTS_TODO.md` (~30 scenarii nebifate). Pe scurt, zonele fără spec Cypress azi:
+Lista completă cu bife e în `cypress/PAGES_TESTS_TODO.md`. Zone rămase fără e2e dedicat:
 
-- **Admin:** autentificare admin (`/admin/login`, redirect fără sesiune), CRUD metode shipping, editare tip de cutie existent, trimitere email ofertă din detaliu comandă
-- **Cont client:** pagina de detaliu comandă (`/account/orders/[id]`) + reorder
-- **Checkout avansat:** editare cantitate/ștergere linie direct pe checkout, upload atașament la checkout
+- **Admin:** trimitere email ofertă din detaliu comandă
+- **Checkout avansat:** editare cantitate/ștergere linie direct pe checkout, upload atașament
 - **Shell global:** căutarea din header (dropdown → PDP), meniul hamburger mobil
-- **Pagini statice:** `/about`, `/delivery`, `/how-to-buy`, `/privacy-policy`, `/regulations`, `/complaints-and-returns`, `/mobile-app-svg`
 - **Reziliență:** stări de eroare API pe mai multe pagini, SEO (`/sitemap.xml`, `robots.txt`)
-
-Acestea rămân doar documentate ca goluri — nu au fost implementate în această trecere (scop limitat, la cererea explicită, la documentație + dashboard pentru suita existentă).
 
 ---
 

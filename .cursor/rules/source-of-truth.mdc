@@ -1,0 +1,24 @@
+---
+description: Keep SOURCE_OF_TRUTH.md and tests in sync when changing business behavior
+globs:
+  - boxmag-backend/src/**/*
+  - boxmag4/app/**/*
+  - boxmag4/lib/**/*
+  - boxmag4/cypress/**/*
+alwaysApply: false
+---
+
+# Source of truth ↔ tests
+
+Behavioral product rules live in [SOURCE_OF_TRUTH.md](SOURCE_OF_TRUTH.md) (`INV-*` IDs).
+
+When changing checkout, orders, auth, B2B guards, tax/qty/tiers, or admin auth:
+
+1. Update the matching `INV-*` (or add a new ID) in `SOURCE_OF_TRUTH.md`.
+2. Update the matrix row (unit BE / unit FE / e2e / smoke).
+3. Add or adjust a test at the lowest suitable level:
+   - pure logic / API → Vitest (`boxmag-backend` or `boxmag4`)
+   - user-visible flow → Cypress
+4. Do not invent tests for behavior that is not in the SoT.
+
+`AGENTS.md` is navigation/setup — not the behavioral authority.

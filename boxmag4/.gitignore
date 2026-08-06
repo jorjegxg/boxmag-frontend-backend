@@ -22,6 +22,9 @@ node_modules
 
 # testing
 /coverage
+/demo-videos/
+/test-results/
+/playwright-report/
 
 # next.js
 /.next/

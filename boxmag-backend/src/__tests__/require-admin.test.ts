@@ -1,7 +1,11 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ADMIN_COOKIE_NAME, createAdminSessionToken } from "../config/admin-auth";
-import { USER_COOKIE_NAME, createUserSessionToken } from "../config/user-auth";
+import {
+  TEST_USER_EMAIL,
+  adminCookie,
+  ensureTestAuthEnv,
+  userCookie,
+} from "./test-helpers";
 
 const { queryMock, executeMock } = vi.hoisted(() => ({
   queryMock: vi.fn(),
@@ -17,25 +21,12 @@ vi.mock("../db/mysql", () => ({
 
 import { app } from "../app";
 
-const ADMIN_PASSWORD = "test-admin-password";
-const USER_EMAIL = "customer@example.com";
-
-function adminCookie(): string {
-  return `${ADMIN_COOKIE_NAME}=${createAdminSessionToken(ADMIN_PASSWORD)}`;
-}
-
-function userCookie(userId = 7): string {
-  const token = createUserSessionToken(userId, USER_EMAIL);
-  if (!token) throw new Error("Failed to create user session token");
-  return `${USER_COOKIE_NAME}=${token}`;
-}
-
 describe("admin authentication", () => {
   beforeEach(() => {
     queryMock.mockReset();
     executeMock.mockReset();
-    process.env.ADMIN_PASSWORD = ADMIN_PASSWORD;
-    process.env.USER_SESSION_SECRET = "test-user-session-secret";
+    ensureTestAuthEnv();
+    delete process.env.ADMIN_API_TOKEN;
   });
 
   it("blocks listing all orders without admin auth", async () => {
@@ -62,11 +53,20 @@ describe("admin authentication", () => {
 
     const response = await request(app)
       .get("/api/orders")
-      .query({ email: USER_EMAIL })
+      .query({ email: TEST_USER_EMAIL })
       .set("Cookie", userCookie());
 
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
+  });
+
+  it("blocks email-scoped orders when user email does not match (INV-AUTH-EMAIL-SCOPE)", async () => {
+    const response = await request(app)
+      .get("/api/orders")
+      .query({ email: "other@example.com" })
+      .set("Cookie", userCookie(7, TEST_USER_EMAIL));
+
+    expect(response.status).toBe(401);
   });
 
   it("blocks order status updates without admin auth", async () => {

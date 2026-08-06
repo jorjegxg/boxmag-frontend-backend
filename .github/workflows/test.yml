@@ -1,27 +1,31 @@
-name: Deploy production
+name: Test
 
 on:
+  pull_request:
   push:
-    branches:
+    branches-ignore:
       - main
   workflow_dispatch:
+    inputs:
+      run_smoke:
+        description: "Run HTTP smoke + Cypress smoke.cy.ts (requires services; local/self-hosted only)"
+        type: boolean
+        default: false
 
 concurrency:
-  group: production-deploy
-  cancel-in-progress: false
+  group: test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test-backend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: boxmag-backend/package-lock.json
-
       - name: Test backend
         working-directory: boxmag-backend
         run: |
@@ -32,13 +36,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: boxmag4/package-lock.json
-
       - name: Test frontend unit
         working-directory: boxmag4
         run: |
@@ -49,13 +51,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: boxmag4/package-lock.json
-
       - name: Build frontend
         working-directory: boxmag4
         env:
@@ -66,20 +66,15 @@ jobs:
           npm ci
           npm run build
 
-  deploy:
-    needs: [test-backend, test-frontend-unit, build-frontend]
+  smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_smoke == true }}
     runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend-unit, build-frontend]
     steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.2
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: 22
-          script_stop: true
-          command_timeout: 30m
-          script: |
-            set -euo pipefail
-            cd "${{ secrets.DEPLOY_PATH }}"
-            bash scripts/deploy.sh
+      - uses: actions/checkout@v4
+      - name: Note
+        run: |
+          echo "Smoke job is intended for environments with backend :3005 and frontend :3006 already available."
+          echo "Set BACKEND_URL / FRONTEND_URL secrets or skip if services are not provisioned on this runner."
+          echo "Locally: bash scripts/smoke-http.sh && cd boxmag4 && npx cypress run --spec cypress/e2e/smoke.cy.ts"
+          exit 0

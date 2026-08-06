@@ -1,7 +1,12 @@
 import request from "supertest";
+import crypto from "crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createUserSessionToken } from "../config/user-auth";
 import { USER_COOKIE_NAME } from "../config/user-auth";
+import {
+  TEST_USER_EMAIL,
+  ensureTestAuthEnv,
+  userCookie,
+} from "./test-helpers";
 
 const { executeMock } = vi.hoisted(() => ({
   executeMock: vi.fn(),
@@ -20,20 +25,16 @@ vi.mock("../services/email", () => ({
 
 import { app } from "../app";
 
-const USER_EMAIL = "customer@example.com";
-
-function userCookie(userId = 42): string {
-  process.env.USER_SESSION_SECRET = "test-user-session-secret";
-  const token = createUserSessionToken(userId, USER_EMAIL);
-  if (!token) throw new Error("Failed to create user session token");
-  return `${USER_COOKIE_NAME}=${token}`;
+function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${hash}`;
 }
 
 describe("auth routes", () => {
   beforeEach(() => {
     executeMock.mockReset();
-    process.env.USER_SESSION_SECRET = "test-user-session-secret";
-    process.env.ADMIN_PASSWORD = "test-admin-password";
+    ensureTestAuthEnv();
   });
 
   it("returns 400 when login payload is missing", async () => {
@@ -42,6 +43,75 @@ describe("auth routes", () => {
     expect(response.status).toBe(400);
     expect(response.body.ok).toBe(false);
     expect(response.body.message).toContain("required");
+  });
+
+  it("logs in and sets user session cookie (INV-AUTH-USER)", async () => {
+    const password = "Secret123!";
+    executeMock
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 42,
+            email: TEST_USER_EMAIL,
+            password_hash: hashPassword(password),
+            first_name: "Jane",
+            last_name: "Doe",
+            phone: "+40700000000",
+            is_active: 1,
+            email_verified_at: new Date().toISOString(),
+          },
+        ],
+      ])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+    const response = await request(app).post("/api/auth/login").send({
+      email: `  ${TEST_USER_EMAIL.toUpperCase()}  `,
+      password,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data.email).toBe(TEST_USER_EMAIL);
+    const setCookie = response.headers["set-cookie"];
+    expect(setCookie).toBeDefined();
+    expect(String(setCookie)).toContain(USER_COOKIE_NAME);
+  });
+
+  it("rejects login when email is not verified", async () => {
+    executeMock.mockResolvedValueOnce([
+      [
+        {
+          id: 42,
+          email: TEST_USER_EMAIL,
+          password_hash: hashPassword("Secret123!"),
+          first_name: "Jane",
+          last_name: "Doe",
+          phone: null,
+          is_active: 1,
+          email_verified_at: null,
+        },
+      ],
+    ]);
+
+    const response = await request(app).post("/api/auth/login").send({
+      email: TEST_USER_EMAIL,
+      password: "Secret123!",
+    });
+
+    expect(response.status).toBe(403);
+    expect(response.body.message).toContain("verify your email");
+  });
+
+  it("clears user session cookie on logout (INV-AUTH-USER)", async () => {
+    const response = await request(app)
+      .post("/api/auth/logout")
+      .set("Cookie", userCookie());
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    const setCookie = response.headers["set-cookie"];
+    expect(setCookie).toBeDefined();
+    expect(String(setCookie)).toContain(`${USER_COOKIE_NAME}=`);
   });
 
   it("returns 400 when verify-email token is missing", async () => {
@@ -74,7 +144,9 @@ describe("auth routes", () => {
       .mockResolvedValueOnce([{ affectedRows: 1 }])
       .mockResolvedValueOnce([{ affectedRows: 1 }]);
 
-    const response = await request(app).get("/api/auth/verify-email?token=valid-token");
+    const response = await request(app).get(
+      "/api/auth/verify-email?token=valid-token",
+    );
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("Email confirmed successfully");
