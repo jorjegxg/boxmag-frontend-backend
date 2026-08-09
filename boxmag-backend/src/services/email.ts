@@ -1391,7 +1391,7 @@ export async function sendOrderOfferEmailToCustomer(
       "Produse:",
       productsTableText,
       priceBreakdownText ? `\n${priceBreakdownText}` : "",
-      displayMessage ? `\nMesaj client:\n${displayMessage}` : "",
+      displayMessage ? `\nMesajul tau:\n${displayMessage}` : "",
       "",
       "Cu respect,",
       "Echipa Boxmag",
@@ -1411,9 +1411,14 @@ export async function sendOrderOfferEmailToCustomer(
               <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#374151;">
                 Salut ${escapeHtml(params.customerName || "client")},
               </p>
-              <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;white-space:pre-line;">
-                ${escapeHtml(offerMessage || defaultOfferText)}
-              </p>
+              <div style="margin:0 0 18px;padding:14px 16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;">
+                <p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#9a3412;">
+                  Oferta noastra
+                </p>
+                <p style="margin:0;font-size:16px;line-height:1.6;color:#9a3412;font-weight:600;white-space:pre-line;">
+                  ${escapeHtml(offerMessage || defaultOfferText)}
+                </p>
+              </div>
 
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;">
                 <tr><td style="padding:4px 0;color:#6b7280;width:160px;">Numar comanda</td><td style="padding:4px 0;font-weight:600;">${escapeHtml(orderNumber)}</td></tr>
@@ -1433,7 +1438,7 @@ export async function sendOrderOfferEmailToCustomer(
               ${
                 displayMessage
                   ? `<div style="margin-top:20px;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
-                <p style="margin:0 0 8px;font-weight:700;">Mesaj client</p>
+                <p style="margin:0 0 8px;font-weight:700;">Mesajul tau</p>
                 <p style="margin:0;white-space:pre-line;">${escapeHtml(displayMessage)}</p>
               </div>`
                   : ""
