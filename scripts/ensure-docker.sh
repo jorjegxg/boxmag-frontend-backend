@@ -26,11 +26,12 @@ start_docker_desktop_windows() {
   for candidate in "${candidates[@]}"; do
     if [[ -f "$candidate" ]]; then
       echo "-> Pornesc Docker Desktop..."
+      local win_path="$candidate"
       if command -v cygpath >/dev/null 2>&1; then
-        cmd.exe //c start "" "$(cygpath -w "$candidate")"
-      else
-        cmd.exe //c start "" "$candidate"
+        win_path="$(cygpath -w "$candidate")"
       fi
+      # Fara `cmd /c start` — evita fereastra consola noua.
+      powershell.exe -NoProfile -Command "Start-Process -FilePath '$win_path'" >/dev/null
       return 0
     fi
   done
