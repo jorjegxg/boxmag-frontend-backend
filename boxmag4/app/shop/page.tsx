@@ -255,11 +255,11 @@ function ShopPageContent() {
 
           <div>
             {isLoading ? (
-              <p className="text-sm text-gray-500">Loading shop...</p>
+              <p className="text-sm text-gray-500">{t("shop.loading")}</p>
             ) : loadError ? (
               <p className="text-sm text-red-600">{loadError}</p>
             ) : products.length === 0 ? (
-              <p className="text-sm text-gray-500">Nu exista produse pentru filtrul selectat.</p>
+              <p className="text-sm text-gray-500">{t("shop.emptyFilter")}</p>
             ) : (
               <div className="grid grid-cols-1 items-stretch gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {products.map((product) => {
@@ -293,9 +293,9 @@ function ShopPageContent() {
                       </div>
                       <p
                         className="line-clamp-2 min-h-8 text-xs uppercase leading-snug tracking-wide text-gray-500"
-                        title={boxType?.title ?? "Box Type"}
+                        title={boxType?.title ?? t("shop.boxTypeFallback")}
                       >
-                        {boxType?.title ?? "Box Type"}
+                        {boxType?.title ?? t("shop.boxTypeFallback")}
                       </p>
                       <h2
                         className="mt-1 line-clamp-2 min-h-12 text-base font-semibold leading-snug text-black"
@@ -303,15 +303,17 @@ function ShopPageContent() {
                       >
                         {product.productName}
                       </h2>
-                      <p className="mt-1 text-sm text-gray-600">Cod: {product.itemNo}</p>
+                      <p className="mt-1 text-sm text-gray-600">
+                        {t("shop.codeLabel")} {product.itemNo}
+                      </p>
                       <p className="mt-1 min-h-5 text-sm text-gray-600">
-                        {size ? `Size: ${size}` : "\u00a0"}
+                        {size ? `${t("shop.sizeLabel")} ${size}` : "\u00a0"}
                       </p>
                       <div className="mt-auto pt-3">
                         <p className="text-sm font-semibold text-black">
                           {firstPrice
-                            ? `de la ${formatPrice(firstPrice.withTax)}`
-                            : "Pret la cerere"}
+                            ? `${t("shop.priceFrom")} ${formatPrice(firstPrice.withTax)}`
+                            : t("shop.priceOnRequest")}
                         </p>
                         <button
                           type="button"
@@ -338,7 +340,9 @@ function ShopPageContent() {
                           ) : (
                             <FaShoppingCart className="h-3.5 w-3.5" />
                           )}
-                          {animatedProductId === product.id ? "Added" : "Add to cart"}
+                          {animatedProductId === product.id
+                            ? t("productTable.addedToCart")
+                            : t("productTable.addToCart")}
                         </button>
                       </div>
                     </article>

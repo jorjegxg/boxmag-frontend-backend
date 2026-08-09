@@ -249,7 +249,7 @@ export function Header() {
         <div className="relative shrink-0" ref={menuContainerRef}>
           <button
             type="button"
-            aria-label="Open shop menu"
+            aria-label={t("header.openShopMenu")}
             onClick={() => {
               setIsMenuOpen((prev) => !prev);
               void loadDefaultBoxTypes();
@@ -261,14 +261,14 @@ export function Header() {
           {isMenuOpen ? (
             <div className="absolute left-0 top-[calc(100%+8px)] z-50 min-w-[240px] rounded-lg border border-my-light-gray bg-white p-3 shadow-lg">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                box_types
+                {t("header.boxTypesLabel")}
               </p>
               {isLoading ? (
-                <p className="text-sm text-gray-500">Loading...</p>
+                <p className="text-sm text-gray-500">{t("header.loading")}</p>
               ) : loadError ? (
                 <p className="text-sm text-red-600">{loadError}</p>
               ) : defaultBoxTypes.length === 0 ? (
-                <p className="text-sm text-gray-500">No box types found.</p>
+                <p className="text-sm text-gray-500">{t("header.noBoxTypes")}</p>
               ) : (
                 <ul className="space-y-1">
                   {defaultBoxTypes.map((type) => (
@@ -333,16 +333,16 @@ export function Header() {
             {isDropdownOpen ? (
               <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 rounded-lg border border-my-light-gray bg-white p-3 shadow-lg">
                 {isLoading ? (
-                  <p className="text-sm text-gray-500">Searching...</p>
+                  <p className="text-sm text-gray-500">{t("header.searching")}</p>
                 ) : loadError ? (
                   <p className="text-sm text-red-600">{loadError}</p>
                 ) : query.trim().length < 2 ? (
                   defaultBoxTypes.length === 0 ? (
-                    <p className="text-sm text-gray-500">No box types found.</p>
+                    <p className="text-sm text-gray-500">{t("header.noBoxTypes")}</p>
                   ) : (
                     <div>
                       <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        box_types
+                        {t("header.boxTypesLabel")}
                       </p>
                       <ul className="space-y-1">
                         {defaultBoxTypes.map((type) => (
@@ -360,13 +360,13 @@ export function Header() {
                     </div>
                   )
                 ) : boxTypes.length === 0 && boxTypeProducts.length === 0 ? (
-                  <p className="text-sm text-gray-500">No results found.</p>
+                  <p className="text-sm text-gray-500">{t("header.noResults")}</p>
                 ) : (
                   <div className="space-y-3">
                     {boxTypes.length > 0 ? (
                       <div>
                         <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                          box_types
+                          {t("header.boxTypesLabel")}
                         </p>
                         <ul className="space-y-1">
                           {boxTypes.map((type) => (
@@ -386,7 +386,7 @@ export function Header() {
                     {boxTypeProducts.length > 0 ? (
                       <div>
                         <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                          box_type_products
+                          {t("header.productsLabel")}
                         </p>
                         <ul className="space-y-1">
                           {boxTypeProducts.map((product) => (

@@ -9,14 +9,16 @@ import { ServicesSection } from "../global/components/services-section";
 import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { getBackendBaseUrl } from "../../lib/backend-url";
+import { useLanguage } from "../i18n/language-context";
 
 type VerifyState = "loading" | "success" | "error";
 
 function VerifyEmailPageContent() {
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
   const [state, setState] = useState<VerifyState>("loading");
-  const [message, setMessage] = useState("Verifying your email...");
+  const [message, setMessage] = useState("");
 
   const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
@@ -24,12 +26,12 @@ function VerifyEmailPageContent() {
     const runVerification = async () => {
       if (!token) {
         setState("error");
-        setMessage("Invalid verification link.");
+        setMessage(t("verifyEmail.invalidLink"));
         return;
       }
 
       setState("loading");
-      setMessage("Verifying your email...");
+      setMessage(t("verifyEmail.verifying"));
       try {
         const response = await fetch(
           `${backendBaseUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}`,
@@ -37,22 +39,20 @@ function VerifyEmailPageContent() {
 
         if (!response.ok) {
           setState("error");
-          setMessage(
-            "Verification link is invalid or expired. Please register again to receive a new link.",
-          );
+          setMessage(t("verifyEmail.expired"));
           return;
         }
 
         setState("success");
-        setMessage("Email confirmed successfully. You can now sign in.");
+        setMessage(t("verifyEmail.successMessage"));
       } catch (_error) {
         setState("error");
-        setMessage("Could not verify your email right now. Please try again.");
+        setMessage(t("verifyEmail.tryAgain"));
       }
     };
 
     void runVerification();
-  }, [backendBaseUrl, token]);
+  }, [backendBaseUrl, t, token]);
 
   return (
     <div>
@@ -61,10 +61,12 @@ function VerifyEmailPageContent() {
       <section className="w-full bg-white px-4 sm:px-6 lg:px-20 pt-6">
         <div className="max-w-4xl mx-auto text-xs lg:text-sm text-gray-500 uppercase tracking-wide">
           <Link href="/" className="hover:underline">
-            Home
+            {t("footer.home")}
           </Link>{" "}
           <span className="mx-2">→</span>
-          <span className="text-gray-700 font-semibold">Verify Email</span>
+          <span className="text-gray-700 font-semibold">
+            {t("verifyEmail.breadcrumb")}
+          </span>
         </div>
       </section>
 
@@ -84,12 +86,14 @@ function VerifyEmailPageContent() {
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900">
                 {state === "loading"
-                  ? "Verifying email"
+                  ? t("verifyEmail.verifyingTitle")
                   : state === "success"
-                    ? "Email verified"
-                    : "Verification failed"}
+                    ? t("verifyEmail.successTitle")
+                    : t("verifyEmail.errorTitle")}
               </h1>
-              <p className="mt-2 text-sm text-gray-600">{message}</p>
+              <p className="mt-2 text-sm text-gray-600">
+                {message || t("verifyEmail.verifying")}
+              </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
                 {state === "success" ? (
@@ -97,21 +101,21 @@ function VerifyEmailPageContent() {
                     href="/account"
                     className="inline-flex items-center justify-center rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white hover:bg-my-red/90 transition-colors"
                   >
-                    Go to Sign In
+                    {t("verifyEmail.goToSignIn")}
                   </Link>
                 ) : (
                   <Link
                     href="/registration"
                     className="inline-flex items-center justify-center rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white hover:bg-my-red/90 transition-colors"
                   >
-                    Register Again
+                    {t("verifyEmail.registerAgain")}
                   </Link>
                 )}
                 <Link
                   href="/"
                   className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                 >
-                  Back to Home
+                  {t("verifyEmail.backHome")}
                 </Link>
               </div>
             </div>

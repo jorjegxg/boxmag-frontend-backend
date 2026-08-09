@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { getBackendBaseUrl } from "../../../lib/backend-url";
+import { useLanguage } from "../../i18n/language-context";
 
 type OrderAttachmentActionsProps = {
   orderId: number;
@@ -36,11 +37,17 @@ export function OrderAttachmentActions({
   attachmentName,
   hasAttachment,
   ownerEmail,
-  label = "Attachment",
-  emptyText = "No",
-  openText = "Open attachment",
-  downloadText = "Download",
+  label,
+  emptyText,
+  openText,
+  downloadText,
 }: OrderAttachmentActionsProps) {
+  const { t } = useLanguage();
+  const resolvedLabel = label ?? t("attachment.label");
+  const resolvedEmptyText = emptyText ?? t("attachment.empty");
+  const resolvedOpenText = openText ?? t("attachment.open");
+  const resolvedDownloadText = downloadText ?? t("attachment.download");
+
   const viewUrl = useMemo(
     () => buildAttachmentUrl(orderId, ownerEmail, false),
     [orderId, ownerEmail],
@@ -54,9 +61,9 @@ export function OrderAttachmentActions({
     return (
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-          {label}
+          {resolvedLabel}
         </p>
-        <p className="mt-1 text-sm font-medium text-gray-900">{emptyText}</p>
+        <p className="mt-1 text-sm font-medium text-gray-900">{resolvedEmptyText}</p>
       </div>
     );
   }
@@ -64,7 +71,7 @@ export function OrderAttachmentActions({
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-        {label}
+        {resolvedLabel}
       </p>
       <p className="mt-1 break-all text-sm font-medium text-gray-900">
         {attachmentName}
@@ -76,13 +83,13 @@ export function OrderAttachmentActions({
           rel="noopener noreferrer"
           className="text-sm font-semibold text-my-red hover:underline"
         >
-          {openText}
+          {resolvedOpenText}
         </a>
         <a
           href={downloadUrl}
           className="text-sm font-semibold text-gray-700 hover:underline"
         >
-          {downloadText}
+          {resolvedDownloadText}
         </a>
       </div>
     </div>

@@ -358,7 +358,7 @@ function ProductByKeyPageContent() {
       <div>
         <B2b />
         <main className="w-full bg-[#f8f8f8] px-4 py-8 lg:px-12">
-          <p className="mx-auto max-w-7xl text-sm text-gray-600">Product not found.</p>
+          <p className="mx-auto max-w-7xl text-sm text-gray-600">{t("productDemo.notFound")}</p>
         </main>
         <NewsletterSubscribe />
       </div>
@@ -381,7 +381,7 @@ function ProductByKeyPageContent() {
                 type="button"
                 onClick={() => setIsZoomOpen(true)}
                 className="group relative flex h-[320px] w-[423px] max-w-full cursor-zoom-in items-center justify-center rounded-2xl border border-gray-200 bg-[#f6f1e8] p-6"
-                aria-label="Zoom image"
+                aria-label={t("productDemo.zoomImage")}
               >
                 <img
                   src={galleryWithProduct[selectedImage]}
@@ -441,7 +441,7 @@ function ProductByKeyPageContent() {
               {allProducts.length > 1 ? (
                 <div className="mt-4">
                   <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="size-option">
-                    Marime produs
+                    {t("productDemo.productSize")}
                   </label>
                   <select
                     id="size-option"
@@ -529,7 +529,9 @@ function ProductByKeyPageContent() {
               >
                 <span className="inline-flex items-center justify-center gap-2">
                   {isAddToCartAnimated ? <FaCheck className="h-4 w-4" /> : null}
-                  {isAddToCartAnimated ? "Added" : t("productDemo.addToCart")}
+                  {isAddToCartAnimated
+                    ? t("productDemo.addedToCart")
+                    : t("productDemo.addToCart")}
                 </span>
               </button>
 
@@ -581,7 +583,7 @@ function ProductByKeyPageContent() {
             type="button"
             onClick={() => setIsZoomOpen(false)}
             className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
-            aria-label="Close"
+            aria-label={t("productDemo.closeLightbox")}
           >
             <X className="h-6 w-6" />
           </button>
@@ -594,7 +596,7 @@ function ProductByKeyPageContent() {
                 showPrevImage();
               }}
               className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
-              aria-label="Previous image"
+              aria-label={t("productDemo.prevImage")}
             >
               <ChevronLeft className="h-7 w-7" />
             </button>
@@ -615,7 +617,7 @@ function ProductByKeyPageContent() {
                 showNextImage();
               }}
               className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
-              aria-label="Next image"
+              aria-label={t("productDemo.nextImage")}
             >
               <ChevronRight className="h-7 w-7" />
             </button>

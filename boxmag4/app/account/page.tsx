@@ -114,7 +114,7 @@ function LoginRequiredView({
     e.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail || !password) {
-      setError("Please enter your email and password.");
+      setError(t("account.error.enterCredentials"));
       return;
     }
 
@@ -138,7 +138,7 @@ function LoginRequiredView({
         message?: string;
       };
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? "Invalid email or password");
+        throw new Error(payload.message ?? t("account.error.invalidCredentials"));
       }
 
       localStorage.setItem(AUTH_STORAGE_KEY, "true");
@@ -149,7 +149,7 @@ function LoginRequiredView({
       setError(
         loginError instanceof Error
           ? loginError.message
-          : "Invalid email or password",
+          : t("account.error.invalidCredentials"),
       );
     } finally {
       setIsSubmitting(false);
@@ -158,13 +158,13 @@ function LoginRequiredView({
 
   return (
     <div className="mx-auto w-full max-w-xl rounded-lg border border-gray-200 bg-white p-6 sm:p-8">
-      <h2 className="text-2xl font-bold text-gray-900">Sign in</h2>
+      <h2 className="text-2xl font-bold text-gray-900">{t("account.signInTitle")}</h2>
       <p className="mt-2 text-sm text-gray-600">
-        Sign in to access your account details, addresses, billing and orders.
+        {t("account.signInHint")}
       </p>
       {sessionExpired ? (
         <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
-          Your session has expired. Please sign in again.
+          {t("account.sessionExpired")}
         </p>
       ) : null}
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
@@ -199,14 +199,18 @@ function LoginRequiredView({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={`${inputClass} pr-12`}
-              placeholder="Password"
+              placeholder={t("account.passwordPlaceholder")}
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
               className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
-              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-label={
+                showPassword
+                  ? t("registration.hidePassword")
+                  : t("registration.showPassword")
+              }
             >
               {showPassword ? (
                 <FaEyeSlash className="h-4 w-4" />
@@ -225,7 +229,7 @@ function LoginRequiredView({
             className={saveBtnClass}
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Signing in..." : "Sign in"}
+            {isSubmitting ? t("account.signingIn") : t("account.signInButton")}
           </button>
           <Link
             href="/registration"
@@ -344,7 +348,7 @@ function MyAccountTab({
 
   const handleSave = async () => {
     if (!profile.email) {
-      setSaveError("Missing account email.");
+      setSaveError(t("account.error.missingEmail"));
       setSaveSuccess(null);
       return;
     }
@@ -372,10 +376,10 @@ function MyAccountTab({
       if (normalizedVat && trimmedCompany) {
         rememberVatCompany(normalizedVat, trimmedCompany);
       }
-      setSaveSuccess("Details saved");
+      setSaveSuccess(t("account.detailsSaved"));
     } catch (error) {
       setSaveError(
-        error instanceof Error ? error.message : "Failed to save profile.",
+        error instanceof Error ? error.message : t("account.error.saveProfile"),
       );
     } finally {
       setIsSaving(false);
@@ -406,14 +410,14 @@ function MyAccountTab({
               htmlFor="acc-first"
               className="block text-xs font-semibold text-gray-500 mb-1 uppercase"
             >
-              First Name
+              {t("contact.firstName")}
             </label>
             <input
               id="acc-first"
               type="text"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              placeholder="First Name"
+              placeholder={t("account.placeholder.firstName")}
               className={inputClass}
             />
           </div>
@@ -422,20 +426,20 @@ function MyAccountTab({
               htmlFor="acc-last"
               className="block text-xs font-semibold text-gray-500 mb-1 uppercase"
             >
-              Last Name
+              {t("contact.surname")}
             </label>
             <input
               id="acc-last"
               type="text"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              placeholder="Last Name"
+              placeholder={t("account.placeholder.lastName")}
               className={inputClass}
             />
           </div>
         </div>
         <button type="button" className={saveBtnClass} onClick={() => void handleSave()} disabled={isSaving}>
-          {isSaving ? "Saving..." : t("account.save")}
+          {isSaving ? t("account.saving") : t("account.save")}
         </button>
       </div>
 
@@ -458,7 +462,7 @@ function MyAccountTab({
             onChange={(e) => setVatNumber(e.target.value.toUpperCase())}
             placeholder={t("contact.vatNumber")}
             pattern="[A-Za-z]{2}\s?[A-Za-z0-9]{2,12}"
-            title="Use country code plus 2-12 letters/digits (e.g. RO12345678 or RO 12345678)"
+            title={t("account.vatFormatTitle")}
             className={inputClass}
             aria-describedby={vatLookupError ? "acc-vat-error" : undefined}
             aria-busy={isLookingUpVat}
@@ -496,7 +500,7 @@ function MyAccountTab({
           />
         </div>
         <button type="button" className={saveBtnClass} onClick={() => void handleSave()} disabled={isSaving || isLookingUpVat}>
-          {isSaving ? "Saving..." : t("account.save")}
+          {isSaving ? t("account.saving") : t("account.save")}
         </button>
       </div>
 
@@ -523,7 +527,7 @@ function MyAccountTab({
           />
         </div>
         <button type="button" className={saveBtnClass} onClick={() => void handleSave()} disabled={isSaving}>
-          {isSaving ? "Saving..." : t("account.save")}
+          {isSaving ? t("account.saving") : t("account.save")}
         </button>
       </div>
 
@@ -547,7 +551,7 @@ function MyAccountTab({
             className={lockedInputClass}
           />
           <p className="mt-2 text-xs text-gray-500">
-            Email-ul contului nu poate fi modificat.
+            {t("account.emailLockedHint")}
           </p>
         </div>
       </div>
@@ -660,7 +664,7 @@ function AddressTab({
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Failed to save address",
+          : t("account.error.saveAddress"),
       );
     } finally {
       setIsSubmitting(false);
@@ -732,7 +736,7 @@ function AddressTab({
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Failed to update address",
+          : t("account.error.updateAddress"),
       );
     } finally {
       setIsSubmitting(false);
@@ -751,7 +755,7 @@ function AddressTab({
       setError(
         deleteError instanceof Error
           ? deleteError.message
-          : "Failed to delete address",
+          : t("account.error.deleteAddress"),
       );
     } finally {
       setDeletingAddressId(null);
@@ -769,12 +773,12 @@ function AddressTab({
 
       <div className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-4">
         <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
-          Saved addresses
+          {t("account.savedAddresses")}
         </h3>
         {isLoading ? (
-          <p className="text-sm text-gray-600">Loading addresses...</p>
+          <p className="text-sm text-gray-600">{t("account.loadingAddresses")}</p>
         ) : addresses.length === 0 ? (
-          <p className="text-sm text-gray-600">No saved addresses yet.</p>
+          <p className="text-sm text-gray-600">{t("account.noSavedAddresses")}</p>
         ) : (
           <div className="space-y-4">
             {addresses.map((address) => (
@@ -804,13 +808,17 @@ function AddressTab({
                       {address.postcode} {address.city}
                     </p>
                     <p>{address.country}</p>
-                    {address.phone ? <p>Tel: {address.phone}</p> : null}
+                    {address.phone ? (
+                      <p>
+                        {t("checkout.address.tel")} {address.phone}
+                      </p>
+                    ) : null}
                     <p className="text-xs text-gray-500">
-                      {address.isDefaultShipping ? "Default shipping" : ""}
+                      {address.isDefaultShipping ? t("account.defaultShipping") : ""}
                       {address.isDefaultShipping && address.isDefaultBilling
                         ? " • "
                         : ""}
-                      {address.isDefaultBilling ? "Default billing" : ""}
+                      {address.isDefaultBilling ? t("account.defaultBilling") : ""}
                     </p>
                     <div className="pt-2 flex gap-3">
                       <button
@@ -818,7 +826,7 @@ function AddressTab({
                         className="text-xs font-semibold text-my-red hover:underline"
                         onClick={() => startEditAddress(address)}
                       >
-                        Edit
+                        {t("account.editAddress")}
                       </button>
                       <button
                         type="button"
@@ -827,8 +835,8 @@ function AddressTab({
                         disabled={deletingAddressId === address.id}
                       >
                         {deletingAddressId === address.id
-                          ? "Deleting..."
-                          : "Delete"}
+                          ? t("account.deleting")
+                          : t("account.delete")}
                       </button>
                     </div>
                   </div>
@@ -845,28 +853,28 @@ function AddressTab({
         className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6 space-y-4"
       >
         <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
-          {editingAddressId ? "Edit address" : "Add new address"}
+          {editingAddressId ? t("account.editAddress") : t("account.addNewAddress")}
         </h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <input
             type="text"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder="Label (Home, Warehouse...)"
+            placeholder={t("account.placeholder.label")}
             className={inputClass}
           />
           <input
             type="text"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
-            placeholder="Company Name"
+            placeholder={t("account.placeholder.companyName")}
             className={inputClass}
           />
           <input
             type="text"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
-            placeholder="First Name *"
+            placeholder={t("account.placeholder.firstNameRequired")}
             className={inputClass}
             required
           />
@@ -874,7 +882,7 @@ function AddressTab({
             type="text"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
-            placeholder="Last Name *"
+            placeholder={t("account.placeholder.lastNameRequired")}
             className={inputClass}
             required
           />
@@ -882,7 +890,7 @@ function AddressTab({
             type="text"
             value={phone}
             onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-            placeholder="Phone"
+            placeholder={t("account.placeholder.phone")}
             className={inputClass}
             inputMode="numeric"
             pattern="[0-9]*"
@@ -891,7 +899,7 @@ function AddressTab({
             type="text"
             value={country}
             onChange={(e) => setCountry(e.target.value)}
-            placeholder="Country *"
+            placeholder={t("account.placeholder.countryRequired")}
             className={inputClass}
             required
           />
@@ -899,7 +907,7 @@ function AddressTab({
             type="text"
             value={addressLine1}
             onChange={(e) => setAddressLine1(e.target.value)}
-            placeholder="Address line 1 *"
+            placeholder={t("account.placeholder.addressLine1Required")}
             className={inputClass}
             required
           />
@@ -907,14 +915,14 @@ function AddressTab({
             type="text"
             value={addressLine2}
             onChange={(e) => setAddressLine2(e.target.value)}
-            placeholder="Address line 2"
+            placeholder={t("account.placeholder.addressLine2")}
             className={inputClass}
           />
           <input
             type="text"
             value={postcode}
             onChange={(e) => setPostcode(e.target.value)}
-            placeholder="Postcode *"
+            placeholder={t("account.placeholder.postcodeRequired")}
             className={inputClass}
             required
           />
@@ -922,7 +930,7 @@ function AddressTab({
             type="text"
             value={city}
             onChange={(e) => setCity(e.target.value)}
-            placeholder="City *"
+            placeholder={t("account.placeholder.cityRequired")}
             className={inputClass}
             required
           />
@@ -934,7 +942,7 @@ function AddressTab({
               checked={isDefaultShipping}
               onChange={(e) => setIsDefaultShipping(e.target.checked)}
             />
-            Default shipping
+            {t("account.defaultShipping")}
           </label>
           <label className="inline-flex items-center gap-2">
             <input
@@ -942,7 +950,7 @@ function AddressTab({
               checked={isDefaultBilling}
               onChange={(e) => setIsDefaultBilling(e.target.checked)}
             />
-            Default billing
+            {t("account.defaultBilling")}
           </label>
         </div>
         {error ? (
@@ -955,10 +963,10 @@ function AddressTab({
             disabled={isSubmitting}
           >
             {isSubmitting
-              ? "Saving..."
+              ? t("account.saving")
               : editingAddressId
-                ? "Update address"
-                : "Save address"}
+                ? t("account.updateAddress")
+                : t("account.saveAddress")}
           </button>
           {editingAddressId ? (
             <button
@@ -966,7 +974,7 @@ function AddressTab({
               className="px-6 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
               onClick={cancelEdit}
             >
-              Cancel
+              {t("account.cancel")}
             </button>
           ) : null}
         </div>
@@ -1049,11 +1057,11 @@ function OrdersTab({
 
         {isLoading ? (
           <p className="px-5 py-4 text-sm text-gray-600 sm:px-6">
-            Loading orders...
+            {t("account.loadingOrders")}
           </p>
         ) : orders.length === 0 ? (
           <p className="px-5 py-4 text-sm text-gray-600 sm:px-6">
-            No orders found.
+            {t("account.noOrders")}
           </p>
         ) : (
           orders.map((order) => (
@@ -1203,7 +1211,7 @@ export default function AccountPage() {
           };
         };
         if (!response.ok || payload.ok !== true || !payload.data) {
-          throw new Error("Failed to load profile");
+          throw new Error(t("account.error.loadProfile"));
         }
 
         setAccountProfile({
@@ -1264,7 +1272,7 @@ export default function AccountPage() {
           payload.ok !== true ||
           !Array.isArray(payload.data)
         ) {
-          throw new Error("Failed to load orders");
+          throw new Error(t("account.error.loadOrders"));
         }
         setOrders(payload.data);
       } catch (_error) {
@@ -1310,7 +1318,7 @@ export default function AccountPage() {
           payload.ok !== true ||
           !Array.isArray(payload.data)
         ) {
-          throw new Error("Failed to load addresses");
+          throw new Error(t("account.error.loadAddresses"));
         }
         setAddresses(payload.data);
       } catch (_error) {
@@ -1335,7 +1343,7 @@ export default function AccountPage() {
     vatNumber: string;
   }) => {
     if (!loggedInEmail) {
-      throw new Error("Missing account email.");
+      throw new Error(t("account.error.missingEmail"));
     }
 
     const response = await fetch(`${getBackendBaseUrl()}/api/auth/profile`, {
@@ -1366,7 +1374,7 @@ export default function AccountPage() {
       };
     };
     if (!response.ok || json.ok !== true || !json.data) {
-      throw new Error(json.message ?? "Failed to save profile");
+      throw new Error(json.message ?? t("account.error.saveProfile"));
     }
 
     setAccountProfile({
@@ -1394,7 +1402,7 @@ export default function AccountPage() {
     isDefaultShipping: boolean;
   }) => {
     if (!loggedInEmail) {
-      throw new Error("Missing account email.");
+      throw new Error(t("account.error.missingEmail"));
     }
 
     const backendBaseUrl = getBackendBaseUrl();
@@ -1415,7 +1423,7 @@ export default function AccountPage() {
     }
     const json = (await response.json()) as { ok?: boolean; message?: string };
     if (!response.ok || json.ok !== true) {
-      throw new Error(json.message ?? "Failed to save address");
+      throw new Error(json.message ?? t("account.error.saveAddress"));
     }
 
     const reload = await fetch(`${backendBaseUrl}/api/addresses`, {
@@ -1448,7 +1456,7 @@ export default function AccountPage() {
     },
   ) => {
     if (!loggedInEmail) {
-      throw new Error("Missing account email.");
+      throw new Error(t("account.error.missingEmail"));
     }
 
     const backendBaseUrl = getBackendBaseUrl();
@@ -1472,7 +1480,7 @@ export default function AccountPage() {
     }
     const json = (await response.json()) as { ok?: boolean; message?: string };
     if (!response.ok || json.ok !== true) {
-      throw new Error(json.message ?? "Failed to update address");
+      throw new Error(json.message ?? t("account.error.updateAddress"));
     }
 
     const reload = await fetch(`${backendBaseUrl}/api/addresses`, {
@@ -1489,7 +1497,7 @@ export default function AccountPage() {
 
   const deleteAddress = async (addressId: number) => {
     if (!loggedInEmail) {
-      throw new Error("Missing account email.");
+      throw new Error(t("account.error.missingEmail"));
     }
 
     const backendBaseUrl = getBackendBaseUrl();
@@ -1503,7 +1511,7 @@ export default function AccountPage() {
     }
     const json = (await response.json()) as { ok?: boolean; message?: string };
     if (!response.ok || json.ok !== true) {
-      throw new Error(json.message ?? "Failed to delete address");
+      throw new Error(json.message ?? t("account.error.deleteAddress"));
     }
 
     const reload = await fetch(`${backendBaseUrl}/api/addresses`, {
@@ -1551,7 +1559,7 @@ export default function AccountPage() {
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="text-xs lg:text-sm text-gray-500 uppercase tracking-wide">
             <Link href="/" className="hover:underline">
-              Home
+              {t("common.home")}
             </Link>
             <span className="mx-2">→</span>
             <span className="text-gray-700 font-semibold">
@@ -1641,7 +1649,7 @@ export default function AccountPage() {
             <main className="flex-1 min-w-0">
               {activeTab === "account" && isProfileLoading ? (
                 <div className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-600">
-                  Loading account details...
+                  {t("account.loadingDetails")}
                 </div>
               ) : null}
               {activeTab === "account" && !isProfileLoading ? (

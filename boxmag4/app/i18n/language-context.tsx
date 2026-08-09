@@ -17,6 +17,10 @@ function interpolateEmails(text: string): string {
   );
 }
 
+function isLanguage(value: string | undefined | null): value is Language {
+  return value === "en" || value === "ro" || value === "de";
+}
+
 type LanguageContextType = {
   language: Language;
   setLanguage: (language: Language) => void;
@@ -27,8 +31,14 @@ const LanguageContext = createContext<LanguageContextType | null>(null);
 
 const STORAGE_KEY = "boxmag.language";
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("en");
+export function LanguageProvider({
+  children,
+  initialLanguage = "en",
+}: {
+  children: React.ReactNode;
+  initialLanguage?: Language;
+}) {
+  const [language, setLanguageState] = useState<Language>(initialLanguage);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -36,14 +46,17 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       .match(/(?:^|; )boxmag\.language=(en|ro|de)/)?.[1];
     const fromStorage = localStorage.getItem(STORAGE_KEY);
     // Cookie wins: middleware sets it on /ro/* and /de/* redirects
-    const saved =
-      fromCookie === "en" || fromCookie === "ro" || fromCookie === "de"
-        ? fromCookie
-        : fromStorage;
-    if (saved === "en" || saved === "ro" || saved === "de") {
+    const saved = isLanguage(fromCookie)
+      ? fromCookie
+      : isLanguage(fromStorage)
+        ? fromStorage
+        : null;
+    if (saved && saved !== language) {
       setLanguageState(saved);
     }
     setHydrated(true);
+    // initialLanguage seeds first paint from server cookie; remount if cookie changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -62,10 +75,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
           translations[language][key] ?? translations.en[key] ?? key,
         ),
     }),
-    [language]
+    [language],
   );
 
-  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+  return (
+    <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>
+  );
 }
 
 export function useLanguage() {

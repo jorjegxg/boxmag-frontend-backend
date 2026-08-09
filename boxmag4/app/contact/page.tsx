@@ -312,7 +312,7 @@ export default function ContactUsPage() {
         notify({
           type: "error",
           message:
-            "Invalid VAT number. Please provide a valid VAT for the selected country (e.g. RO12345678).",
+            t("contact.error.vatInvalid"),
         });
         document.getElementById("vatNumber")?.focus();
         return;
@@ -340,7 +340,10 @@ export default function ContactUsPage() {
     if (missingFields.length > 0) {
       notify({
         type: "error",
-        message: `Please complete the following fields: ${missingFields.join(", ")}.`,
+        message: t("contact.error.completeFields").replace(
+          "{{fields}}",
+          missingFields.join(", "),
+        ),
       });
       if (firstMissingFieldId) {
         document.getElementById(firstMissingFieldId)?.focus();
@@ -351,7 +354,7 @@ export default function ContactUsPage() {
     if (!acceptTerms) {
       notify({
         type: "error",
-        message: "Please accept terms and privacy policy.",
+        message: t("contact.error.acceptTerms"),
       });
       return;
     }
@@ -361,7 +364,7 @@ export default function ContactUsPage() {
       notify({
         type: "error",
         message:
-          "Invalid VAT number. Please provide a valid VAT for the selected country (e.g. RO12345678).",
+          t("contact.error.vatInvalid"),
       });
       return;
     }
@@ -369,7 +372,10 @@ export default function ContactUsPage() {
     if (attachments.length > MAX_ATTACHMENTS) {
       notify({
         type: "error",
-        message: `You can upload up to ${MAX_ATTACHMENTS} files.`,
+        message: t("contact.error.maxAttachments").replace(
+          "{{max}}",
+          String(MAX_ATTACHMENTS),
+        ),
       });
       return;
     }
@@ -380,7 +386,9 @@ export default function ContactUsPage() {
     if (oversizedFile) {
       notify({
         type: "error",
-        message: `File "${oversizedFile.name}" is too large. Maximum allowed size is ${MAX_ATTACHMENT_MB} MB per file.`,
+        message: t("contact.error.fileTooLarge")
+          .replace("{{name}}", oversizedFile.name)
+          .replace("{{maxMb}}", String(MAX_ATTACHMENT_MB)),
       });
       return;
     }
@@ -408,14 +416,14 @@ export default function ContactUsPage() {
       if (!response.ok) {
         notify({
           type: "error",
-          message: data.message ?? "Unable to send your message.",
+          message: data.message ?? t("contact.error.sendFailed"),
         });
         return;
       }
 
       notify({
         type: "success",
-        message: data.message ?? "Message sent successfully.",
+        message: data.message ?? t("contact.success.sent"),
       });
       setMessage("");
       setAcceptTerms(false);
@@ -438,7 +446,7 @@ export default function ContactUsPage() {
     } catch {
       notify({
         type: "error",
-        message: "Unable to send your message right now.",
+        message: t("contact.error.sendFailedRetry"),
       });
     } finally {
       setIsSubmitting(false);
@@ -550,7 +558,7 @@ export default function ContactUsPage() {
                   onChange={(e) => setVatNumber(e.target.value.toUpperCase())}
                   placeholder={t("contact.vatNumber")}
                   pattern="[A-Za-z]{2}\s?[A-Za-z0-9]{2,12}"
-                  title="Use country code plus 2-12 letters/digits (e.g. RO12345678 or RO 12345678)"
+                  title={t("account.vatFormatTitle")}
                   className={inputClass}
                   aria-describedby={vatLookupError ? "vatNumber-error" : undefined}
                 />

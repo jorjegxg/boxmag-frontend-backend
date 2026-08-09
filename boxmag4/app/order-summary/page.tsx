@@ -577,13 +577,13 @@ export default function OrderSummaryPage() {
       setSubmitSucceeded(true);
       notify({
         type: "success",
-        message: "Order sent successfully.",
+        message: t("orderSummary.success.sent"),
       });
       router.push("/business/order-success");
     } catch (error) {
       notify({
         type: "error",
-        message: error instanceof Error ? error.message : "Failed to send order.",
+        message: error instanceof Error ? error.message : t("orderSummary.errors.sendFailed"),
       });
     } finally {
       setIsSubmitting(false);

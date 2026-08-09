@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Footer } from "./global/components/footer";
@@ -6,6 +7,7 @@ import { Header } from "./global/components/header";
 import { TopBar } from "./global/components/top-bar";
 import { getSiteBaseUrl } from "../lib/site-url";
 import { Providers } from "./providers";
+import type { Language } from "./i18n/translations";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,17 +33,27 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+function resolveLanguage(value: string | undefined): Language {
+  if (value === "en" || value === "ro" || value === "de") return value;
+  return "en";
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const initialLanguage = resolveLanguage(
+    cookieStore.get("boxmag.language")?.value,
+  );
+
   return (
-    <html lang="en">
+    <html lang={initialLanguage}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased `}
       >
-        <Providers>
+        <Providers initialLanguage={initialLanguage}>
           <TopBar />
           <Header />
           {children}

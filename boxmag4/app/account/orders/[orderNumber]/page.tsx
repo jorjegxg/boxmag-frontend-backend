@@ -11,6 +11,7 @@ import { NewsletterSubscribe } from "../../../global/components/newsletter-subsc
 import { useCartStore } from "../../../stores/cart_store";
 import { useNotification } from "../../../global/components/notification-center";
 import { OrderAttachmentActions } from "../../../global/components/order-attachment-actions";
+import { useLanguage } from "../../../i18n/language-context";
 import { getBackendBaseUrl } from "../../../../lib/backend-url";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const FALLBACK_PRODUCT_IMAGE = "/b2b/boxes/box.png";
@@ -119,6 +120,7 @@ function parseStripeMessageItems(message: string): OrderItem[] {
 }
 
 export default function AccountOrderDetailsPage() {
+  const { t } = useLanguage();
   const params = useParams<{ orderNumber: string }>();
   const orderId = Number(params.orderNumber ?? "");
   const [order, setOrder] = useState<OrderDetails | null>(null);
@@ -135,7 +137,7 @@ export default function AccountOrderDetailsPage() {
   useEffect(() => {
     if (!Number.isInteger(orderId) || orderId <= 0) {
       setOrder(null);
-      setLoadError("Invalid order id.");
+      setLoadError(t("accountOrder.invalidId"));
       setIsLoading(false);
       return;
     }
@@ -158,13 +160,13 @@ export default function AccountOrderDetailsPage() {
           data?: OrderDetails;
         };
         if (!response.ok || payload.ok !== true || !payload.data) {
-          throw new Error(payload.message ?? "Failed to load order details");
+          throw new Error(payload.message ?? t("accountOrder.loadFailed"));
         }
         setOrder(payload.data);
       } catch (error) {
         if (controller.signal.aborted) return;
         setOrder(null);
-        setLoadError(error instanceof Error ? error.message : "Failed to load order details");
+        setLoadError(error instanceof Error ? error.message : t("accountOrder.loadFailed"));
       } finally {
         if (!controller.signal.aborted) {
           setIsLoading(false);
@@ -174,7 +176,7 @@ export default function AccountOrderDetailsPage() {
 
     void loadOrder();
     return () => controller.abort();
-  }, [orderId]);
+  }, [orderId, t]);
 
   const isCartOrder = useMemo(
     () => Array.isArray(order?.items) && (order?.items?.length ?? 0) > 0,
@@ -197,7 +199,7 @@ export default function AccountOrderDetailsPage() {
     if (!hasDisplayItems) {
       notify({
         type: "info",
-        message: "This order has no items to add to cart.",
+        message: t("accountOrder.noItems"),
       });
       return;
     }
@@ -214,7 +216,7 @@ export default function AccountOrderDetailsPage() {
 
     notify({
       type: "success",
-      message: `${displayItems.length} item(s) from this order were added to cart.`,
+      message: t("accountOrder.addedToCart").replace("{{count}}", String(displayItems.length)),
     });
   };
 
@@ -233,15 +235,17 @@ export default function AccountOrderDetailsPage() {
       <section className="w-full bg-white px-4 pt-6 sm:px-6 lg:px-20">
         <div className="mx-auto max-w-6xl text-xs uppercase tracking-wide text-gray-500 lg:text-sm">
           <Link href="/" className="hover:underline">
-            Home
+            {t("accountOrder.breadcrumbHome")}
           </Link>
           <span className="mx-2">→</span>
           <Link href="/account" className="hover:underline">
-            Account
+            {t("accountOrder.breadcrumbAccount")}
           </Link>
           <span className="mx-2">→</span>
           <span className="font-semibold text-gray-700">
-            {order ? `Order ${order.orderNumber}` : `Order #${orderId}`}
+            {order
+              ? `${t("accountOrder.orderNumber")} ${order.orderNumber}`
+              : `${t("accountOrder.orderNumber")} #${orderId}`}
           </span>
         </div>
       </section>
@@ -250,7 +254,7 @@ export default function AccountOrderDetailsPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-center gap-4 rounded-lg bg-my-red px-6 py-6">
           <FaBoxOpen className="h-10 w-10 shrink-0 text-white sm:h-12 sm:w-12" />
           <h1 className="text-2xl font-bold uppercase tracking-wide text-white sm:text-3xl lg:text-4xl">
-            Order Details
+            {t("accountOrder.title")}
           </h1>
         </div>
       </section>
@@ -258,29 +262,31 @@ export default function AccountOrderDetailsPage() {
       <section className="w-full px-4 pb-12 sm:px-6 lg:px-20">
         <div className="mx-auto max-w-6xl rounded-lg border border-gray-200 bg-white p-6 sm:p-8">
           {isLoading ? (
-            <p className="text-sm text-gray-600">Loading order details...</p>
+            <p className="text-sm text-gray-600">{t("accountOrder.loading")}</p>
           ) : loadError ? (
             <div className="space-y-4">
               <p className="text-sm font-medium text-red-700">{loadError}</p>
               <Link href="/account" className="text-sm font-semibold text-my-red hover:underline">
-                Back to account
+                {t("accountOrder.backToAccount")}
               </Link>
             </div>
           ) : !order ? (
             <div className="space-y-4">
               <p className="text-sm font-medium text-red-700">
-                Order not found.
+                {t("accountOrder.notFound")}
               </p>
               <Link href="/account" className="text-sm font-semibold text-my-red hover:underline">
-                Back to account
+                {t("accountOrder.backToAccount")}
               </Link>
             </div>
           ) : (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Order #{order.orderNumber}</h2>
+                <h2 className="text-lg font-bold text-gray-900">
+                  {t("accountOrder.orderNumber")} #{order.orderNumber}
+                </h2>
                 <p className="mt-1 text-sm text-gray-600">
-                  Placed on {new Date(order.createdAt).toLocaleString()}
+                  {t("accountOrder.date")}: {new Date(order.createdAt).toLocaleString()}
                 </p>
                 <button
                   type="button"
@@ -288,23 +294,29 @@ export default function AccountOrderDetailsPage() {
                   disabled={!hasDisplayItems}
                   className="mt-3 inline-flex items-center rounded-md bg-my-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-my-red/90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Add this order to cart
+                  {t("accountOrder.addToCart")}
                 </button>
               </div>
 
               <div className="grid grid-cols-1 gap-4 rounded-lg border border-gray-200 p-4 sm:grid-cols-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase text-gray-500">Order Number</p>
+                  <p className="text-xs font-semibold uppercase text-gray-500">
+                    {t("accountOrder.orderNumber")}
+                  </p>
                   <p className="mt-1 text-sm font-medium text-gray-800">{order.orderNumber}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase text-gray-500">Date</p>
+                  <p className="text-xs font-semibold uppercase text-gray-500">
+                    {t("accountOrder.date")}
+                  </p>
                   <p className="mt-1 text-sm font-medium text-gray-800">
                     {new Date(order.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase text-gray-500">Status</p>
+                  <p className="text-xs font-semibold uppercase text-gray-500">
+                    {t("accountOrder.status")}
+                  </p>
                   <span
                     className={`mt-1 inline-block rounded-full px-2.5 py-1 text-xs font-bold uppercase ${statusBadgeClass(order.status)}`}
                   >
@@ -313,7 +325,9 @@ export default function AccountOrderDetailsPage() {
                 </div>
                 {order.paymentStatus ? (
                   <div>
-                    <p className="text-xs font-semibold uppercase text-gray-500">Payment</p>
+                    <p className="text-xs font-semibold uppercase text-gray-500">
+                      {t("accountOrder.payment")}
+                    </p>
                     <span
                       className={`mt-1 inline-block rounded-full px-2.5 py-1 text-xs font-bold uppercase ${paymentBadgeClass(order.paymentStatus)}`}
                     >
@@ -326,7 +340,7 @@ export default function AccountOrderDetailsPage() {
               {hasDisplayItems ? (
                 <div className="rounded-lg border border-gray-200 p-4">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                    Items ({displayItems.length})
+                    {t("accountOrder.items")} ({displayItems.length})
                   </h3>
                   <div className="mt-4 space-y-3">
                     {displayItems.map((item) => {
@@ -361,7 +375,7 @@ export default function AccountOrderDetailsPage() {
                           </div>
                           <div className="flex flex-row items-center justify-between gap-4 sm:flex-col sm:items-end sm:gap-1">
                             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                              Line total
+                              {t("accountOrder.total")}
                             </p>
                             <p className="text-base font-bold text-gray-900">
                               {formatCurrency(item.lineTotal)}
@@ -375,19 +389,23 @@ export default function AccountOrderDetailsPage() {
               ) : (
                 <div className="rounded-lg border border-gray-200 p-4">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                    Items
+                    {t("accountOrder.items")}
                   </h3>
                   <div className="mt-3 space-y-3 text-sm text-gray-700">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-2">
                       <span>{order.boxTypeName}</span>
-                      <span className="font-medium">{order.quantity} pcs</span>
+                      <span className="font-medium">
+                        {t("accountOrder.quantity")}: {order.quantity} {t("accountOrder.pcs")}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                      <span>Cardboard: {order.cardboardType}</span>
+                      <span>
+                        {t("accountOrder.cardboardColour")}: {order.cardboardType}
+                      </span>
                       <span className="font-medium">{order.cardboardColour}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Print</span>
+                      <span>{t("accountOrder.boxPrint")}</span>
                       <span className="font-medium">{order.boxPrint}</span>
                     </div>
                   </div>
@@ -397,18 +415,18 @@ export default function AccountOrderDetailsPage() {
               {order.priceBreakdown ? (
                 <div className="rounded-lg border border-gray-200 p-4">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                    Order Total
+                    {t("accountOrder.orderTotal")}
                   </h3>
                   <div className="mt-4 space-y-2 text-sm text-gray-700">
                     <div className="flex items-center justify-between">
-                      <span>Subtotal</span>
+                      <span>{t("accountOrder.subtotal")}</span>
                       <span className="font-medium text-gray-900">
                         {formatCurrency(order.priceBreakdown.subtotal)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>
-                        VAT
+                        {t("accountOrder.vat")}
                         {order.priceBreakdown.vatPercent != null
                           ? ` (${order.priceBreakdown.vatPercent}%)`
                           : ""}
@@ -419,7 +437,7 @@ export default function AccountOrderDetailsPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span>
-                        Shipping
+                        {t("accountOrder.shipping")}
                         {order.priceBreakdown.shippingMethod
                           ? ` (${order.priceBreakdown.shippingMethod}${
                               order.priceBreakdown.shippingEta
@@ -434,7 +452,7 @@ export default function AccountOrderDetailsPage() {
                     </div>
                     <div className="mt-2 flex items-center justify-between border-t border-gray-200 pt-3">
                       <span className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                        Total
+                        {t("accountOrder.total")}
                       </span>
                       <span className="text-base font-bold text-my-red">
                         {formatCurrency(order.priceBreakdown.total)}
@@ -447,7 +465,7 @@ export default function AccountOrderDetailsPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="rounded-lg border border-gray-200 p-4">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                    Shipping Address
+                    {t("accountOrder.shippingAddress")}
                   </h3>
                   <div className="mt-3 space-y-1 text-sm text-gray-700">
                     <p className="font-medium">{order.customerName}</p>
@@ -462,15 +480,15 @@ export default function AccountOrderDetailsPage() {
                 {!hasDisplayItems ? (
                   <div className="rounded-lg border border-gray-200 p-4">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                      Order Metadata
+                      {t("accountOrder.orderMetadata")}
                     </h3>
                     <div className="mt-3 space-y-2 text-sm text-gray-700">
                       <div className="flex items-center justify-between">
-                        <span>Transport</span>
+                        <span>{t("accountOrder.transport")}</span>
                         <span>{order.transport}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span>Size</span>
+                        <span>{t("accountOrder.size")}</span>
                         <span>{order.size}</span>
                       </div>
                     </div>
@@ -484,13 +502,16 @@ export default function AccountOrderDetailsPage() {
                   attachmentName={order.attachmentName}
                   hasAttachment={order.hasAttachment}
                   ownerEmail={accountEmail}
+                  label={t("attachment.label")}
+                  openText={t("attachment.open")}
+                  downloadText={t("attachment.download")}
                 />
               </div>
 
               {cleanCustomerMessage.trim().length > 0 ? (
                 <div className="rounded-lg border border-gray-200 p-4">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
-                    Customer Message
+                    {t("accountOrder.customerMessage")}
                   </h3>
                   <div className="mt-3 whitespace-pre-line text-sm text-gray-700">
                     {cleanCustomerMessage}
@@ -499,7 +520,7 @@ export default function AccountOrderDetailsPage() {
               ) : null}
 
               <Link href="/account" className="text-sm font-semibold text-my-red hover:underline">
-                Back to account
+                {t("accountOrder.backToAccount")}
               </Link>
             </div>
           )}

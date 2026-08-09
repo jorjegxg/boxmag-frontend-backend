@@ -112,6 +112,18 @@ function getShippingMethodDisplay(
       etaText: t("checkout.shipping.ownTransportEta"),
     };
   }
+  if (method.key === "standard") {
+    return {
+      name: t("checkout.shipping.standardDelivery"),
+      etaText: method.etaText || t("checkout.standardEta"),
+    };
+  }
+  if (method.key === "express") {
+    return {
+      name: t("checkout.shipping.expressDelivery"),
+      etaText: method.etaText || t("checkout.expressEta"),
+    };
+  }
   return { name: method.name, etaText: method.etaText };
 }
 
@@ -871,10 +883,12 @@ function OrderAttachmentSection({
   onAttachmentCleared: () => void;
   onError: (message: string) => void;
 }) {
+  const { t } = useLanguage();
+
   return (
     <div className="w-full">
       <label className="mb-2 block text-sm font-semibold text-gray-800">
-        Attachment (optional)
+        {t("checkout.attachmentOptional")}
       </label>
       <div className="flex flex-wrap items-center gap-2">
         <label className="inline-flex cursor-pointer items-center rounded-lg bg-my-yellow px-4 py-2.5 text-sm font-semibold text-black hover:bg-my-yellow-bright">
@@ -888,7 +902,12 @@ function OrderAttachmentSection({
                 return;
               }
               if (file.size > MAX_ATTACHMENT_BYTES) {
-                onError(`Attachment is too large (max ${MAX_ATTACHMENT_MB} MB).`);
+                onError(
+                  t("checkout.error.attachmentTooLarge").replace(
+                    "{{maxMb}}",
+                    String(MAX_ATTACHMENT_MB),
+                  ),
+                );
                 onAttachmentCleared();
                 event.currentTarget.value = "";
                 return;
@@ -897,7 +916,7 @@ function OrderAttachmentSection({
               reader.onload = () => {
                 const result = typeof reader.result === "string" ? reader.result : "";
                 if (!result) {
-                  onError("Failed to read attachment.");
+                  onError(t("checkout.error.attachmentReadFailed"));
                   onAttachmentCleared();
                   return;
                 }
@@ -908,20 +927,23 @@ function OrderAttachmentSection({
                 });
               };
               reader.onerror = () => {
-                onError("Failed to read attachment.");
+                onError(t("checkout.error.attachmentReadFailed"));
                 onAttachmentCleared();
               };
               reader.readAsDataURL(file);
             }}
           />
-          Choose File
+          {t("contact.chooseFile")}
         </label>
         <span className="max-w-full truncate text-sm text-gray-600">
-          {attachmentName || "No file chosen"}
+          {attachmentName || t("contact.noFile")}
         </span>
       </div>
       <p className="mt-2 text-xs text-gray-500">
-        Accepted max file size: {MAX_ATTACHMENT_MB} MB.
+        {t("checkout.attachmentMaxSize").replace(
+          "{{maxMb}}",
+          String(MAX_ATTACHMENT_MB),
+        )}
       </p>
     </div>
   );

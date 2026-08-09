@@ -15,6 +15,7 @@ import { clearB2bOrderSuccessPayload } from "../../lib/b2b-order-success";
 import { checkVAT, countries } from "jsvat";
 import { fetchVatLookup, getCachedVatCompany } from "../../lib/vat-company";
 import { getBackendBaseUrl } from "../../lib/backend-url";
+import { useLanguage } from "../i18n/language-context";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -29,6 +30,7 @@ function normalizeVatNumber(value: string): string {
 const isDevelopment = isDevelopmentAppEnv();
 
 function RegistrationPageContent() {
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const queryEmail = searchParams.get("email")?.trim() ?? "";
   const queryFirstName = searchParams.get("firstName")?.trim() ?? "";
@@ -162,21 +164,21 @@ function RegistrationPageContent() {
 
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) {
-      setFeedback({ kind: "error", message: "Email is required." });
+      setFeedback({ kind: "error", message: t("registration.error.emailRequired") });
       return;
     }
 
     if (isLookingUpVat) {
       setFeedback({
         kind: "error",
-        message: "VAT lookup is still in progress. Please wait.",
+        message: t("registration.error.vatLookupInProgress"),
       });
       return;
     }
 
     const normalizedVat = normalizeVatNumber(vatNumber);
     if (!normalizedVat) {
-      setFeedback({ kind: "error", message: "VAT number is required." });
+      setFeedback({ kind: "error", message: t("registration.error.vatRequired") });
       return;
     }
 
@@ -184,8 +186,7 @@ function RegistrationPageContent() {
     if (!vatFormatCheck.isValid && !vatFormatCheck.isValidFormat) {
       setFeedback({
         kind: "error",
-        message:
-          "Invalid VAT number. Please provide a valid VAT (e.g. RO12345678).",
+        message: t("registration.error.vatInvalid"),
       });
       return;
     }
@@ -195,20 +196,20 @@ function RegistrationPageContent() {
         kind: "error",
         message:
           vatLookupError?.trim() ||
-          "Company name could not be resolved from VAT number.",
+          t("registration.error.companyFromVat"),
       });
       return;
     }
 
     if (password !== confirmPassword) {
-      setFeedback({ kind: "error", message: "Passwords do not match." });
+      setFeedback({ kind: "error", message: t("registration.error.passwordsMismatch") });
       return;
     }
 
     if (!acceptRegulations) {
       setFeedback({
         kind: "error",
-        message: "You must accept the Regulations and Privacy Policy.",
+        message: t("registration.error.acceptTerms"),
       });
       return;
     }
@@ -239,7 +240,7 @@ function RegistrationPageContent() {
       };
 
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? "Registration failed");
+        throw new Error(payload.message ?? t("registration.failedFallback"));
       }
 
       if (fromSource === "b2b-order") {
@@ -248,8 +249,7 @@ function RegistrationPageContent() {
 
       setFeedback({
         kind: "success",
-        message:
-          "Account created. Check your email and click the verification link before signing in.",
+        message: t("registration.success.checkEmail"),
       });
       setRegisteredEmail(normalizedEmail);
       setIsRegistered(true);
@@ -261,7 +261,7 @@ function RegistrationPageContent() {
         message:
           error instanceof Error && error.message.trim().length > 0
             ? error.message
-            : "Failed to register account",
+            : t("registration.error.failed"),
       });
     } finally {
       setIsSubmitting(false);
@@ -275,10 +275,10 @@ function RegistrationPageContent() {
       <section className="w-full bg-white px-4 sm:px-6 lg:px-20 pt-6">
         <div className="max-w-4xl mx-auto text-xs lg:text-sm text-gray-500 uppercase tracking-wide">
           <Link href="/" className="hover:underline">
-            Home
+            {t("footer.home")}
           </Link>{" "}
           <span className="mx-2">→</span>
-          <span className="text-gray-700 font-semibold">Registration</span>
+          <span className="text-gray-700 font-semibold">{t("registration.title")}</span>
         </div>
       </section>
 
@@ -286,7 +286,7 @@ function RegistrationPageContent() {
         <div className="max-w-4xl mx-auto bg-my-red rounded-lg flex items-center justify-center gap-4 py-6 px-6">
           <FaUserPlus className="w-10 h-10 sm:w-12 sm:h-12 text-white shrink-0" />
           <h1 className="text-white text-2xl sm:text-3xl lg:text-4xl font-bold uppercase tracking-wide">
-            Registration
+            {t("registration.title")}
           </h1>
         </div>
       </section>
@@ -295,22 +295,23 @@ function RegistrationPageContent() {
         <div className="max-w-4xl mx-auto rounded-lg border-2 border-gray-200 bg-white px-6 py-6 sm:px-8 sm:py-8">
           {fromSource === "b2b-order" ? (
             <p className="text-gray-600 text-sm mb-6">
-              Create an account to save your B2B quote request and track it from your account.
+              {t("registration.hint.b2b")}
             </p>
           ) : fromSource === "checkout" ? (
             <p className="text-gray-600 text-sm mb-6">
-              Create an account to save this order and track it from your account.
+              {t("registration.hint.checkout")}
             </p>
           ) : (
             <p className="text-gray-600 text-sm mb-6">
-              Create an account to place orders and manage your details. Registration in the Online Store is optional. By registering you accept the{" "}
-              <Link href="/regulations" className="text-my-red font-semibold hover:underline">Regulations</Link>.
+              {t("registration.hint.defaultPrefix")}{" "}
+              <Link href="/regulations" className="text-my-red font-semibold hover:underline">{t("registration.regulations")}</Link>
+              {t("registration.period")}
             </p>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="reg-vat" className="block text-sm font-semibold text-gray-800 mb-1">VAT Number *</label>
+                <label htmlFor="reg-vat" className="block text-sm font-semibold text-gray-800 mb-1">{t("registration.vatNumber")}</label>
                 <input
                   id="reg-vat"
                   type="text"
@@ -320,11 +321,11 @@ function RegistrationPageContent() {
                   className={inputClass}
                   required
                   pattern="[A-Za-z]{2}\s?[A-Za-z0-9]{2,12}"
-                  title="Use country code plus 2-12 letters/digits (e.g. RO12345678 or RO 12345678)"
+                  title={t("registration.vatTitle")}
                   aria-describedby={vatLookupError ? "reg-vat-error" : undefined}
                 />
                 {isLookingUpVat ? (
-                  <p className="mt-1 text-sm text-gray-500">Looking up VAT…</p>
+                  <p className="mt-1 text-sm text-gray-500">{t("registration.lookingUpVatShort")}</p>
                 ) : null}
                 {!isLookingUpVat && vatLookupError ? (
                   <p id="reg-vat-error" className="mt-1 text-sm text-red-600">
@@ -334,7 +335,7 @@ function RegistrationPageContent() {
               </div>
               <div>
                 <label htmlFor="reg-company" className="block text-sm font-semibold text-gray-800 mb-1">
-                  Company Name *
+                  {t("registration.companyNameLabel")}
                 </label>
                 <input
                   id="reg-company"
@@ -342,7 +343,7 @@ function RegistrationPageContent() {
                   value={companyName}
                   readOnly
                   placeholder={
-                    isLookingUpVat ? "Looking up VAT..." : "Auto-filled from VAT number"
+                    isLookingUpVat ? t("registration.lookingUpVat") : t("registration.autoFilledFromVat")
                   }
                   className={lockedInputClass}
                   aria-busy={isLookingUpVat}
@@ -352,7 +353,7 @@ function RegistrationPageContent() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="reg-email" className="block text-sm font-semibold text-gray-800 mb-1">Email *</label>
+                <label htmlFor="reg-email" className="block text-sm font-semibold text-gray-800 mb-1">{t("registration.email")}</label>
                 <input
                   id="reg-email"
                   type="email"
@@ -367,14 +368,14 @@ function RegistrationPageContent() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="reg-password" className="block text-sm font-semibold text-gray-800 mb-1">Password *</label>
+                <label htmlFor="reg-password" className="block text-sm font-semibold text-gray-800 mb-1">{t("registration.password")}</label>
                 <div className="relative">
                   <input
                     id="reg-password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Password"
+                    placeholder={t("registration.passwordPlaceholder")}
                     className={`${inputClass} pr-12`}
                     required
                     minLength={6}
@@ -383,21 +384,21 @@ function RegistrationPageContent() {
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
                     className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? t("registration.hidePassword") : t("registration.showPassword")}
                   >
                     {showPassword ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
               <div>
-                <label htmlFor="reg-confirm" className="block text-sm font-semibold text-gray-800 mb-1">Confirm Password *</label>
+                <label htmlFor="reg-confirm" className="block text-sm font-semibold text-gray-800 mb-1">{t("registration.confirmPasswordLabel")}</label>
                 <div className="relative">
                   <input
                     id="reg-confirm"
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm Password"
+                    placeholder={t("registration.confirmPasswordPlaceholder")}
                     className={`${inputClass} pr-12`}
                     required
                   />
@@ -405,7 +406,7 @@ function RegistrationPageContent() {
                     type="button"
                     onClick={() => setShowConfirmPassword((prev) => !prev)}
                     className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
-                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    aria-label={showConfirmPassword ? t("registration.hidePassword") : t("registration.showPassword")}
                   >
                     {showConfirmPassword ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
                   </button>
@@ -414,17 +415,17 @@ function RegistrationPageContent() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="reg-firstName" className="block text-sm font-semibold text-gray-800 mb-1">First Name *</label>
-                <input id="reg-firstName" type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First Name" className={inputClass} required />
+                <label htmlFor="reg-firstName" className="block text-sm font-semibold text-gray-800 mb-1">{t("registration.firstNameLabel")}</label>
+                <input id="reg-firstName" type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={t("account.placeholder.firstName")} className={inputClass} required />
               </div>
               <div>
-                <label htmlFor="reg-surname" className="block text-sm font-semibold text-gray-800 mb-1">Surname *</label>
-                <input id="reg-surname" type="text" value={surname} onChange={(e) => setSurname(e.target.value)} placeholder="Surname" className={inputClass} required />
+                <label htmlFor="reg-surname" className="block text-sm font-semibold text-gray-800 mb-1">{t("registration.surnameLabel")}</label>
+                <input id="reg-surname" type="text" value={surname} onChange={(e) => setSurname(e.target.value)} placeholder={t("account.placeholder.lastName")} className={inputClass} required />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="reg-phone" className="block text-sm font-semibold text-gray-800 mb-1">Phone Number</label>
+                <label htmlFor="reg-phone" className="block text-sm font-semibold text-gray-800 mb-1">{t("registration.phoneNumber")}</label>
                 <input id="reg-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+40 700 000 000" className={inputClass} />
               </div>
               <div />
@@ -432,7 +433,11 @@ function RegistrationPageContent() {
             <div className="flex items-start gap-3">
               <input id="reg-accept" type="checkbox" checked={acceptRegulations} onChange={(e) => setAcceptRegulations(e.target.checked)} className="mt-1 rounded border-gray-300 text-my-red focus:ring-my-red" />
               <label htmlFor="reg-accept" className="text-sm text-gray-700">
-                I have read and accept the <Link href="/regulations" className="text-my-red font-semibold hover:underline">Regulations</Link> and the <Link href="/privacy-policy" className="text-my-red font-semibold hover:underline">Privacy Policy</Link> of the Online Store.
+                {t("registration.acceptCheckbox")}{" "}
+                <Link href="/regulations" className="text-my-red font-semibold hover:underline">{t("registration.regulations")}</Link>{" "}
+                {t("registration.and")}{" "}
+                <Link href="/privacy-policy" className="text-my-red font-semibold hover:underline">{t("registration.privacyPolicy")}</Link>{" "}
+                {t("registration.ofOnlineStore")}
               </label>
             </div>
             {feedback?.kind === "error" ? (
@@ -440,12 +445,12 @@ function RegistrationPageContent() {
             ) : null}
             <div className="flex flex-col sm:flex-row gap-4 pt-2">
               <button type="submit" disabled={isSubmitting || isRegistered} className="px-6 py-3 rounded-lg bg-my-red text-white font-semibold hover:bg-my-red/90 transition-colors disabled:opacity-70 disabled:cursor-not-allowed">
-                {isSubmitting ? "Registering..." : "Register"}
+                {isSubmitting ? t("registration.registering") : t("registration.register")}
               </button>
               <p className="flex items-center text-sm text-gray-600">
-                Already have an account?{" "}
+                {t("registration.alreadyHaveAccount")}{" "}
                 <Link href="/account" className="ml-1 text-my-red font-semibold hover:underline">
-                  Sign in
+                  {t("registration.signInLink")}
                 </Link>
               </p>
             </div>
@@ -464,10 +469,10 @@ function RegistrationPageContent() {
                 <FaCheckCircle className="h-7 w-7 text-green-600" />
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-wide text-green-700">
-                    Registration Successful
+                    {t("registration.successBanner")}
                   </p>
                   <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">
-                    Confirm your email
+                    {t("registration.confirmEmailTitle")}
                   </h2>
                 </div>
               </div>
@@ -475,13 +480,12 @@ function RegistrationPageContent() {
 
             <div className="px-6 py-6 sm:px-8 sm:py-7">
               <p className="text-sm text-gray-600 sm:text-base">
-                We sent a verification link to the address below. Please open your inbox and
-                confirm your account before signing in.
+                {t("registration.successBody")}
               </p>
 
               <div className="mt-4 rounded-xl border border-my-red/30 bg-my-red/5 px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Verification email
+                  {t("registration.verificationEmail")}
                 </p>
                 <p className="mt-1 break-all text-base font-semibold text-my-red sm:text-lg">
                   {registeredEmail}
@@ -493,7 +497,7 @@ function RegistrationPageContent() {
                   href={returnTo}
                   className="inline-flex items-center justify-center rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white hover:bg-my-red/90 transition-colors"
                 >
-                  Back to login
+                  {t("registration.backToLogin")}
                 </Link>
               </div>
             </div>
