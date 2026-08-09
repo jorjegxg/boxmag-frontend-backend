@@ -451,6 +451,7 @@ export default function CheckoutPage() {
         `${backendBaseUrl}/api/payments/create-checkout-session`,
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },

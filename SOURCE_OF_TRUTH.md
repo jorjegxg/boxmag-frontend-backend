@@ -36,7 +36,7 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 | ID | Regulă | Cod |
 |----|--------|-----|
 | `INV-ORDER-STATUS` | Valori permise: `new`, `in progress`, `completed`, `done`. | `orders.route.ts` |
-| `INV-GUEST-LINK` | La verify-email / register reușit, comenzile guest cu același email se leagă de user. | `auth.route.ts`, `link-guest-orders.ts` |
+| `INV-GUEST-LINK` | La verify-email / login reușit, comenzile guest cu același email se leagă de user. B2C checkout setează `user_id` doar dacă cookie sesiune + email match (nu pe existența email-ului în DB). | `auth.route.ts`, `link-guest-orders.ts`, `payments.route.ts` |
 
 ### Auth
 
@@ -91,7 +91,7 @@ Așteptări: guards `INV-B2B-GUARDS`; attachment opțional → MinIO; guest OK.
   → login pe /account → profile / addresses / orders
 ```
 
-Așteptări: cont inactiv până la verify; `INV-GUEST-LINK` la verify.
+Așteptări: cont inactiv până la verify; `INV-GUEST-LINK` la verify și la login; B2C logat setează `user_id` din sesiune.
 
 ### Admin
 
@@ -117,7 +117,7 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-STRIPE-LOCK` | OK `orders` | — | — | — |
 | `INV-PAY-STATUS` | OK `orders` | — | — | — |
 | `INV-ORDER-STATUS` | OK `orders` | — | OK `admin-orders` | — |
-| `INV-GUEST-LINK` | OK `auth`, `link-guest-orders` | — | OK `checkout-guest-create-account`, `b2b-order-success` | — |
+| `INV-GUEST-LINK` | OK `auth`, `link-guest-orders`, `payments` | — | OK `checkout-guest-create-account`, `b2b-order-success` | — |
 | `INV-AUTH-ADMIN` | OK `require-admin`, `session-tokens` | OK `admin-auth` | OK `admin-login` | — |
 | `INV-AUTH-USER` | OK `auth` login/logout, `session-tokens` | — | OK `login`, `account` | — |
 | `INV-AUTH-EMAIL-SCOPE` | OK `require-admin` | — | — | — |

@@ -62,7 +62,8 @@ describe("auth routes", () => {
           },
         ],
       ])
-      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([{ affectedRows: 0 }]);
 
     const response = await request(app).post("/api/auth/login").send({
       email: `  ${TEST_USER_EMAIL.toUpperCase()}  `,
@@ -75,6 +76,38 @@ describe("auth routes", () => {
     const setCookie = response.headers["set-cookie"];
     expect(setCookie).toBeDefined();
     expect(String(setCookie)).toContain(USER_COOKIE_NAME);
+  });
+
+  it("links guest orders on login (INV-GUEST-LINK)", async () => {
+    const password = "Secret123!";
+    executeMock
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 42,
+            email: TEST_USER_EMAIL,
+            password_hash: hashPassword(password),
+            first_name: "Jane",
+            last_name: "Doe",
+            phone: "+40700000000",
+            is_active: 1,
+            email_verified_at: new Date().toISOString(),
+          },
+        ],
+      ])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([{ affectedRows: 2 }]);
+
+    const response = await request(app).post("/api/auth/login").send({
+      email: TEST_USER_EMAIL,
+      password,
+    });
+
+    expect(response.status).toBe(200);
+    expect(executeMock).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE orders o"),
+      [42, TEST_USER_EMAIL],
+    );
   });
 
   it("rejects login when email is not verified", async () => {

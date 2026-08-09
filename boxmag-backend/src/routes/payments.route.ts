@@ -27,6 +27,7 @@ import {
   resolveShippingMethod,
 } from "../services/checkout-pricing";
 import { checkoutRateLimiter } from "../middleware/rate-limit";
+import { getRequestUserSession } from "../middleware/require-user";
 
 type CartItemPayload = {
   itemNo: string;
@@ -458,15 +459,24 @@ paymentsRouter.post("/create-checkout-session", checkoutRateLimiter, async (req,
       })),
     );
 
+    // Link only when signed session email matches checkout email (INV-GUEST-LINK).
+    const userSession = getRequestUserSession(req);
+    const normalizedOrderEmail = email.toLowerCase();
+    const linkedUserId =
+      userSession && userSession.email === normalizedOrderEmail
+        ? userSession.userId
+        : null;
+
     const [orderInsertResult] = await conn.execute<ResultSetHeader>(
       `INSERT INTO orders
-        (box_type_name, cardboard_type, cardboard_colour, box_print,
+        (user_id, box_type_name, cardboard_type, cardboard_colour, box_print,
          size_type, transport, quantity, ftl, attachment_name, attachment_object_name, attachment_url, message, items_json,
          accepted_terms, status, payment_status,
          total_amount_cents, subtotal_cents, vat_percent, vat_cents,
          shipping_cents, shipping_method, shipping_eta, currency)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        linkedUserId,
         "Checkout Cart Order",
         "N/A",
         "N/A",

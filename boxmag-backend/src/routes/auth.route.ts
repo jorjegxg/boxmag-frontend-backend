@@ -185,6 +185,9 @@ authRouter.post("/login", async (req, res) => {
       [user.id]
     );
 
+    // Backfill guest orders placed with this email before login (INV-GUEST-LINK).
+    await linkGuestOrdersToUser(user.id, user.email);
+
     const sessionToken = createUserSessionToken(user.id, user.email);
     if (!sessionToken) {
       res.status(503).json({

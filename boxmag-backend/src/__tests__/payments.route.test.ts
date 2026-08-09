@@ -1,5 +1,10 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  TEST_USER_EMAIL,
+  ensureTestAuthEnv,
+  userCookie,
+} from "./test-helpers";
 
 const {
   executeMock,
@@ -127,6 +132,38 @@ function mockCatalogAndShipping(options?: {
     .mockResolvedValueOnce([shippingRows]);
 }
 
+function findOrderInsertArgs(): unknown[] | undefined {
+  for (const call of executeMock.mock.calls) {
+    const sql = String(call[0] ?? "");
+    if (sql.includes("INSERT INTO orders")) {
+      return call[1] as unknown[];
+    }
+  }
+  return undefined;
+}
+
+const validCheckoutBody = {
+  email: "buyer@example.com",
+  currency: "eur" as const,
+  cartItems: [
+    {
+      itemNo: "STD-001",
+      name: "Standard Box",
+      unitPrice: 10,
+      quantity: 100,
+    },
+  ],
+  shipping: {
+    key: "standard",
+    name: "Standard",
+    etaText: "3-5 days",
+    price: 30,
+  },
+  vatPercent: 21,
+  vatNumber: "RO12345678",
+  address: checkoutAddress,
+};
+
 describe("payments routes", () => {
   beforeEach(() => {
     executeMock.mockReset();
@@ -141,6 +178,7 @@ describe("payments routes", () => {
     sendNewOrderNotificationEmailMock.mockReset();
     isStripeConfiguredMock.mockReset();
     isStripeConfiguredMock.mockReturnValue(true);
+    ensureTestAuthEnv();
 
     const connection = {
       beginTransaction: vi.fn(async () => undefined),
@@ -155,6 +193,47 @@ describe("payments routes", () => {
       id: "cs_test_123",
       url: "https://checkout.stripe.test/session",
     });
+  });
+
+  it("sets user_id when session email matches checkout email (INV-GUEST-LINK)", async () => {
+    mockCatalogAndShipping();
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .set("Cookie", userCookie(42, "buyer@example.com"))
+      .send(validCheckoutBody);
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    const insertArgs = findOrderInsertArgs();
+    expect(insertArgs?.[0]).toBe(42);
+  });
+
+  it("keeps user_id null for guest checkout without session (INV-GUEST-LINK)", async () => {
+    mockCatalogAndShipping();
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send(validCheckoutBody);
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    const insertArgs = findOrderInsertArgs();
+    expect(insertArgs?.[0]).toBeNull();
+  });
+
+  it("keeps user_id null when session email differs from checkout email (INV-GUEST-LINK)", async () => {
+    mockCatalogAndShipping();
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .set("Cookie", userCookie(42, TEST_USER_EMAIL))
+      .send(validCheckoutBody);
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    const insertArgs = findOrderInsertArgs();
+    expect(insertArgs?.[0]).toBeNull();
   });
 
   it("returns 400 when a cart item is below minimum quantity", async () => {
