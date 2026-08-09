@@ -267,7 +267,7 @@
   "b2bOrderSuccess.createAccountBenefit1": "Verfolgen Sie den Status Ihres Angebots",
   "b2bOrderSuccess.createAccountBenefit2": "Greifen Sie auf Ihre Bestellhistorie zu",
   "b2bOrderSuccess.createAccountBenefit3": "Speichern Sie Ihre Daten für zukünftige Bestellungen",
-  "b2bOrderSuccess.createAccountCta": "Kostenloses Konto erstellen",
+  "b2bOrderSuccess.createAccountCta": "Kostenloses Konto erstellen und Bestellung verknüpfen",
   "b2bOrderSuccess.skipCta": "Nein, danke",
   "b2bOrderSuccess.alreadyHaveAccount": "Sie haben bereits ein Konto?",
   "b2bOrderSuccess.signIn": "Anmelden",
