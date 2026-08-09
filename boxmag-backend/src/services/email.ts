@@ -1019,7 +1019,7 @@ export async function sendBusinessOrderConfirmationEmailToCustomer(
       productsTableText,
       displayMessage ? `\nMesajul tau:\n${displayMessage}` : "",
       "",
-      "Daca ai intrebari suplimentare, raspunde la acest email sau contacteaza-ne.",
+      "Daca ai intrebari, contacteaza-ne la info@boxmag.eu (informatii generale) sau b2b@boxmag.eu (oferte si comenzi B2B).",
       "",
       "Cu respect,",
       "Echipa Boxmag",
@@ -1082,7 +1082,7 @@ export async function sendBusinessOrderConfirmationEmailToCustomer(
               }
 
               <p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#374151;">
-                Daca ai intrebari suplimentare, raspunde la acest email sau contacteaza-ne.
+                Daca ai intrebari, contacteaza-ne la <a href="mailto:info@boxmag.eu" style="color:#b91c1c;text-decoration:underline;">info@boxmag.eu</a> (informatii generale) sau <a href="mailto:b2b@boxmag.eu" style="color:#b91c1c;text-decoration:underline;">b2b@boxmag.eu</a> (oferte si comenzi B2B).
               </p>
               <p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#374151;">
                 Cu respect,<br />
