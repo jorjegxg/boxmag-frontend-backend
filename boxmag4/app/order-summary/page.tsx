@@ -665,7 +665,7 @@ export default function OrderSummaryPage() {
               <div className="sm:col-span-2">
                 <label htmlFor="os-vatNumber" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.vatNumber")}</label>
                 <input id="os-vatNumber" type="text" value={vatNumber} onChange={(e) => {
-                  const nextValue = e.target.value.toUpperCase();
+                  const nextValue = e.target.value;
                   setVatNumber(nextValue);
                   if (e.target.value.trim().length > 0 && requiredFieldErrors.vatNumber) {
                     setRequiredFieldErrors((prev) => ({ ...prev, vatNumber: false }));

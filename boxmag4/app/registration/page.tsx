@@ -316,7 +316,7 @@ function RegistrationPageContent() {
                   id="reg-vat"
                   type="text"
                   value={vatNumber}
-                  onChange={(e) => setVatNumber(e.target.value.toUpperCase())}
+                  onChange={(e) => setVatNumber(e.target.value)}
                   placeholder="RO12345678"
                   className={inputClass}
                   required

@@ -306,7 +306,7 @@ export function CheckoutShippingInformation({
             id="checkout-vatNumber"
             type="text"
             value={vatNumber}
-            onChange={(e) => onVatNumberChange(e.target.value.toUpperCase())}
+            onChange={(e) => onVatNumberChange(e.target.value)}
             className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red ${
               vatNumberError || vatFormatError || vatLookupError
                 ? "border-red-500 bg-red-50"

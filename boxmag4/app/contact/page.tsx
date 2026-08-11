@@ -555,7 +555,7 @@ export default function ContactUsPage() {
                   type="text"
                   required
                   value={vatNumber}
-                  onChange={(e) => setVatNumber(e.target.value.toUpperCase())}
+                  onChange={(e) => setVatNumber(e.target.value)}
                   placeholder={t("contact.vatNumber")}
                   pattern="[A-Za-z]{2}\s?[A-Za-z0-9]{2,12}"
                   title={t("account.vatFormatTitle")}
