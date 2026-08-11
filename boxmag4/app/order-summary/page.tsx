@@ -20,12 +20,18 @@ import type { VatLookupAddressFields } from "../../lib/parse-vat-address";
 import {
   fetchVatLookup,
   getCachedVatCompany,
+  rememberVatCompany,
 } from "../../lib/vat-company";
 import { getBackendBaseUrl } from "../../lib/backend-url";
 import {
   formatOrderNumber,
   writeB2bOrderSuccessPayload,
 } from "../../lib/b2b-order-success";
+import {
+  AUTH_EMAIL_STORAGE_KEY,
+  AUTH_STORAGE_KEY,
+  clearCustomerAuthLocalState,
+} from "../../lib/customer-auth";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -40,11 +46,37 @@ function normalizeVatNumber(value: string): string {
   return value.trim().toUpperCase().replace(/\s+/g, "");
 }
 
-const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
-const AUTH_STORAGE_KEY = "boxmag.auth.loggedIn";
 const EUROPEAN_COUNTRY_CODES = new Set(
   europeanCountries.map((country) => country.code),
 );
+
+type UserAddress = {
+  id: number;
+  label?: string;
+  companyName: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  postcode: string;
+  city: string;
+  country: string;
+  isDefaultBilling: boolean;
+  isDefaultShipping: boolean;
+};
+
+function normalizeCountryCode(value: string | undefined): string {
+  const normalized = (value ?? "").trim().toUpperCase();
+  if (EUROPEAN_COUNTRY_CODES.has(normalized)) {
+    return normalized;
+  }
+  return "";
+}
+
+function formatSavedAddressLine(entry: UserAddress): string {
+  return [entry.addressLine1, entry.addressLine2].filter(Boolean).join(", ");
+}
 type RequiredFieldKey =
   | "firstName"
   | "surname"
@@ -116,6 +148,10 @@ export default function OrderSummaryPage() {
   const [submitSucceeded, setSubmitSucceeded] = useState(false);
   const [hasLoadedAccountDefaults, setHasLoadedAccountDefaults] = useState(false);
   const [lockedAccountEmail, setLockedAccountEmail] = useState<string | null>(null);
+  const [addresses, setAddresses] = useState<UserAddress[]>([]);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [addressType, setAddressType] = useState<"company" | "another">("another");
 
   const boxes = useBusinessStore((s) => s.boxes);
   const carboardTypes = useBusinessStore((s) => s.carboarbonTypeOptions);
@@ -144,6 +180,12 @@ export default function OrderSummaryPage() {
     Boolean(draft.quantity) &&
     draft.acceptedTerms;
   const backendBaseUrl = getBackendBaseUrl();
+  const selectedAddress =
+    addresses.find((entry) => entry.id === selectedAddressId) ?? null;
+  const defaultShippingAddress =
+    addresses.find((entry) => entry.isDefaultShipping) ?? addresses[0] ?? null;
+  const hasSavedAddresses = addresses.length > 0;
+  const useManualAddressForm = !hasSavedAddresses || addressType === "another";
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem(AUTH_STORAGE_KEY) === "true";
@@ -160,6 +202,10 @@ export default function OrderSummaryPage() {
     const isLoggedIn = localStorage.getItem(AUTH_STORAGE_KEY) === "true";
     const loggedInEmail = localStorage.getItem(AUTH_EMAIL_STORAGE_KEY)?.trim() ?? "";
     if (!isLoggedIn || !loggedInEmail) {
+      setAddresses([]);
+      setSelectedAddressId(null);
+      setAddressType("another");
+      setIsLoadingAddresses(false);
       setHasLoadedAccountDefaults(true);
       return;
     }
@@ -168,16 +214,32 @@ export default function OrderSummaryPage() {
     setEmail(loggedInEmail);
 
     let isCancelled = false;
+    const controller = new AbortController();
     const loadAccountDefaults = async () => {
+      setIsLoadingAddresses(true);
       try {
         const [profileResponse, addressesResponse] = await Promise.all([
           fetch(`${backendBaseUrl}/api/auth/profile`, {
             credentials: "include",
+            signal: controller.signal,
           }),
           fetch(`${backendBaseUrl}/api/addresses`, {
             credentials: "include",
+            signal: controller.signal,
           }),
         ]);
+
+        if (
+          addressesResponse.status === 401 ||
+          profileResponse.status === 401
+        ) {
+          clearCustomerAuthLocalState();
+          setLockedAccountEmail(null);
+          setAddresses([]);
+          setSelectedAddressId(null);
+          setAddressType("another");
+          return;
+        }
 
         const profilePayload = (await profileResponse.json()) as {
           ok?: boolean;
@@ -192,37 +254,26 @@ export default function OrderSummaryPage() {
         };
         const addressesPayload = (await addressesResponse.json()) as {
           ok?: boolean;
-          data?: Array<{
-            companyName?: string;
-            addressLine1?: string;
-            addressLine2?: string;
-            postcode?: string;
-            city?: string;
-            country?: string;
-            phone?: string;
-            isDefaultShipping?: boolean;
-            isDefaultBilling?: boolean;
-          }>;
+          data?: UserAddress[];
         };
 
         if (isCancelled) return;
 
-        const addresses = Array.isArray(addressesPayload.data)
-          ? addressesPayload.data
-          : [];
+        const loadedAddresses =
+          addressesResponse.ok &&
+          addressesPayload.ok === true &&
+          Array.isArray(addressesPayload.data)
+            ? addressesPayload.data
+            : [];
         const defaultAddress =
-          addresses.find((entry) => entry.isDefaultShipping) ??
-          addresses.find((entry) => entry.isDefaultBilling) ??
-          addresses[0] ??
+          loadedAddresses.find((entry) => entry.isDefaultShipping) ??
+          loadedAddresses.find((entry) => entry.isDefaultBilling) ??
+          loadedAddresses[0] ??
           null;
 
-        const normalizeCountry = (value: string | undefined): string => {
-          const normalized = (value ?? "").trim().toUpperCase();
-          if (EUROPEAN_COUNTRY_CODES.has(normalized)) {
-            return normalized;
-          }
-          return "";
-        };
+        setAddresses(loadedAddresses);
+        setSelectedAddressId(defaultAddress?.id ?? null);
+        setAddressType(loadedAddresses.length > 0 ? "company" : "another");
 
         if (profileResponse.ok && profilePayload.ok === true && profilePayload.data) {
           setEmail(loggedInEmail);
@@ -234,6 +285,9 @@ export default function OrderSummaryPage() {
           const profileCompany =
             String(profilePayload.data?.companyName ?? "").trim() ||
             String(defaultAddress?.companyName ?? "").trim();
+          if (profileVat && profileCompany) {
+            rememberVatCompany(profileVat, profileCompany);
+          }
           setVatNumber((prev) => prev || profileVat);
           if (profileCompany) {
             setCompanyName((prev) => prev.trim() || profileCompany);
@@ -247,26 +301,33 @@ export default function OrderSummaryPage() {
         }
 
         if (defaultAddress) {
-          setAddress((prev) =>
-            prev ||
-            [defaultAddress.addressLine1, defaultAddress.addressLine2]
-              .filter(Boolean)
-              .join(", "),
-          );
+          setAddress((prev) => prev || formatSavedAddressLine(defaultAddress));
           setPostcode((prev) => prev || String(defaultAddress.postcode ?? ""));
           setCity((prev) => prev || String(defaultAddress.city ?? ""));
-          setCountry((prev) => prev || normalizeCountry(defaultAddress.country));
+          setCountry(
+            (prev) => prev || normalizeCountryCode(defaultAddress.country),
+          );
           const addressPhone = String(defaultAddress.phone ?? "").trim();
           if (addressPhone) {
             setPhone((prev) => prev.trim() || addressPhone);
           }
         }
-      } catch (_error) {
+      } catch (error) {
+        if (
+          isCancelled ||
+          (error instanceof DOMException && error.name === "AbortError")
+        ) {
+          return;
+        }
         if (!isCancelled) {
           setEmail(loggedInEmail);
+          setAddresses([]);
+          setSelectedAddressId(null);
+          setAddressType("another");
         }
       } finally {
         if (!isCancelled) {
+          setIsLoadingAddresses(false);
           setHasLoadedAccountDefaults(true);
         }
       }
@@ -275,6 +336,7 @@ export default function OrderSummaryPage() {
     void loadAccountDefaults();
     return () => {
       isCancelled = true;
+      controller.abort();
     };
   }, [backendBaseUrl, hasLoadedAccountDefaults]);
 
@@ -320,24 +382,29 @@ export default function OrderSummaryPage() {
           country: payload.country,
           phone: payload.phone,
         };
-        const addressFromLookup = [lookupFields.addressLine1, lookupFields.addressLine2]
-          .filter(Boolean)
-          .join(", ");
-        const lookupCountry = lookupFields.country?.trim().toUpperCase() ?? "";
 
         setCompanyName(
           (prev) => prev.trim() || lookupFields.companyName?.trim() || "",
         );
-        setAddress((prev) => prev.trim() || addressFromLookup || prev);
-        setPostcode((prev) => prev.trim() || lookupFields.postcode?.trim() || prev);
-        setCity((prev) => prev.trim() || lookupFields.city?.trim() || prev);
-        setCountry((prev) => {
-          if (prev.trim()) return prev;
-          if (lookupCountry && EUROPEAN_COUNTRY_CODES.has(lookupCountry)) {
-            return lookupCountry;
-          }
-          return lookupFields.country?.trim() || prev;
-        });
+
+        // Saved-address mode: keep account address; only seed company from VIES.
+        if (addressType !== "company") {
+          const addressFromLookup = [lookupFields.addressLine1, lookupFields.addressLine2]
+            .filter(Boolean)
+            .join(", ");
+          const lookupCountry = lookupFields.country?.trim().toUpperCase() ?? "";
+
+          setAddress((prev) => prev.trim() || addressFromLookup || prev);
+          setPostcode((prev) => prev.trim() || lookupFields.postcode?.trim() || prev);
+          setCity((prev) => prev.trim() || lookupFields.city?.trim() || prev);
+          setCountry((prev) => {
+            if (prev.trim()) return prev;
+            if (lookupCountry && EUROPEAN_COUNTRY_CODES.has(lookupCountry)) {
+              return lookupCountry;
+            }
+            return lookupFields.country?.trim() || prev;
+          });
+        }
         setVatLookupError(null);
       } catch (error) {
         if (isCancelled || (error instanceof DOMException && error.name === "AbortError")) {
@@ -357,7 +424,7 @@ export default function OrderSummaryPage() {
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [vatNumber, t]);
+  }, [vatNumber, t, addressType]);
 
   useEffect(() => {
     if (submitSucceeded) return;
@@ -398,17 +465,39 @@ export default function OrderSummaryPage() {
     setConsentPhoneError("");
     setConsentEmailError("");
 
+    const useSavedAddress =
+      addressType === "company" && selectedAddress != null;
+    const submitAddress = useSavedAddress
+      ? formatSavedAddressLine(selectedAddress)
+      : address;
+    const submitPostcode = useSavedAddress
+      ? String(selectedAddress.postcode ?? "")
+      : postcode;
+    const submitCity = useSavedAddress
+      ? String(selectedAddress.city ?? "")
+      : city;
+    const submitCountry = useSavedAddress
+      ? normalizeCountryCode(selectedAddress.country) ||
+        String(selectedAddress.country ?? "").trim()
+      : country;
+    const submitPhone =
+      phone.trim() ||
+      (useSavedAddress ? String(selectedAddress.phone ?? "").trim() : "");
+    const submitCompanyName =
+      companyName.trim() ||
+      (useSavedAddress ? String(selectedAddress.companyName ?? "").trim() : "");
+
     const contactFields: Array<{ key: RequiredFieldKey; value: string }> = [
       { key: "firstName", value: firstName },
       { key: "surname", value: surname },
-      { key: "companyName", value: companyName },
+      { key: "companyName", value: submitCompanyName },
       { key: "vatNumber", value: vatNumber },
       { key: "email", value: email },
-      { key: "phone", value: phone },
-      { key: "address", value: address },
-      { key: "postcode", value: postcode },
-      { key: "city", value: city },
-      { key: "country", value: country },
+      { key: "phone", value: submitPhone },
+      { key: "address", value: submitAddress },
+      { key: "postcode", value: submitPostcode },
+      { key: "city", value: submitCity },
+      { key: "country", value: submitCountry },
     ];
     const nextRequiredFieldErrors = contactFields.reduce<Record<RequiredFieldKey, boolean>>(
       (acc, field) => {
@@ -456,7 +545,7 @@ export default function OrderSummaryPage() {
       return;
     }
 
-    if (!companyName.trim()) {
+    if (!submitCompanyName.trim()) {
       notify({
         type: "error",
         message: vatLookupError ?? t("contact.vatLookupFailed"),
@@ -524,14 +613,14 @@ export default function OrderSummaryPage() {
           acceptedTerms: draft.acceptedTerms,
           firstName,
           surname,
-          companyName,
+          companyName: submitCompanyName,
           vatNumber: normalizedVat || null,
           email: orderEmail,
-          phone,
-          address,
-          postcode,
-          city,
-          country,
+          phone: submitPhone,
+          address: submitAddress,
+          postcode: submitPostcode,
+          city: submitCity,
+          country: submitCountry,
           consentPhone,
           consentEmail,
         }),
@@ -568,9 +657,9 @@ export default function OrderSummaryPage() {
         email: orderEmail,
         firstName: firstName.trim(),
         surname: surname.trim(),
-        companyName: companyName.trim(),
+        companyName: submitCompanyName.trim(),
         vatNumber: normalizedVat,
-        phone: phone.trim(),
+        phone: submitPhone.trim(),
         isGuest: !lockedAccountEmail,
       });
 
@@ -743,57 +832,125 @@ export default function OrderSummaryPage() {
                 {requiredFieldErrors.phone ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.phoneRequired")}</p> : null}
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="os-address" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.address")}</label>
-                <input id="os-address" type="text" value={address} onChange={(e) => {
-                  setAddress(e.target.value);
-                  if (e.target.value.trim().length > 0 && requiredFieldErrors.address) {
-                    setRequiredFieldErrors((prev) => ({ ...prev, address: false }));
-                  }
-                }} placeholder={t("orderSummary.address")} className={requiredFieldErrors.address ? invalidInputClass : inputClass} />
-                {requiredFieldErrors.address ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.addressRequired")}</p> : null}
+            {isLoadingAddresses ? (
+              <p className="text-sm text-gray-600">{t("checkout.address.loading")}</p>
+            ) : null}
+            {hasSavedAddresses ? (
+              <p className="text-my-red font-semibold text-sm flex items-center gap-2">
+                <span>•</span> {t("checkout.selectAddress")}
+              </p>
+            ) : null}
+            {!useManualAddressForm && selectedAddress ? (
+              <div
+                data-testid="os-saved-address-preview"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 space-y-1"
+              >
+                <p className="font-bold text-black">
+                  {[selectedAddress.firstName, selectedAddress.lastName]
+                    .filter(Boolean)
+                    .join(" ")
+                    .trim() ||
+                    [firstName, surname].filter(Boolean).join(" ").trim()}
+                </p>
+                {(selectedAddress.companyName || companyName) ? (
+                  <p>{selectedAddress.companyName || companyName}</p>
+                ) : null}
+                <p>{formatSavedAddressLine(selectedAddress)}</p>
+                <p>
+                  {selectedAddress.postcode} {selectedAddress.city}
+                </p>
+                <p>{selectedAddress.country}</p>
+                {selectedAddress.phone ? (
+                  <p className="mt-1">
+                    {t("checkout.address.tel")} {selectedAddress.phone}
+                  </p>
+                ) : null}
+                <p className="mt-2 text-gray-600">
+                  {t("checkout.address.companyDefaultHint")}
+                </p>
               </div>
-              <div>
-                <label htmlFor="os-postcode" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.postcode")}</label>
-                <input id="os-postcode" type="text" value={postcode} onChange={(e) => {
-                  setPostcode(e.target.value);
-                  if (e.target.value.trim().length > 0 && requiredFieldErrors.postcode) {
-                    setRequiredFieldErrors((prev) => ({ ...prev, postcode: false }));
-                  }
-                }} placeholder={t("orderSummary.postcode")} className={requiredFieldErrors.postcode ? invalidInputClass : inputClass} />
-                {requiredFieldErrors.postcode ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.postcodeRequired")}</p> : null}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="os-city" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.city")}</label>
-                <input id="os-city" type="text" value={city} onChange={(e) => {
-                  setCity(e.target.value);
-                  if (e.target.value.trim().length > 0 && requiredFieldErrors.city) {
-                    setRequiredFieldErrors((prev) => ({ ...prev, city: false }));
-                  }
-                }} placeholder={t("orderSummary.city")} className={requiredFieldErrors.city ? invalidInputClass : inputClass} />
-                {requiredFieldErrors.city ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.cityRequired")}</p> : null}
-              </div>
-              <div>
-                <label htmlFor="os-country" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.country")}</label>
-                <select id="os-country" value={country} onChange={(e) => {
-                  setCountry(e.target.value);
-                  if (e.target.value.trim().length > 0 && requiredFieldErrors.country) {
-                    setRequiredFieldErrors((prev) => ({ ...prev, country: false }));
-                  }
-                }} className={requiredFieldErrors.country ? invalidInputClass : inputClass}>
-                  <option value="">{t("orderSummary.country")}</option>
-                  {europeanCountries.map((countryOption) => (
-                    <option key={countryOption.code} value={countryOption.code}>
-                      {countryOption.name}
-                    </option>
-                  ))}
-                </select>
-                {requiredFieldErrors.country ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.countryRequired")}</p> : null}
-              </div>
-            </div>
+            ) : null}
+            {useManualAddressForm ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="os-address" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.address")}</label>
+                    <input id="os-address" type="text" value={address} onChange={(e) => {
+                      setAddress(e.target.value);
+                      if (e.target.value.trim().length > 0 && requiredFieldErrors.address) {
+                        setRequiredFieldErrors((prev) => ({ ...prev, address: false }));
+                      }
+                    }} placeholder={t("orderSummary.address")} className={requiredFieldErrors.address ? invalidInputClass : inputClass} />
+                    {requiredFieldErrors.address ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.addressRequired")}</p> : null}
+                  </div>
+                  <div>
+                    <label htmlFor="os-postcode" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.postcode")}</label>
+                    <input id="os-postcode" type="text" value={postcode} onChange={(e) => {
+                      setPostcode(e.target.value);
+                      if (e.target.value.trim().length > 0 && requiredFieldErrors.postcode) {
+                        setRequiredFieldErrors((prev) => ({ ...prev, postcode: false }));
+                      }
+                    }} placeholder={t("orderSummary.postcode")} className={requiredFieldErrors.postcode ? invalidInputClass : inputClass} />
+                    {requiredFieldErrors.postcode ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.postcodeRequired")}</p> : null}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="os-city" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.city")}</label>
+                    <input id="os-city" type="text" value={city} onChange={(e) => {
+                      setCity(e.target.value);
+                      if (e.target.value.trim().length > 0 && requiredFieldErrors.city) {
+                        setRequiredFieldErrors((prev) => ({ ...prev, city: false }));
+                      }
+                    }} placeholder={t("orderSummary.city")} className={requiredFieldErrors.city ? invalidInputClass : inputClass} />
+                    {requiredFieldErrors.city ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.cityRequired")}</p> : null}
+                  </div>
+                  <div>
+                    <label htmlFor="os-country" className="block text-sm font-semibold text-gray-800 mb-1">{t("orderSummary.country")}</label>
+                    <select id="os-country" value={country} onChange={(e) => {
+                      setCountry(e.target.value);
+                      if (e.target.value.trim().length > 0 && requiredFieldErrors.country) {
+                        setRequiredFieldErrors((prev) => ({ ...prev, country: false }));
+                      }
+                    }} className={requiredFieldErrors.country ? invalidInputClass : inputClass}>
+                      <option value="">{t("orderSummary.country")}</option>
+                      {europeanCountries.map((countryOption) => (
+                        <option key={countryOption.code} value={countryOption.code}>
+                          {countryOption.name}
+                        </option>
+                      ))}
+                    </select>
+                    {requiredFieldErrors.country ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.countryRequired")}</p> : null}
+                  </div>
+                </div>
+              </>
+            ) : null}
+            {hasSavedAddresses ? (
+              <p className="text-sm">
+                {addressType === "company" ? (
+                  <button
+                    type="button"
+                    data-testid="os-use-another-address"
+                    onClick={() => setAddressType("another")}
+                    className="font-semibold text-my-red hover:underline"
+                  >
+                    {t("checkout.useAnotherAddress")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    data-testid="os-use-saved-address"
+                    onClick={() => {
+                      setAddressType("company");
+                      setSelectedAddressId(defaultShippingAddress?.id ?? null);
+                    }}
+                    className="font-semibold text-my-red hover:underline"
+                  >
+                    {t("checkout.useSavedAddress")}
+                  </button>
+                )}
+              </p>
+            ) : null}
           </form>
         </div>
 

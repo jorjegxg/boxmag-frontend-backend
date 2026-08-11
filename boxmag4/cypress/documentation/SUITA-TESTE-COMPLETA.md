@@ -47,6 +47,7 @@ Reset DB automat înainte de rulare (`CYPRESS_RESET_DB=false` ca să-l dezactive
 | --- | --- | --- |
 | `business.cy.ts` | 16 | `/business`: pașii configuratorului, breadcrumb + contact B2B, tipuri de cutii din API (+ eroare API), selectare tip cutie, query params `length/width/height` pre-completează formularul, validare (tip cutie, dimensiuni, termeni, mesaj — toate obligatorii), flux complet → `/order-summary`, opțiuni carton/print/transport |
 | `order-summary-guard.cy.ts` | 2 | Acces direct la `/order-summary` fără draft B2B redirecționează la `/business` (guard de flux, fără flash de conținut) |
+| `order-summary-saved-address.cy.ts` | 2 | User logat: adresă salvată default pe `/order-summary` + toggle altă adresă; payload `POST /api/orders` folosește adresa activă (`INV-B2B-SAVED-ADDRESS`) |
 | `b2b-order-success.cy.ts` | 6 | Flux complet guest: `/business` → `/order-summary` (VAT `RO2816464` → firmă auto-completată) → `POST /api/orders` → `/business/order-success`; creare cont din pagina de success → login → comanda apare în `/account#orders` cu toate detaliile; pagina de success redirecționează la `/business` fără payload; „No, thanks” golește sesiunea |
 | `b2b-guest-integration.cy.ts` | 1 (+ manual) | Guest plasează comandă B2B și refuză crearea contului — verificare automată + checklist manual pentru admin/email (`PAGES_TESTS_TODO2.md`) |
 | `b2b-guest-create-account.cy.ts` | 1 (+ manual) | Guest plasează comandă B2B și **creează** cont din pagina de success — verificare automată + checklist manual pentru admin/email |
