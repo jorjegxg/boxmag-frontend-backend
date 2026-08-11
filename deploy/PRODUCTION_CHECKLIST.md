@@ -14,8 +14,9 @@ Backend `assertProductionEnv()` refuses to start unless these hold when `NODE_EN
 | `MINIO_ROOT_PASSWORD` | Strong; not `change-me-*` |
 | `ADMIN_PASSWORD` | Strong; not `change-me-*` |
 | `USER_SESSION_SECRET` | Dedicated secret (required; no `ADMIN_PASSWORD` fallback in prod) |
-| `STRIPE_SECRET_KEY` | Live key `sk_live_…` |
-| `STRIPE_WEBHOOK_SECRET` | From Stripe Dashboard / `stripe listen` |
+| `STRIPE_SECRET_KEY` | Live key `sk_live_…`, **or** `sk_test_…` with `STRIPE_ALLOW_TEST_KEYS=1` |
+| `STRIPE_ALLOW_TEST_KEYS` | Set `1` only for production host still on Stripe test mode; remove before go-live |
+| `STRIPE_WEBHOOK_SECRET` | From Stripe Dashboard / `stripe listen` (test vs live mode must match the secret key) |
 | `STRIPE_SUCCESS_URL` | `https://…/checkout/success?session_id={CHECKOUT_SESSION_ID}` |
 | `STRIPE_CANCEL_URL` | `https://…/checkout/cancel` |
 | `FRONTEND_BASE_URL` | Public `https://` (no localhost) |

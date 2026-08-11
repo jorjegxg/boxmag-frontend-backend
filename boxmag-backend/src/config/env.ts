@@ -51,7 +51,16 @@ export type ProductionEnvSnapshot = {
   stripeCancelUrl?: string;
   frontendBaseUrl?: string;
   backendPublicUrl?: string;
+  /** When true/"1", allow sk_test_ keys in production (staging / pre-live). */
+  stripeAllowTestKeys?: string | boolean;
 };
+
+function isTruthyFlag(value: string | boolean | undefined): boolean {
+  if (value === true) return true;
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes";
+}
 
 /**
  * Fail-closed production checks. Safe to call in any env — no-ops unless
@@ -80,6 +89,9 @@ export function assertProductionEnv(snapshot: ProductionEnvSnapshot = {}): void 
     snapshot.frontendBaseUrl ?? process.env.FRONTEND_BASE_URL ?? "";
   const backendPublicUrl =
     snapshot.backendPublicUrl ?? process.env.BACKEND_PUBLIC_URL ?? "";
+  const stripeAllowTestKeys = isTruthyFlag(
+    snapshot.stripeAllowTestKeys ?? process.env.STRIPE_ALLOW_TEST_KEYS,
+  );
 
   const errors: string[] = [];
 
@@ -107,7 +119,17 @@ export function assertProductionEnv(snapshot: ProductionEnvSnapshot = {}): void 
     );
   }
 
-  if (!stripeSecretKey.startsWith("sk_live_")) {
+  const isLiveKey = stripeSecretKey.startsWith("sk_live_");
+  const isTestKey = stripeSecretKey.startsWith("sk_test_");
+  if (isLiveKey) {
+    // ok
+  } else if (isTestKey && stripeAllowTestKeys) {
+    // ok — explicit staging / pre-live escape hatch
+  } else if (isTestKey) {
+    errors.push(
+      "STRIPE_SECRET_KEY is a test key (sk_test_…); set STRIPE_ALLOW_TEST_KEYS=1 to allow in production, or use sk_live_…",
+    );
+  } else {
     errors.push("STRIPE_SECRET_KEY must be a live key (sk_live_…)");
   }
   if (!(stripeWebhookSecret ?? "").trim()) {

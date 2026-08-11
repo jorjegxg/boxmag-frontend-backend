@@ -47,10 +47,20 @@ describe("assertProductionEnv", () => {
     ).toThrow(/DB_PASSWORD/);
   });
 
-  it("rejects missing Stripe live key", () => {
+  it("rejects Stripe test key without STRIPE_ALLOW_TEST_KEYS", () => {
     expect(() =>
       assertProductionEnv({ ...validProd, stripeSecretKey: "sk_test_x" }),
     ).toThrow(/STRIPE_SECRET_KEY/);
+  });
+
+  it("accepts Stripe test key when STRIPE_ALLOW_TEST_KEYS is set", () => {
+    expect(() =>
+      assertProductionEnv({
+        ...validProd,
+        stripeSecretKey: "sk_test_x",
+        stripeAllowTestKeys: "1",
+      }),
+    ).not.toThrow();
   });
 
   it("rejects localhost public URLs", () => {

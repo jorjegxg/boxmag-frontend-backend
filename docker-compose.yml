@@ -64,9 +64,8 @@ services:
     env_file:
       - ./.env
     environment:
-      # Temporarily development to allow Stripe sk_test_ on this host.
-      # Switch back to production before going live with sk_live_.
-      NODE_ENV: development
+      # NODE_ENV comes from .env (production). For Stripe test keys in prod set
+      # STRIPE_ALLOW_TEST_KEYS=1 — see assertProductionEnv in boxmag-backend.
       NODE_OPTIONS: "--max-old-space-size=192"
       DB_HOST: mysql
       DB_PORT: 3306
