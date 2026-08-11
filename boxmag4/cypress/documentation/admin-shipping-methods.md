@@ -19,7 +19,7 @@
 ### 1. Tabel
 
 1. `cy.loginAdmin()`, intercept GET, visit
-2. **CHECK:** „Metode de livrare”, cheie + nume din mock
+2. **CHECK:** „Metode de livrare”; `input[value="standard"]` + `input[value="Standard Delivery"]` (key/name pe input value)
 
 ### 2. Creare
 
@@ -28,8 +28,16 @@
 
 ---
 
+## Selectori utili
+
+- `cy.get('input[value="standard"]')` — key din rândul editat
+- `cy.get('input[value="Standard Delivery"]')` — name din rândul editat
+- `cy.get('input[placeholder="standard"]')` — formular creare
+
+---
+
 ## Rulare
 
 ```bash
-npx cypress run --spec cypress/e2e/admin-shipping-methods.cy.ts
+npx cypress run --spec cypress/e2e/admin-shipping-methods.cy.ts --browser chrome
 ```

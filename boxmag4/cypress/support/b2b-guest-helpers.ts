@@ -213,13 +213,13 @@ export const assertCustomerOrderDetail = (
   order: CreateOrderBody,
 ) => {
   cy.contains("Order Details").should("exist");
-  cy.contains(`Order #${orderNumber}`).should("exist");
+  cy.contains(`Order Number #${orderNumber}`).should("exist");
   cy.contains("NEW").should("exist");
 
   cy.contains("Items").should("exist");
   cy.contains(order.boxTypeName).should("exist");
   cy.contains(`${order.quantity} pcs`).should("exist");
-  cy.contains(`Cardboard: ${CARDBOARD_TYPE}`).should("exist");
+  cy.contains(`Cardboard colour: ${CARDBOARD_TYPE}`).should("exist");
   cy.contains(CARDBOARD_COLOUR).should("exist");
   cy.contains(BOX_PRINT).should("exist");
 

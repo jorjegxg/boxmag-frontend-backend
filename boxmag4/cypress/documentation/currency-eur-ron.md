@@ -28,9 +28,9 @@ Viewport ≥ `lg` (TopBar selectors `max-md:hidden`). Cypress default: 1280×800
 1. Mock `GET **/api/exchange-rate/eur-ron` cu `rate: 5`
 2. Mock catalog shop/PDP (preț `withTax: 11.9`)
 3. Visit `/shop` cu moneda EUR
-4. **CHECK:** `de la € 11.90`
+4. **CHECK:** `from € 11.90` (EN default `shop.priceFrom`; limba default = en)
 5. Select `RON`
-6. **CHECK:** `de la 59.50 lei` (11.9 × 5)
+6. **CHECK:** `from 59.50 lei` (11.9 × 5)
 7. Visit PDP `/products/standard?itemNo=STD-001`
 8. **CHECK:** preț brut RON (`5950.00 lei` = 11.9 × 100 × 5)
 9. Visit checkout (guest, cart seed `unitPrice: 12.5`, qty 100)

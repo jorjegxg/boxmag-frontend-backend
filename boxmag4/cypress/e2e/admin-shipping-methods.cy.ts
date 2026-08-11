@@ -28,8 +28,8 @@ describe("Admin shipping methods", () => {
     cy.visit("/admin/shipping-methods");
     cy.wait("@getShipping");
     cy.contains("Metode de livrare").should("exist");
-    cy.contains("standard").should("exist");
-    cy.contains("Standard Delivery").should("exist");
+    cy.get('input[value="standard"]').should("exist");
+    cy.get('input[value="Standard Delivery"]').should("exist");
   });
 
   it("posts a new shipping method from the form", () => {

@@ -247,7 +247,7 @@ export const assertCustomerCheckoutOrdersList = (orderNumber: string) => {
 
 export const assertCustomerCheckoutOrderDetail = (orderNumber: string) => {
   cy.contains("Order Details").should("exist");
-  cy.contains(`Order #${orderNumber}`).should("exist");
+  cy.contains(`Order Number #${orderNumber}`).should("exist");
   cy.contains("NEW").should("exist");
   cy.contains("PAID").should("exist");
 

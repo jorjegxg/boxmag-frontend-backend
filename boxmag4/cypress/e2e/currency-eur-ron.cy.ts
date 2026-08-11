@@ -142,11 +142,11 @@ describe("Monedă EUR / RON", () => {
     cy.wait(["@getExchangeRate", "@getBoxTypes", "@getProducts"]);
 
     currencySelect().should("have.value", "EUR");
-    cy.contains(`de la € ${UNIT_WITH_TAX.toFixed(2)}`).should("be.visible");
+    cy.contains(`from € ${UNIT_WITH_TAX.toFixed(2)}`).should("be.visible");
 
     currencySelect().select("RON");
     currencySelect().should("have.value", "RON");
-    cy.contains(`de la ${(UNIT_WITH_TAX * MOCK_RATE).toFixed(2)} lei`).should(
+    cy.contains(`from ${(UNIT_WITH_TAX * MOCK_RATE).toFixed(2)} lei`).should(
       "be.visible",
     );
 
@@ -180,7 +180,7 @@ describe("Monedă EUR / RON", () => {
     cy.wait(["@getBoxTypes", "@getProducts"]);
 
     currencySelect().select("RON");
-    cy.contains(`de la ${(UNIT_WITH_TAX * 4).toFixed(2)} lei`).should(
+    cy.contains(`from ${(UNIT_WITH_TAX * 4).toFixed(2)} lei`).should(
       "be.visible",
     );
   });
@@ -194,8 +194,8 @@ describe("Monedă EUR / RON", () => {
 
     currencySelect().select("RON");
     currencySelect().should("have.value", "RON");
-    cy.contains(`de la ${UNIT_WITH_TAX.toFixed(2)} lei`).should("be.visible");
-    cy.contains(/de la € /).should("not.exist");
+    cy.contains(`from ${UNIT_WITH_TAX.toFixed(2)} lei`).should("be.visible");
+    cy.contains(/from € /).should("not.exist");
   });
 
   it("moneda persistă în localStorage după reload", () => {
@@ -214,7 +214,7 @@ describe("Monedă EUR / RON", () => {
     cy.wait(["@getExchangeRate", "@getBoxTypes", "@getProducts"]);
 
     currencySelect().should("have.value", "RON");
-    cy.contains(`de la ${(UNIT_WITH_TAX * MOCK_RATE).toFixed(2)} lei`).should(
+    cy.contains(`from ${(UNIT_WITH_TAX * MOCK_RATE).toFixed(2)} lei`).should(
       "be.visible",
     );
     cy.window().then((win) => {

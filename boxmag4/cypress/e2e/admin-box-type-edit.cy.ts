@@ -56,7 +56,7 @@ describe("Admin box type edit", () => {
     cy.visit("/admin/box-types/3/edit");
     cy.wait(["@getBoxTypes", "@getProducts"]);
     cy.contains("h1", "Editare tip cutie").should("exist");
-    cy.contains("TB-001").should("exist");
+    cy.get('input[value="TB-001"]').should("exist");
     cy.contains("Salvează").should("exist");
   });
 });

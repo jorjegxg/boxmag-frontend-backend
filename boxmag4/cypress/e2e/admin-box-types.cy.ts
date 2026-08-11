@@ -58,7 +58,7 @@ describe("Admin box types", () => {
     cy.wait("@getBoxTypes");
 
     cy.get('form[role="search"] input[type="search"]').clear().type(title);
-    cy.contains('p', "box_types", { timeout: 10000 }).should("exist");
+    cy.contains('p', "Box types", { timeout: 10000 }).should("exist");
     cy.get('form[role="search"]')
       .parent()
       .contains("a", title)

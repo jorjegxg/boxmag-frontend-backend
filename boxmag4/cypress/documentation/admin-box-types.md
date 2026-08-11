@@ -18,7 +18,7 @@ Necesită frontend (:3006), backend (:3005), MySQL, MinIO.
 | Visit `/admin/box-types` | `GET /api/box-types` + formular Titlu / Imagini |
 | Upload + „Adaugă tip de cutie” | `POST /api/box-types/upload-images` → `POST /api/box-types` (key auto din title) |
 | Row în tabel | Titlu + status `Activ` |
-| Search pe `/shop` (≥2 caractere) | Filtrează tipuri active după `title`; dropdown `box_types` |
+| Search pe `/shop` (≥2 caractere) | Filtrează tipuri active după `title`; dropdown label i18n `Box types` (EN) |
 
 ---
 
@@ -35,7 +35,7 @@ Necesită frontend (:3006), backend (:3005), MySQL, MinIO.
 7. **CHECK:** `@uploadImages` 200/201; `@createBoxType` 201
 8. **CHECK:** rând tabel cu titlu + `Activ`
 9. Visit `/shop`, tastează titlul în search
-10. **CHECK:** link cu titlul în dropdown (`/shop?boxTypeId=…`)
+10. **CHECK:** `p` cu „Box types” (EN `header.boxTypesLabel`); link cu titlul în dropdown (`/shop?boxTypeId=…`)
 
 ---
 
@@ -47,6 +47,7 @@ cy.contains("label", "Titlu").find("input")
 cy.get("#box-image-upload")
 cy.contains("button", "Adaugă tip de cutie")
 cy.get('form[role="search"] input[type="search"]')
+cy.contains('p', "Box types")
 ```
 
 Fixture: `cypress/fixtures/box-type.png`
@@ -57,5 +58,5 @@ Fixture: `cypress/fixtures/box-type.png`
 
 ```bash
 cd boxmag4
-npx cypress run --spec cypress/e2e/admin-box-types.cy.ts
+npx cypress run --spec cypress/e2e/admin-box-types.cy.ts --browser chrome
 ```

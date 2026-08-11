@@ -13,12 +13,21 @@
 1. `cy.loginAdmin()`
 2. Intercept `GET /api/box-types` + `GET /api/box-types/3/products`
 3. Visit `/admin/box-types/3/edit`
-4. **CHECK:** „Editare tip cutie”, itemNo produs, buton „Salvează”
+4. **CHECK:** „Editare tip cutie”, `input[value="TB-001"]` (itemNo e value pe input, nu text node), buton „Salvează”
+
+---
+
+## Selectori utili
+
+- `cy.contains("h1", "Editare tip cutie")`
+- `cy.get('input[value="TB-001"]')` — itemNo din mock products
+- `cy.contains("Salvează")`
 
 ---
 
 ## Rulare
 
 ```bash
-npx cypress run --spec cypress/e2e/admin-box-type-edit.cy.ts
+npx cypress run --spec cypress/e2e/admin-box-type-edit.cy.ts --browser chrome
 ```
+
