@@ -66,7 +66,7 @@ function statusBadgeClass(status: string): string {
   const normalized = status.trim().toLowerCase();
   if (normalized === "processing" || normalized === "in progress") return "text-yellow-600 bg-yellow-50";
   if (normalized === "shipped") return "text-blue-600 bg-blue-50";
-  if (normalized === "completed" || normalized === "done") return "text-green-600 bg-green-50";
+  if (normalized === "completed") return "text-green-600 bg-green-50";
   return "text-gray-600 bg-gray-50";
 }
 

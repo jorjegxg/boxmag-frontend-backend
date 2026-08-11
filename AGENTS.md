@@ -620,7 +620,7 @@ Schema: `boxmag-backend/db/reset_and_seed.sql` (+ ordered migrations in `boxmag-
 | `newsletter_subscribers` | Newsletter |
 | `schema_migrations` | Applied migration filenames |
 
-**Order statuses:** `new`, `in progress`, `completed`, `done`  
+**Order statuses:** `new`, `in progress`, `completed`  
 **Payment statuses:** `pending`, `paid`, `failed`
 
 ---

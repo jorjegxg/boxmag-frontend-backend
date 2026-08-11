@@ -35,7 +35,7 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 
 | ID | Regulă | Cod |
 |----|--------|-----|
-| `INV-ORDER-STATUS` | Valori permise: `new`, `in progress`, `completed`, `done`. | `orders.route.ts` |
+| `INV-ORDER-STATUS` | Valori permise: `new`, `in progress`, `completed`. | `orders.route.ts` |
 | `INV-GUEST-LINK` | La verify-email / login reușit, comenzile guest cu același email se leagă de user. B2C checkout setează `user_id` doar dacă cookie sesiune + email match (nu pe existența email-ului în DB). | `auth.route.ts`, `link-guest-orders.ts`, `payments.route.ts` |
 
 ### Auth

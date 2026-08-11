@@ -993,7 +993,6 @@ function statusColor(status: string) {
     case "shipped":
       return "text-blue-600 bg-blue-50";
     case "completed":
-    case "done":
       return "text-green-600 bg-green-50";
     case "new":
       return "text-my-red bg-red-50";
@@ -1025,8 +1024,7 @@ function OrdersTab({
     if (normalized === "processing" || normalized === "in progress")
       return t("account.status.processing");
     if (normalized === "shipped") return t("account.status.shipped");
-    if (normalized === "completed" || normalized === "done")
-      return t("account.status.completed");
+    if (normalized === "completed") return t("account.status.completed");
     return status.toUpperCase();
   };
 

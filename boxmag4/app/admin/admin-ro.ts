@@ -1,17 +1,15 @@
-export type OrderStatusValue = "new" | "in progress" | "completed" | "done";
+export type OrderStatusValue = "new" | "in progress" | "completed";
 
 export const ORDER_STATUS_OPTIONS: OrderStatusValue[] = [
   "new",
   "in progress",
   "completed",
-  "done",
 ];
 
 export const ORDER_STATUS_LABELS: Record<OrderStatusValue, string> = {
   new: "Nouă",
   "in progress": "În lucru",
   completed: "Finalizată",
-  done: "Încheiată",
 };
 
 const EXTRA_ORDER_STATUS_LABELS: Record<string, string> = {

@@ -125,7 +125,6 @@ const ALLOWED_ORDER_STATUSES = new Set([
   "new",
   "in progress",
   "completed",
-  "done",
 ]);
 const ALLOWED_PAYMENT_STATUSES = new Set(["pending", "paid", "failed"]);
 

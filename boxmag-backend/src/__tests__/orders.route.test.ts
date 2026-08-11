@@ -117,6 +117,20 @@ describe("orders routes", () => {
     expect(response.body.message).toContain("Invalid order status value");
   });
 
+  it("returns 400 for legacy done status when admin", async () => {
+    const { createAdminSessionToken } = await import("../config/admin-auth");
+    const adminCookie = `boxmag-admin-session=${createAdminSessionToken("test-admin-password")}`;
+
+    const response = await request(app)
+      .patch("/api/orders/12/status")
+      .set("Cookie", adminCookie)
+      .send({ status: "done" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(response.body.message).toContain("Invalid order status value");
+  });
+
   it("returns 400 when create order payload is missing required fields", async () => {
     const response = await request(app).post("/api/orders").send({
       boxTypeName: "Standard Box",

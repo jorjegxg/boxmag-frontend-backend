@@ -90,7 +90,7 @@ function statusBadgeClass(status: string): string {
     return "text-yellow-600 bg-yellow-50";
   }
   if (normalized === "shipped") return "text-blue-600 bg-blue-50";
-  if (normalized === "completed" || normalized === "done") {
+  if (normalized === "completed") {
     return "text-green-600 bg-green-50";
   }
   return "text-gray-600 bg-gray-50";
