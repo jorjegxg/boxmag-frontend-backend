@@ -825,6 +825,7 @@
   "header.searching": "Se caută...",
   "account.error.enterCredentials": "Te rugăm să introduci emailul și parola.",
   "account.error.loadProfile": "Nu s-a putut încărca profilul",
+  "account.retryLoadProfile": "Încearcă din nou",
   "account.error.loadOrders": "Nu s-au putut încărca comenzile",
   "account.error.loadAddresses": "Nu s-au putut încărca adresele",
   "account.error.updateAddress": "Nu s-a putut actualiza adresa",

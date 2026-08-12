@@ -1119,6 +1119,8 @@ export default function AccountPage() {
     vatNumber: "",
   });
   const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
+  const [profileReloadToken, setProfileReloadToken] = useState(0);
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [isAddressesLoading, setIsAddressesLoading] = useState(false);
   const [orders, setOrders] = useState<UserOrder[]>([]);
@@ -1139,6 +1141,7 @@ export default function AccountPage() {
       companyName: "",
       vatNumber: "",
     });
+    setProfileLoadError(null);
     setActiveTab("account");
     router.push("/account#account");
   }, [router]);
@@ -1200,6 +1203,7 @@ export default function AccountPage() {
 
     const loadProfile = async () => {
       setIsProfileLoading(true);
+      setProfileLoadError(null);
       try {
         const response = await fetch(`${backendBaseUrl}/api/auth/profile`, {
           credentials: "include",
@@ -1232,8 +1236,14 @@ export default function AccountPage() {
           companyName: payload.data.companyName ?? "",
           vatNumber: payload.data.vatNumber ?? "",
         });
+        setProfileLoadError(null);
       } catch (error) {
         if (controller.signal.aborted) return;
+        setProfileLoadError(
+          error instanceof Error
+            ? error.message
+            : t("account.error.loadProfile"),
+        );
         setAccountProfile({
           firstName: "",
           lastName: "",
@@ -1251,7 +1261,7 @@ export default function AccountPage() {
 
     void loadProfile();
     return () => controller.abort();
-  }, [isLoggedIn, loggedInEmail, handleSessionExpired]);
+  }, [isLoggedIn, loggedInEmail, handleSessionExpired, profileReloadToken, t]);
 
   useEffect(() => {
     if (!isLoggedIn || !loggedInEmail) {
@@ -1662,7 +1672,27 @@ export default function AccountPage() {
                   {t("account.loadingDetails")}
                 </div>
               ) : null}
-              {activeTab === "account" && !isProfileLoading ? (
+              {activeTab === "account" &&
+              !isProfileLoading &&
+              profileLoadError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-6 space-y-4">
+                  <p className="text-sm font-medium text-red-700">
+                    {profileLoadError}
+                  </p>
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white hover:bg-my-red/90 transition-colors"
+                    onClick={() =>
+                      setProfileReloadToken((token) => token + 1)
+                    }
+                  >
+                    {t("account.retryLoadProfile")}
+                  </button>
+                </div>
+              ) : null}
+              {activeTab === "account" &&
+              !isProfileLoading &&
+              !profileLoadError ? (
                 <MyAccountTab
                   t={t}
                   profile={accountProfile}

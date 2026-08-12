@@ -501,6 +501,30 @@ authRouter.get("/verify-email", async (req, res) => {
       linkedUserId = insertResult.insertId;
     } else {
       linkedUserId = existingRows[0]!.id;
+      // Backfill profile from pending registration (double-verify / pre-existing row).
+      await mysqlPool.execute(
+        `UPDATE users
+         SET password_hash = ?,
+             first_name = ?,
+             last_name = ?,
+             company_name = ?,
+             vat_number = ?,
+             phone = ?,
+             email_verification_token_hash = NULL,
+             email_verification_expires_at = NULL,
+             email_verified_at = CURRENT_TIMESTAMP,
+             is_active = 1
+         WHERE id = ?`,
+        [
+          user.password_hash,
+          user.first_name,
+          user.last_name,
+          user.company_name,
+          user.vat_number,
+          user.phone,
+          linkedUserId,
+        ]
+      );
     }
 
     if (linkedUserId != null && linkedUserId > 0) {

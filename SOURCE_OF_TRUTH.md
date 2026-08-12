@@ -45,6 +45,7 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 | `INV-AUTH-ADMIN` | Admin: cookie `boxmag-admin-session` **sau** `Authorization: Bearer` / `x-admin-token`. Fără config → 503 pe rute protejate. | `require-admin.ts` |
 | `INV-AUTH-USER` | Customer: cookie `boxmag-user-session` (HMAC, TTL 14 zile) + `localStorage` pe FE (`boxmag.auth.*`). | `require-user.ts`, `user-auth.ts` |
 | `INV-AUTH-EMAIL-SCOPE` | `GET /api/orders` fără `?email=` = admin only. Cu `?email=` = admin sau user cu email potrivit. | `require-admin-or-user-email.ts` |
+| `INV-AUTH-VERIFY-PROFILE` | `GET /api/auth/verify-email`: creează user din `pending_user_registrations` **sau**, dacă email-ul există deja în `users`, actualizează `password_hash` + profil (`first_name`, `last_name`, `company_name`, `vat_number`, `phone`) + `email_verified_at` / `is_active` din pending, apoi șterge pending. | `auth.route.ts` |
 
 ### Fluxuri FE
 
@@ -93,7 +94,7 @@ Așteptări: guards `INV-B2B-GUARDS`; attachment opțional → MinIO; guest OK.
   → login pe /account → profile / addresses / orders
 ```
 
-Așteptări: cont inactiv până la verify; `INV-GUEST-LINK` la verify și la login; B2C logat setează `user_id` din sesiune.
+Așteptări: cont inactiv până la verify; verify creează **sau actualizează** `users` din pending (`INV-AUTH-VERIFY-PROFILE`); `INV-GUEST-LINK` la verify și la login; B2C logat setează `user_id` din sesiune. Fail load profil pe `/account` → eroare + retry, fără formular gol editabil.
 
 ### Admin
 
@@ -122,6 +123,7 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-GUEST-LINK` | OK `auth`, `link-guest-orders`, `payments` | — | OK `checkout-guest-create-account`, `b2b-order-success` | — |
 | `INV-AUTH-ADMIN` | OK `require-admin`, `session-tokens` | OK `admin-auth` | OK `admin-login` | — |
 | `INV-AUTH-USER` | OK `auth` login/logout, `session-tokens` | — | OK `login`, `account` | — |
+| `INV-AUTH-VERIFY-PROFILE` | OK `auth` verify existing-user update | — | — | — |
 | `INV-AUTH-EMAIL-SCOPE` | OK `require-admin` | — | — | — |
 | `INV-B2B-GUARDS` | — | OK `b2b-order-success` | OK `order-summary-guard`, `b2b-order-success` | — |
 | `INV-B2B-SAVED-ADDRESS` | — | — | OK `order-summary-saved-address` | — |

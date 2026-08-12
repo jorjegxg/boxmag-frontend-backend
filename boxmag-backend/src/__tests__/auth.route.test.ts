@@ -189,6 +189,53 @@ describe("auth routes", () => {
     );
   });
 
+  it("updates existing user profile from pending on verify-email", async () => {
+    const future = new Date(Date.now() + 60_000);
+    executeMock
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 7,
+            email: "guest@example.com",
+            password_hash: "salt:newhash",
+            first_name: "Ion",
+            last_name: "Popescu",
+            company_name: "Firma SRL",
+            vat_number: "RO12345678",
+            phone: "+40700000000",
+            verification_expires_at: future.toISOString(),
+          },
+        ],
+      ])
+      .mockResolvedValueOnce([[{ id: 42 }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+    const response = await request(app).get(
+      "/api/auth/verify-email?token=valid-token",
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("Email confirmed successfully");
+    expect(executeMock).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE users"),
+      [
+        "salt:newhash",
+        "Ion",
+        "Popescu",
+        "Firma SRL",
+        "RO12345678",
+        "+40700000000",
+        42,
+      ],
+    );
+    expect(executeMock).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE orders o"),
+      [42, "guest@example.com"],
+    );
+  });
+
   it("returns 400 when register payload is invalid", async () => {
     const response = await request(app).post("/api/auth/register").send({
       email: "customer@example.com",

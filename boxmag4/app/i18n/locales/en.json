@@ -825,6 +825,7 @@
   "header.searching": "Searching...",
   "account.error.enterCredentials": "Please enter your email and password.",
   "account.error.loadProfile": "Failed to load profile",
+  "account.retryLoadProfile": "Try again",
   "account.error.loadOrders": "Failed to load orders",
   "account.error.loadAddresses": "Failed to load addresses",
   "account.error.updateAddress": "Failed to update address",

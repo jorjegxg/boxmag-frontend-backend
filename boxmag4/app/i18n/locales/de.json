@@ -825,6 +825,7 @@
   "header.searching": "Suche läuft...",
   "account.error.enterCredentials": "Bitte geben Sie E-Mail und Passwort ein.",
   "account.error.loadProfile": "Profil konnte nicht geladen werden",
+  "account.retryLoadProfile": "Erneut versuchen",
   "account.error.loadOrders": "Bestellungen konnten nicht geladen werden",
   "account.error.loadAddresses": "Adressen konnten nicht geladen werden",
   "account.error.updateAddress": "Adresse konnte nicht aktualisiert werden",
