@@ -856,6 +856,7 @@
   "account.detailsSaved": "Detalii salvate",
   "account.error.missingEmail": "Lipsește emailul contului.",
   "account.emailLockedHint": "Emailul contului nu poate fi modificat.",
+  "account.companyFromProfileHint": "Numele firmei se modifică din Contul meu, pe baza codului TVA.",
   "account.vatFormatTitle": "Folosește codul țării plus 2-12 litere/cifre (ex. RO12345678 sau RO 12345678)",
   "checkout.attachmentOptional": "Atașament (opțional)",
   "checkout.attachmentMaxSize": "Dimensiune maximă acceptată: {{maxMb}} MB.",

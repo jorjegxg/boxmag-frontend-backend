@@ -856,6 +856,7 @@
   "account.detailsSaved": "Details saved",
   "account.error.missingEmail": "Missing account email.",
   "account.emailLockedHint": "The account email cannot be changed.",
+  "account.companyFromProfileHint": "Company name is edited in My Account, based on the VAT number.",
   "account.vatFormatTitle": "Use country code plus 2-12 letters/digits (e.g. RO12345678 or RO 12345678)",
   "checkout.attachmentOptional": "Attachment (optional)",
   "checkout.attachmentMaxSize": "Accepted max file size: {{maxMb}} MB.",

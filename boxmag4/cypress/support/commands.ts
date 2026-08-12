@@ -157,6 +157,8 @@ const defaultProfile: MockProfile = {
   lastName: "Doe",
   phone: "799111222",
   email: TEST_EMAIL,
+  companyName: "Boxmag SRL",
+  vatNumber: "RO12345678",
 };
 
 Cypress.Commands.add(

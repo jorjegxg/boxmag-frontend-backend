@@ -12,10 +12,9 @@ import {
 
 const fillAccountAddressForm = () => {
   cy.get('input[placeholder="Label (Home, Warehouse...)"]').type("Cart Test");
-  cy.get('input[placeholder="Company Name"]').type("Boxmag SRL");
-  cy.get('input[placeholder="First Name *"]').type("Elena");
-  cy.get('input[placeholder="Last Name *"]').type("Marin");
-  cy.get('input[placeholder="Phone"]').type("799888777");
+  cy.get('input[placeholder="First Name *"]').clear().type("Elena");
+  cy.get('input[placeholder="Last Name *"]').clear().type("Marin");
+  cy.get('input[placeholder="Phone"]').clear().type("799888777");
   cy.get('input[placeholder="Address line 1 *"]').type("Str. Coșului 7");
   cy.get('input[placeholder="Postcode *"]').type("725400");
   cy.get('input[placeholder="City *"]').type("Radauti");

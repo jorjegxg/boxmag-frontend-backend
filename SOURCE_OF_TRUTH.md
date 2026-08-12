@@ -52,6 +52,7 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 |----|--------|-----|
 | `INV-B2B-GUARDS` | `/order-summary` fără draft complet → redirect `/business`. `/business/order-success` fără payload session → redirect `/business`. | `order-summary/page.tsx`, `b2b-order-success.ts` |
 | `INV-B2B-SAVED-ADDRESS` | User logat pe `/order-summary` cu adrese în cont: default adresa salvată (shipping); toggle altă adresă / adresă salvată ca la checkout; `POST /api/orders` folosește adresa activă. Guest / fără adrese = formular manual. | `order-summary/page.tsx` |
+| `INV-ACCOUNT-ADDRESS-IDENTITY` | Tab Address: `companyName` read-only din profil (edit doar My Account / VAT); `firstName` / `lastName` / `phone` prefilled din profil la adresă nouă, editabile per adresă; create/update trimite `companyName` din profil. | `account/page.tsx` (`AddressTab`) |
 | `INV-I18N-COOKIE` | Limba = cookie `boxmag.language`. Prefix `/ro/*`, `/de/*` → path fără prefix + set cookie. | `middleware.ts` |
 | `INV-CONTACT-NEXT` | Formular contact = doar Next.js `POST /api/contact` (nu `boxmag-backend`). | `boxmag4/app/api/contact` |
 
@@ -124,6 +125,7 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-AUTH-EMAIL-SCOPE` | OK `require-admin` | — | — | — |
 | `INV-B2B-GUARDS` | — | OK `b2b-order-success` | OK `order-summary-guard`, `b2b-order-success` | — |
 | `INV-B2B-SAVED-ADDRESS` | — | — | OK `order-summary-saved-address` | — |
+| `INV-ACCOUNT-ADDRESS-IDENTITY` | — | — | OK `account-logged-in`, `account-address-cart` | — |
 | `INV-I18N-COOKIE` | — | — | OK `language-i18n`, `smoke` | OK `smoke` |
 | `INV-CONTACT-NEXT` | — | OK `contact-route` | OK `contact` | — |
 | `INV-NO-PROD-WIPE` | OK `env.production` (parțial) | — | — | — |

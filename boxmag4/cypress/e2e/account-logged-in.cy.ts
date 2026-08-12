@@ -24,7 +24,6 @@ const sampleAddress = {
 
 const fillAddressForm = (overrides: Partial<{
   label: string;
-  companyName: string;
   firstName: string;
   lastName: string;
   phone: string;
@@ -36,7 +35,6 @@ const fillAddressForm = (overrides: Partial<{
 }> = {}) => {
   const data = {
     label: "Office",
-    companyName: "Test Company",
     firstName: "Ana",
     lastName: "Popescu",
     phone: "799111222",
@@ -50,9 +48,6 @@ const fillAddressForm = (overrides: Partial<{
 
   if (data.label) {
     cy.get('input[placeholder="Label (Home, Warehouse...)"]').clear().type(data.label);
-  }
-  if (data.companyName) {
-    cy.get('input[placeholder="Company Name"]').clear().type(data.companyName);
   }
   cy.get('input[placeholder="First Name *"]').clear().type(data.firstName);
   cy.get('input[placeholder="Last Name *"]').clear().type(data.lastName);
@@ -247,8 +242,23 @@ describe("/account – tab Address (logat)", () => {
     cy.contains("button", "Save address").click();
     cy.wait("@createAddress");
 
-    cy.get('input[placeholder="First Name *"]').should("have.value", "");
+    cy.get('input[placeholder="First Name *"]').should("have.value", "John");
     cy.get('input[placeholder="Address line 1 *"]').should("have.value", "");
+  });
+
+  it("firma e read-only și vine din profil", () => {
+    cy.get('input[placeholder="Company Name"]')
+      .should("have.value", "Boxmag SRL")
+      .and("have.attr", "readonly");
+    cy.contains(
+      "Company name is edited in My Account, based on the VAT number.",
+    ).should("exist");
+  });
+
+  it("contactul e prefilled din profil pentru adresă nouă", () => {
+    cy.get('input[placeholder="First Name *"]').should("have.value", "John");
+    cy.get('input[placeholder="Last Name *"]').should("have.value", "Doe");
+    cy.get('input[placeholder="Phone"]').should("have.value", "799111222");
   });
 
   it("trimite PUT la actualizarea unei adrese", () => {

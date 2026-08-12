@@ -856,6 +856,7 @@
   "account.detailsSaved": "Details gespeichert",
   "account.error.missingEmail": "Konto-E-Mail fehlt.",
   "account.emailLockedHint": "Die Konto-E-Mail kann nicht geändert werden.",
+  "account.companyFromProfileHint": "Der Firmenname wird im Bereich Mein Konto anhand der USt-IdNr. geändert.",
   "account.vatFormatTitle": "Ländercode plus 2–12 Buchstaben/Ziffern verwenden (z. B. RO12345678 oder RO 12345678)",
   "checkout.attachmentOptional": "Anhang (optional)",
   "checkout.attachmentMaxSize": "Maximal akzeptierte Dateigröße: {{maxMb}} MB.",

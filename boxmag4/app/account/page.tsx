@@ -567,6 +567,7 @@ function MyAccountTab({
 /* ─── Tab content: ADDRESS ────────────────────────────────── */
 function AddressTab({
   t,
+  profile,
   addresses,
   isLoading,
   onCreateAddress,
@@ -574,6 +575,7 @@ function AddressTab({
   onDeleteAddress,
 }: {
   t: (key: string) => string;
+  profile: UserProfile;
   addresses: UserAddress[];
   isLoading: boolean;
   onCreateAddress: (payload: {
@@ -610,10 +612,9 @@ function AddressTab({
   onDeleteAddress: (addressId: number) => Promise<void>;
 }) {
   const [label, setLabel] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [firstName, setFirstName] = useState(profile.firstName);
+  const [lastName, setLastName] = useState(profile.lastName);
+  const [phone, setPhone] = useState(profile.phone);
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
   const [postcode, setPostcode] = useState("");
@@ -629,6 +630,39 @@ function AddressTab({
   );
   const addressFormRef = useRef<HTMLFormElement | null>(null);
 
+  const resetContactFromProfile = useCallback(() => {
+    setFirstName(profile.firstName);
+    setLastName(profile.lastName);
+    setPhone(profile.phone);
+  }, [profile.firstName, profile.lastName, profile.phone]);
+
+  const resetFormToNewAddress = useCallback(() => {
+    setEditingAddressId(null);
+    setLabel("");
+    resetContactFromProfile();
+    setAddressLine1("");
+    setAddressLine2("");
+    setPostcode("");
+    setCity("");
+    setCountry("");
+    setIsDefaultBilling(true);
+    setIsDefaultShipping(true);
+    setError(null);
+  }, [resetContactFromProfile]);
+
+  // Profile loads async; fill empty contact fields only while adding a new address.
+  useEffect(() => {
+    if (editingAddressId !== null) return;
+    setFirstName((prev) => (prev.trim() ? prev : profile.firstName));
+    setLastName((prev) => (prev.trim() ? prev : profile.lastName));
+    setPhone((prev) => (prev.trim() ? prev : profile.phone));
+  }, [
+    editingAddressId,
+    profile.firstName,
+    profile.lastName,
+    profile.phone,
+  ]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -636,7 +670,7 @@ function AddressTab({
     try {
       await onCreateAddress({
         label,
-        companyName,
+        companyName: profile.companyName,
         firstName,
         lastName,
         phone,
@@ -648,18 +682,7 @@ function AddressTab({
         isDefaultBilling,
         isDefaultShipping,
       });
-      setLabel("");
-      setCompanyName("");
-      setFirstName("");
-      setLastName("");
-      setPhone("");
-      setAddressLine1("");
-      setAddressLine2("");
-      setPostcode("");
-      setCity("");
-      setCountry("");
-      setIsDefaultBilling(true);
-      setIsDefaultShipping(true);
+      resetFormToNewAddress();
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -674,7 +697,6 @@ function AddressTab({
   const startEditAddress = (address: UserAddress) => {
     setEditingAddressId(address.id);
     setLabel(address.label);
-    setCompanyName(address.companyName);
     setFirstName(address.firstName);
     setLastName(address.lastName);
     setPhone(address.phone);
@@ -695,20 +717,7 @@ function AddressTab({
   };
 
   const cancelEdit = () => {
-    setEditingAddressId(null);
-    setLabel("");
-    setCompanyName("");
-    setFirstName("");
-    setLastName("");
-    setPhone("");
-    setAddressLine1("");
-    setAddressLine2("");
-    setPostcode("");
-    setCity("");
-    setCountry("");
-    setIsDefaultBilling(true);
-    setIsDefaultShipping(true);
-    setError(null);
+    resetFormToNewAddress();
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -719,7 +728,7 @@ function AddressTab({
     try {
       await onUpdateAddress(editingAddressId, {
         label,
-        companyName,
+        companyName: profile.companyName,
         firstName,
         lastName,
         phone,
@@ -865,10 +874,10 @@ function AddressTab({
           />
           <input
             type="text"
-            value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
+            value={profile.companyName}
+            readOnly
             placeholder={t("account.placeholder.companyName")}
-            className={inputClass}
+            className={lockedInputClass}
           />
           <input
             type="text"
@@ -935,6 +944,9 @@ function AddressTab({
             required
           />
         </div>
+        <p className="text-xs text-gray-500">
+          {t("account.companyFromProfileHint")}
+        </p>
         <div className="flex flex-col gap-2 text-sm text-gray-700 sm:flex-row sm:gap-6">
           <label className="inline-flex items-center gap-2">
             <input
@@ -1660,6 +1672,7 @@ export default function AccountPage() {
               {activeTab === "address" ? (
                 <AddressTab
                   t={t}
+                  profile={accountProfile}
                   addresses={addresses}
                   isLoading={isAddressesLoading}
                   onCreateAddress={createAddress}
