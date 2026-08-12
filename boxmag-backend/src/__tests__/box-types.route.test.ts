@@ -328,6 +328,54 @@ describe("box types routes", () => {
     expect(response.body.message).toContain("Box type not found");
   });
 
+  it("updates a box type metadata and images with admin auth", async () => {
+    const connection = fakeConnection();
+    getConnectionMock.mockResolvedValueOnce(connection);
+
+    const response = await request(app)
+      .put("/api/box-types/1")
+      .set("Cookie", adminCookie())
+      .send({
+        title: "Renamed Box",
+        key: "renamed-box",
+        images: validImages,
+        isActive: true,
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(connection.beginTransaction).toHaveBeenCalled();
+    expect(connection.commit).toHaveBeenCalled();
+  });
+
+  it("returns 400 when uploading multiple images without files", async () => {
+    const response = await request(app)
+      .post("/api/box-types/upload-images")
+      .set("Cookie", adminCookie());
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain("At least one image file is required");
+  });
+
+  it("uploads multiple images when admin authenticated", async () => {
+    const response = await request(app)
+      .post("/api/box-types/upload-images")
+      .set("Cookie", adminCookie())
+      .attach("images", Buffer.from("fake-image-1"), {
+        filename: "a.jpg",
+        contentType: "image/jpeg",
+      })
+      .attach("images", Buffer.from("fake-image-2"), {
+        filename: "b.jpg",
+        contentType: "image/jpeg",
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data.images).toHaveLength(2);
+    expect(response.body.data.images[0].url).toContain("/boxes/");
+  });
+
   it("blocks deactivating a box type without admin auth", async () => {
     const response = await request(app).delete("/api/box-types/1");
 

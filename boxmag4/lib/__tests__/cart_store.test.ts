@@ -74,4 +74,43 @@ describe("cart_store (INV-QTY-100)", () => {
     expect(useCartStore.getState().subtotal).toBe(0);
     expect(useCartStore.getState().totalItems).toBe(0);
   });
+
+  it("keeps multiple distinct lines and sums subtotal", () => {
+    useCartStore.getState().addItem({
+      itemNo: "BOX-A",
+      name: "Box A",
+      unitPrice: 2,
+      quantity: 100,
+    });
+    useCartStore.getState().addItem({
+      itemNo: "BOX-B",
+      name: "Box B",
+      unitPrice: 3,
+      quantity: 200,
+    });
+
+    const state = useCartStore.getState();
+    expect(state.items).toHaveLength(2);
+    expect(state.subtotal).toBe(2 * 100 + 3 * 200);
+    expect(state.totalItems).toBe(300);
+  });
+
+  it("merges quantity when adding the same itemNo again", () => {
+    useCartStore.getState().addItem({
+      itemNo: "BOX-SAME",
+      name: "Box",
+      unitPrice: 1,
+      quantity: 100,
+    });
+    useCartStore.getState().addItem({
+      itemNo: "BOX-SAME",
+      name: "Box",
+      unitPrice: 1,
+      quantity: 100,
+    });
+
+    const state = useCartStore.getState();
+    expect(state.items).toHaveLength(1);
+    expect(state.items[0]?.quantity).toBe(200);
+  });
 });

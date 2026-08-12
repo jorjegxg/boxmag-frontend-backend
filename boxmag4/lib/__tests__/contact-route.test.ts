@@ -82,4 +82,22 @@ describe("POST /api/contact (INV-CONTACT-NEXT)", () => {
     expect(payload.message).toContain("Invalid VAT");
     expect(sendMailMock).not.toHaveBeenCalled();
   });
+
+  it("sends mail on valid payload", async () => {
+    vi.resetModules();
+    process.env.SMTP_HOST = "smtp.example.com";
+    process.env.SMTP_PORT = "587";
+    process.env.SMTP_USER = "smtp@example.com";
+    process.env.SMTP_PASS = "secret";
+    process.env.CONTACT_TO = "orders@example.com";
+    process.env.EMAIL_FROM = "noreply@example.com";
+    const response = await postContact({
+      ...validBody,
+      vatNumber: "RO2816464",
+    });
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as { message?: string };
+    expect(payload.message).toContain("Message sent successfully");
+    expect(sendMailMock).toHaveBeenCalled();
+  });
 });

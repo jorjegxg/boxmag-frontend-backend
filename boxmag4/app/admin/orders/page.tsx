@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ORDER_STATUS_LABELS,
@@ -196,7 +197,13 @@ export default function AdminOrdersPage() {
                             }
                           >
                             <td className="px-4 py-3 font-medium text-my-red">
-                              {order.orderNumber}
+                              <Link
+                                href={`/admin/orders/${order.id}`}
+                                className="hover:underline"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                {order.orderNumber}
+                              </Link>
                             </td>
                             <td className="px-4 py-3">{order.customerName}</td>
                             <td className="px-4 py-3">{order.companyName}</td>

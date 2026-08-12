@@ -236,6 +236,104 @@ describe("payments routes", () => {
     expect(insertArgs?.[0]).toBeNull();
   });
 
+  it("returns 400 when cart is empty", async () => {
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({
+        ...validCheckoutBody,
+        cartItems: [],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(stripeCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("creates checkout session for multi-line cart", async () => {
+    queryMock
+      .mockResolvedValueOnce([
+        [
+          {
+            item_no: "STD-001",
+            product_name: "Standard Box",
+            price_name: "300",
+            price_without_tax: 10,
+          },
+          {
+            item_no: "STD-002",
+            product_name: "Tall Box",
+            price_name: "300",
+            price_without_tax: 12,
+          },
+        ],
+      ])
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 1,
+            method_key: "standard",
+            name: "Standard",
+            eta_text: "3-5 days",
+            price: 30,
+          },
+        ],
+      ]);
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({
+        ...validCheckoutBody,
+        cartItems: [
+          {
+            itemNo: "STD-001",
+            name: "Standard Box",
+            unitPrice: 999,
+            quantity: 100,
+          },
+          {
+            itemNo: "STD-002",
+            name: "Tall Box",
+            unitPrice: 999,
+            quantity: 300,
+          },
+        ],
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(stripeCreateMock).toHaveBeenCalledTimes(1);
+    const lineItems = stripeCreateMock.mock.calls[0]?.[0]?.line_items;
+    expect(lineItems?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("webhook completed is no-op when no order matches session id", async () => {
+    isOrderEmailTransportConfiguredMock.mockReturnValue(true);
+    constructEventMock.mockReturnValue({
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_unknown",
+          payment_intent: "pi_unknown",
+          amount_total: 1000,
+          currency: "eur",
+          payment_status: "paid",
+        },
+      },
+    });
+    executeMock.mockResolvedValueOnce([{ affectedRows: 0 }]);
+
+    const response = await request(app)
+      .post("/api/payments/webhook")
+      .set("stripe-signature", "t=1,v1=test")
+      .set("Content-Type", "application/json")
+      .send(Buffer.from(JSON.stringify({ id: "evt_unknown" })));
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ received: true });
+    expect(sendNewOrderNotificationEmailMock).not.toHaveBeenCalled();
+    expect(sendOrderConfirmationEmailToCustomerMock).not.toHaveBeenCalled();
+  });
+
   it("returns 400 when a cart item is below minimum quantity", async () => {
     const response = await request(app)
       .post("/api/payments/create-checkout-session")

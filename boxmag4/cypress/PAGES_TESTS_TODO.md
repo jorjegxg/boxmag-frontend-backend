@@ -44,7 +44,7 @@ Auth: Guest | Customer | Admin
   - [x] TEST Iconița coșului duce la /checkout | cart-persistence.cy.ts
 
 - [ ] FLOW Tipuri de preț & afișare taxă
-  - [ ] TEST Doar tipurile 300, 500, Pallet apar (fără tipuri legacy <100)
+  - [x] TEST Doar tipurile 300, 500, Pallet apar (fără tipuri legacy <100) | product-detail.cy.ts
   - [ ] TEST Tabelul de tipuri arată cu-taxă și fără-taxă în moneda selectată
   - [ ] TEST Adaugă-în-coș default folosește prețul unitar corect pentru cantitate 100
   - [ ] TEST Totalurile pe linie la checkout = preț tip × cantitate
@@ -68,10 +68,10 @@ Auth: Guest | Customer | Admin
   - [x] TEST Config valid navighează la /order-summary | business.cy.ts
   - [x] TEST Flux guest complet cu VAT RO2816464 → order success | b2b-order-success.cy.ts
   - [x] TEST Acces direct /order-summary fără draft redirecționează la /business | order-summary-guard.cy.ts
-  - [ ] TEST Atașamentul de fișier pe /business e dus până la POST /api/orders
+  - [x] TEST Atașamentul de fișier pe /business e dus până la POST /api/orders | order-summary-edges.cy.ts
   - [ ] TEST Toggle dimensiune externă vs internă schimbă etichetele de validare
-  - [ ] TEST order-summary: checkbox-urile de consimțământ (telefon/email) obligatorii
-  - [ ] TEST order-summary: eșec API la submit arată mesaj de eroare
+  - [x] TEST order-summary: checkbox-urile de consimțământ (telefon/email) obligatorii | order-summary-edges.cy.ts
+  - [x] TEST order-summary: eșec API la submit arată mesaj de eroare | order-summary-edges.cy.ts
   - [x] TEST /business/order-success fără payload redirecționează la /business | b2b-order-success.cy.ts
   - [x] TEST Success guest arată CTA create-account | b2b-order-success.cy.ts
   - [x] TEST "No thanks" golește sesiunea și duce pe home | b2b-order-success.cy.ts
@@ -217,9 +217,9 @@ Auth: Guest | Customer | Admin
   - [x] TEST Schimbă status comandă din listă | admin-orders.cy.ts
   - [x] TEST Pagina detaliu comandă se încarcă | admin-orders.cy.ts
   - [ ] TEST Detaliu comandă — config B2B vs line items B2C afișate
-  - [ ] TEST Trimite email oferte — selectează sender, submit, feedback success/error
-  - [ ] TEST Schimbare manuală status plată permisă pentru comenzi non-Stripe
-  - [ ] TEST Schimbare status plată dezactivată pentru comenzi Stripe
+  - [x] TEST Trimite email oferte — selectează sender, submit, feedback success/error | admin-orders.cy.ts
+  - [x] TEST Schimbare manuală status plată permisă pentru comenzi non-Stripe | admin-orders.cy.ts (implicit via editable select)
+  - [x] TEST Schimbare status plată dezactivată pentru comenzi Stripe | admin-orders.cy.ts (INV-STRIPE-LOCK)
   - [ ] TEST Download atașament pe detaliu comandă admin
 
 - [ ] FLOW CRUD tipuri cutii admin

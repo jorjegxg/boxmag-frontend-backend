@@ -38,6 +38,7 @@ const BussinessPage = () => {
   const [attachmentName, setAttachmentName] = useState("");
   const [attachmentBase64, setAttachmentBase64] = useState("");
   const [attachmentMimeType, setAttachmentMimeType] = useState("");
+  const [attachmentReading, setAttachmentReading] = useState(false);
   const [length, setLength] = useState(
     () => searchParams.get("length") ?? (isDevelopment ? "400" : ""),
   );
@@ -78,6 +79,16 @@ const BussinessPage = () => {
   const hasAnyError = Object.keys(errors).length > 0;
 
   const validateAndContinue = () => {
+    if (attachmentReading) {
+      return;
+    }
+    if (attachmentName && !attachmentBase64) {
+      notify({
+        type: "error",
+        message: t("business.attachmentStillReading"),
+      });
+      return;
+    }
     const nextErrors: Record<string, string> = {};
     const errorOrder = [
       "boxType",
@@ -331,6 +342,7 @@ const BussinessPage = () => {
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (!file) {
+                  setAttachmentReading(false);
                   setAttachmentName("");
                   setAttachmentBase64("");
                   setAttachmentMimeType("");
@@ -341,24 +353,30 @@ const BussinessPage = () => {
                     type: "error",
                     message: t("business.maxFileSizePdf"),
                   });
+                  setAttachmentReading(false);
                   setAttachmentName("");
                   setAttachmentBase64("");
                   setAttachmentMimeType("");
                   e.currentTarget.value = "";
                   return;
                 }
+                setAttachmentReading(true);
+                setAttachmentBase64("");
                 setAttachmentName(file.name);
                 setAttachmentMimeType(file.type || "application/octet-stream");
                 const reader = new FileReader();
                 reader.onload = () => {
-                  const result = typeof reader.result === "string" ? reader.result : "";
+                  const result =
+                    typeof reader.result === "string" ? reader.result : "";
                   setAttachmentBase64(result);
+                  setAttachmentReading(false);
                 };
                 reader.onerror = () => {
                   notify({
                     type: "error",
                     message: "Failed to read attachment file.",
                   });
+                  setAttachmentReading(false);
                   setAttachmentName("");
                   setAttachmentBase64("");
                   setAttachmentMimeType("");
@@ -374,12 +392,22 @@ const BussinessPage = () => {
               {t("business.chooseFile")}
             </button>
             <span className="flex-1 min-w-0 px-4 py-3.5 text-gray-600 text-sm truncate border-l border-gray-200">
-              {attachmentName || t("business.noFileChosen")}
+              {attachmentReading
+                ? t("business.attachmentReading")
+                : attachmentName || t("business.noFileChosen")}
             </span>
           </div>
           <p className="mt-2.5 text-sm text-my-gray">
             {t("business.maxFileSizePdf")}
           </p>
+          {attachmentReading ? (
+            <p
+              data-testid="attachment-reading"
+              className="mt-2 text-sm text-gray-600"
+            >
+              {t("business.attachmentReading")}
+            </p>
+          ) : null}
         </div>
 
         <Pt16 />
@@ -404,7 +432,9 @@ const BussinessPage = () => {
           <button
             type="button"
             onClick={validateAndContinue}
-            className="inline-flex items-center gap-2 bg-my-yellow hover:bg-my-yellow-bright text-black font-bold uppercase text-sm sm:text-base px-6 py-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-my-red focus:ring-offset-2"
+            disabled={attachmentReading}
+            aria-busy={attachmentReading}
+            className="inline-flex items-center gap-2 bg-my-yellow hover:bg-my-yellow-bright text-black font-bold uppercase text-sm sm:text-base px-6 py-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-my-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {t("common.next")}
             <span aria-hidden>→</span>

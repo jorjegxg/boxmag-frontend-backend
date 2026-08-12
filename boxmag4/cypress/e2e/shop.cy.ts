@@ -205,7 +205,9 @@ describe("/shop", () => {
 
     cy.visit("/shop?boxTypeId=9");
     cy.wait(["@getBoxTypes", "@getProducts"]);
-    cy.contains("Nu exista produse pentru filtrul selectat.").should("exist");
+    cy.contains(
+      /No products for the selected filter|Nu există produse pentru filtrul selectat|Keine Produkte für den ausgewählten Filter/i,
+    ).should("exist");
   });
 
   it("Add to cart adaugă produsul în localStorage (boxmag.cart)", () => {

@@ -626,6 +626,8 @@
   "business.uploadFileOptional": "Upload a file (optional)",
   "business.chooseFile": "Choose File",
   "business.noFileChosen": "No file chosen",
+  "business.attachmentReading": "Reading file…",
+  "business.attachmentStillReading": "Please wait until the attachment finishes loading.",
   "business.maxFileSizePdf": "Max file size: 18 MB. Allowed format: PDF",
   "business.message": "Message",
   "business.enterMessageHere": "Enter your message here...",

@@ -116,6 +116,27 @@ describe("Admin orders", () => {
     cy.contains("Standard Boxes").should("exist");
   });
 
+  it("opens order detail via order number link", () => {
+    cy.intercept("GET", "**/api/orders", {
+      statusCode: 200,
+      body: { ok: true, data: orders },
+    }).as("getOrders");
+    cy.intercept("GET", "**/api/orders/42", {
+      statusCode: 200,
+      body: { ok: true, data: orderDetails },
+    }).as("getOrderDetails");
+
+    cy.visit("/admin/orders");
+    cy.wait("@getOrders");
+
+    cy.contains("a", "ORD-0042")
+      .should("have.attr", "href", "/admin/orders/42")
+      .click();
+    cy.wait("@getOrderDetails");
+    cy.location("pathname").should("eq", "/admin/orders/42");
+    cy.contains("Detalii comandă").should("exist");
+  });
+
   it("updates order status from orders table", () => {
     cy.intercept("GET", "**/api/orders", {
       statusCode: 200,
@@ -171,5 +192,113 @@ describe("Admin orders", () => {
       expect(body.status).to.eq("completed");
     });
     cy.contains("span", "Finalizată").should("exist");
+  });
+
+  it("shows Stripe payment badge without editable select (INV-STRIPE-LOCK)", () => {
+    const stripeOrder = {
+      ...orderDetails,
+      paymentStatus: "paid",
+      stripeSessionId: "cs_test_lock_123",
+    };
+
+    cy.intercept("GET", "**/api/orders/42", {
+      statusCode: 200,
+      body: { ok: true, data: stripeOrder },
+    }).as("getStripeOrder");
+    cy.intercept("PATCH", "**/api/orders/42/payment-status", {
+      statusCode: 400,
+      body: { ok: false, message: "Stripe-managed" },
+    }).as("patchPayment");
+
+    cy.visit("/admin/orders/42");
+    cy.wait("@getStripeOrder");
+
+    cy.contains("Plată Stripe").should("exist");
+    cy.contains("Schimbă status plată").should("not.exist");
+    cy.get("select").then(($selects) => {
+      const paymentSelects = [...$selects].filter((el) =>
+        /pending|paid|failed/i.test(el.textContent ?? ""),
+      );
+      expect(paymentSelects.length).to.eq(0);
+    });
+  });
+
+  it("sends offer email from order detail", () => {
+    const offerOrder = {
+      ...orderDetails,
+      paymentStatus: null,
+      stripeSessionId: null,
+      items: [],
+      priceBreakdown: null,
+    };
+
+    cy.intercept("GET", "**/api/orders/42", {
+      statusCode: 200,
+      body: { ok: true, data: offerOrder },
+    }).as("getOrderDetails");
+    cy.intercept("GET", "**/api/orders/offer-senders", {
+      statusCode: 200,
+      body: {
+        ok: true,
+        data: [{ key: "orders", email: "orders@example.com", label: "Orders" }],
+        defaultKey: "orders",
+      },
+    }).as("getOfferSenders");
+    cy.intercept("POST", "**/api/orders/42/send-offer", {
+      statusCode: 200,
+      body: {
+        ok: true,
+        data: {
+          to: "ana@example.com",
+          offerSentFrom: "orders@example.com",
+          offerSentAt: "2026-07-02T10:00:00.000Z",
+        },
+      },
+    }).as("sendOffer");
+
+    cy.visit("/admin/orders/42");
+    cy.wait("@getOrderDetails");
+    cy.wait("@getOfferSenders");
+
+    cy.contains("h3", "Trimite email cu ofertă").scrollIntoView().should("exist");
+    cy.contains("button", "Trimite email cu ofertă").should("be.visible").click();
+    cy.wait("@sendOffer").its("response.statusCode").should("eq", 200);
+    cy.contains(/Ofertă trimisă/i).should("exist");
+  });
+
+  it("shows error when send-offer returns 404", () => {
+    const offerOrder = {
+      ...orderDetails,
+      paymentStatus: null,
+      stripeSessionId: null,
+      items: [],
+      priceBreakdown: null,
+    };
+
+    cy.intercept("GET", "**/api/orders/42", {
+      statusCode: 200,
+      body: { ok: true, data: offerOrder },
+    }).as("getOrderDetails");
+    cy.intercept("GET", "**/api/orders/offer-senders", {
+      statusCode: 200,
+      body: {
+        ok: true,
+        data: [{ key: "orders", email: "orders@example.com", label: "Orders" }],
+        defaultKey: "orders",
+      },
+    }).as("getOfferSenders");
+    cy.intercept("POST", "**/api/orders/42/send-offer", {
+      statusCode: 404,
+      body: { ok: false, message: "Order not found" },
+    }).as("sendOfferFail");
+
+    cy.visit("/admin/orders/42");
+    cy.wait("@getOrderDetails");
+    cy.wait("@getOfferSenders");
+
+    cy.contains("h3", "Trimite email cu ofertă").scrollIntoView().should("exist");
+    cy.contains("button", "Trimite email cu ofertă").should("be.visible").click();
+    cy.wait("@sendOfferFail");
+    cy.contains(/Order not found|Nu s-a putut trimite/i).should("exist");
   });
 });

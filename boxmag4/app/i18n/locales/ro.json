@@ -626,6 +626,8 @@
   "business.uploadFileOptional": "Încarcă un fișier (opțional)",
   "business.chooseFile": "Alege fișier",
   "business.noFileChosen": "Niciun fișier ales",
+  "business.attachmentReading": "Se citește fișierul…",
+  "business.attachmentStillReading": "Așteaptă până se termină încărcarea atașamentului.",
   "business.maxFileSizePdf": "Dimensiune maximă fișier: 18 MB. Format permis: PDF",
   "business.message": "Mesaj",
   "business.enterMessageHere": "Introdu mesajul aici...",

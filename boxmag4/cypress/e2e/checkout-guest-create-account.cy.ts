@@ -133,8 +133,11 @@ describe("checkout-guest-create-account", () => {
       cy.wait("@getAdminOrders");
 
       assertAdminCheckoutOrderRow(orderNumber);
-      cy.contains("tr", orderNumber).click();
-      cy.location("pathname").should("match", /^\/admin\/orders\/\d+$/);
+      cy.contains("a", orderNumber).click();
+      cy.location("pathname", { timeout: 15000 }).should(
+        "match",
+        /^\/admin\/orders\/\d+$/,
+      );
       assertAdminCheckoutOrderDetail(orderNumber);
     });
   });

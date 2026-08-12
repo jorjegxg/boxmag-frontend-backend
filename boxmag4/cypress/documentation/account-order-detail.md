@@ -14,6 +14,13 @@
 3. Click „Add this order to cart”
 4. **CHECK:** `localStorage` `boxmag.cart` conține `STD-001` qty 200
 
+### 2. Attachment + soft auth
+
+1. Mock order cu `hasAttachment` + link download
+2. **CHECK:** href conține `/attachment`
+3. Mock `GET` 401
+4. **CHECK:** mesaj eroare vizibil
+
 ---
 
 ## Rulare

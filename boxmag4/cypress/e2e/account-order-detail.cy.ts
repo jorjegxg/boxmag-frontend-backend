@@ -97,4 +97,48 @@ describe("Account order detail + reorder", () => {
       expect(parsed.state?.items?.[0]?.quantity).to.eq(200);
     });
   });
+
+  it("shows attachment download link and soft-fails unauthorized detail", () => {
+    const withAttachment = {
+      ...orderDetails,
+      attachmentName: "specs.pdf",
+      hasAttachment: true,
+    };
+
+    cy.intercept("GET", "**/api/orders/77*", {
+      statusCode: 200,
+      body: { ok: true, data: withAttachment },
+    }).as("getOrderWithAttachment");
+    cy.intercept("GET", "**/api/orders/77/attachment*", {
+      statusCode: 200,
+      headers: { "content-type": "application/pdf" },
+      body: "pdf",
+    }).as("getAttachment");
+
+    cy.visit("/account/orders/77", {
+      onBeforeLoad(win) {
+        win.localStorage.setItem(AUTH_STORAGE_KEY, "true");
+        win.localStorage.setItem(AUTH_EMAIL_STORAGE_KEY, TEST_EMAIL);
+      },
+    });
+    cy.wait("@getOrderWithAttachment");
+    cy.contains("specs.pdf").should("exist");
+    cy.contains("a", /download/i)
+      .should("have.attr", "href")
+      .and("include", "/api/orders/77/attachment");
+
+    cy.intercept("GET", "**/api/orders/77*", {
+      statusCode: 401,
+      body: { ok: false, message: "Authentication required." },
+    }).as("getOrderUnauthorized");
+
+    cy.visit("/account/orders/77", {
+      onBeforeLoad(win) {
+        win.localStorage.setItem(AUTH_STORAGE_KEY, "true");
+        win.localStorage.setItem(AUTH_EMAIL_STORAGE_KEY, TEST_EMAIL);
+      },
+    });
+    cy.wait("@getOrderUnauthorized");
+    cy.contains(/auth|sign in|error|nu|failed|required/i).should("exist");
+  });
 });

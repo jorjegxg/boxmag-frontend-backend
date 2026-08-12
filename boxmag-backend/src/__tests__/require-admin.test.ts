@@ -98,4 +98,27 @@ describe("admin authentication", () => {
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
   });
+
+  it("accepts admin API token via x-admin-token header (INV-AUTH-ADMIN)", async () => {
+    process.env.ADMIN_API_TOKEN = "server-token";
+    queryMock.mockResolvedValueOnce([[]]);
+
+    const response = await request(app)
+      .get("/api/orders")
+      .set("x-admin-token", "server-token");
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+  });
+
+  it("returns 503 when admin password and API token are not configured (INV-AUTH-ADMIN)", async () => {
+    process.env.ADMIN_PASSWORD = "";
+    process.env.ADMIN_API_TOKEN = "";
+
+    const response = await request(app).get("/api/orders/offer-senders");
+
+    expect(response.status).toBe(503);
+    expect(response.body.ok).toBe(false);
+    expect(response.body.message).toContain("not configured");
+  });
 });

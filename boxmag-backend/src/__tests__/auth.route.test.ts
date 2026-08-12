@@ -250,6 +250,149 @@ describe("auth routes", () => {
     expect(response.body.message).toContain("Invalid registration payload");
   });
 
+  it("rejects login with wrong password", async () => {
+    executeMock.mockResolvedValueOnce([
+      [
+        {
+          id: 42,
+          email: TEST_USER_EMAIL,
+          password_hash: hashPassword("Secret123!"),
+          first_name: "Jane",
+          last_name: "Doe",
+          phone: null,
+          is_active: 1,
+          email_verified_at: new Date().toISOString(),
+        },
+      ],
+    ]);
+
+    const response = await request(app).post("/api/auth/login").send({
+      email: TEST_USER_EMAIL,
+      password: "WrongPassword!",
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toContain("Invalid email or password");
+  });
+
+  it("rejects login for unknown email", async () => {
+    executeMock.mockResolvedValueOnce([[]]);
+
+    const response = await request(app).post("/api/auth/login").send({
+      email: "nobody@example.com",
+      password: "Secret123!",
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toContain("Invalid email or password");
+  });
+
+  it("registers a pending user and sends verification email", async () => {
+    const { sendVerificationEmail } = await import("../services/email");
+    executeMock
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([{ insertId: 1, affectedRows: 1 }]);
+
+    const response = await request(app).post("/api/auth/register").send({
+      email: "  New.User@Example.com  ",
+      password: "Secret123!",
+      firstName: "New",
+      surname: "User",
+      companyName: "Acme SRL",
+      vatNumber: "RO12345678",
+      phone: "+40700000000",
+      acceptRegulations: true,
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data).toEqual({
+      email: "new.user@example.com",
+      requiresEmailVerification: true,
+    });
+    expect(sendVerificationEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "new.user@example.com",
+        verifyUrl: expect.stringContaining("/verify-email?token="),
+      }),
+    );
+    expect(executeMock).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO pending_user_registrations"),
+      expect.any(Array),
+    );
+  });
+
+  it("returns 409 when registering an email that already exists", async () => {
+    executeMock.mockResolvedValueOnce([[{ id: 42 }]]);
+
+    const response = await request(app).post("/api/auth/register").send({
+      email: TEST_USER_EMAIL,
+      password: "Secret123!",
+      firstName: "Jane",
+      surname: "Doe",
+      acceptRegulations: true,
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toContain("already exists");
+  });
+
+  it("returns profile for authenticated user", async () => {
+    executeMock.mockResolvedValueOnce([
+      [
+        {
+          email: TEST_USER_EMAIL,
+          first_name: "Jane",
+          last_name: "Doe",
+          phone: "+40700000000",
+          company_name: "Boxmag SRL",
+          vat_number: "RO12345678",
+        },
+      ],
+    ]);
+
+    const response = await request(app)
+      .get("/api/auth/profile")
+      .set("Cookie", userCookie());
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data).toEqual({
+      email: TEST_USER_EMAIL,
+      firstName: "Jane",
+      lastName: "Doe",
+      phone: "+40700000000",
+      companyName: "Boxmag SRL",
+      vatNumber: "RO12345678",
+    });
+  });
+
+  it("returns 401 for profile when session cookie is expired", async () => {
+    const { createUserSessionToken, USER_COOKIE_NAME } = await import(
+      "../config/user-auth"
+    );
+    const expired = createUserSessionToken(
+      42,
+      TEST_USER_EMAIL,
+      Math.floor(Date.now() / 1000) - 60 * 60 * 24 * 20,
+    );
+    expect(expired).toBeTruthy();
+
+    const response = await request(app)
+      .get("/api/auth/profile")
+      .set("Cookie", `${USER_COOKIE_NAME}=${expired}`);
+
+    expect(response.status).toBe(401);
+  });
+
+  it("returns 401 for profile when session cookie is malformed", async () => {
+    const response = await request(app)
+      .get("/api/auth/profile")
+      .set("Cookie", `${USER_COOKIE_NAME}=not-a-valid-token`);
+
+    expect(response.status).toBe(401);
+  });
+
   it("returns 401 when profile update is not authenticated", async () => {
     const response = await request(app).put("/api/auth/profile").send({
       firstName: "Jane",

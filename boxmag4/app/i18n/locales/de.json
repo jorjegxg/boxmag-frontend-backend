@@ -626,6 +626,8 @@
   "business.uploadFileOptional": "Datei hochladen (optional)",
   "business.chooseFile": "Datei wählen",
   "business.noFileChosen": "Keine Datei ausgewählt",
+  "business.attachmentReading": "Datei wird gelesen…",
+  "business.attachmentStillReading": "Bitte warten, bis der Anhang fertig geladen ist.",
   "business.maxFileSizePdf": "Maximale Dateigröße: 18 MB. Erlaubtes Format: PDF",
   "business.message": "Nachricht",
   "business.enterMessageHere": "Nachricht hier eingeben...",

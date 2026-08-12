@@ -290,4 +290,21 @@ describe("/checkout", () => {
     cy.wait("@slowCheckout");
     cy.location("hash").should("eq", "#payment-redirect");
   });
+
+  it("line total equals unitPrice × quantity for cart line", () => {
+    cy.visitCheckoutLoggedOut({
+      cartItems: [
+        {
+          itemNo: "STD-LINE",
+          name: "Line Total Box",
+          unitPrice: 12.5,
+          quantity: 100,
+        },
+      ],
+    });
+
+    // 12.5 × 100 = 1250 displayed somewhere in cart summary
+    cy.contains("Line Total Box").should("exist");
+    cy.contains(/1[.,]?250|1250/).should("exist");
+  });
 });

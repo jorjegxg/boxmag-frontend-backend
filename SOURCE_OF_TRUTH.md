@@ -117,20 +117,20 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-TAX-SERVER` | OK `payments` | — | OK `checkout` (body) | — |
 | `INV-CHECKOUT-TIER-300` | OK `payments` | — | OK `checkout` | — |
 | `INV-WEBHOOK-PAID` | OK `payments` | — | OK success poll (mock) | — |
-| `INV-STRIPE-LOCK` | OK `orders` | — | — | — |
+| `INV-STRIPE-LOCK` | OK `orders` | — | OK `admin-orders` | — |
 | `INV-PAY-STATUS` | OK `orders` | — | — | — |
 | `INV-ORDER-STATUS` | OK `orders` | — | OK `admin-orders` | — |
 | `INV-GUEST-LINK` | OK `auth`, `link-guest-orders`, `payments` | — | OK `checkout-guest-create-account`, `b2b-order-success` | — |
-| `INV-AUTH-ADMIN` | OK `require-admin`, `session-tokens` | OK `admin-auth` | OK `admin-login` | — |
-| `INV-AUTH-USER` | OK `auth` login/logout, `session-tokens` | — | OK `login`, `account` | — |
+| `INV-AUTH-ADMIN` | OK `require-admin` (`x-admin-token`, 503), `session-tokens` | OK `admin-auth` | OK `admin-login` | — |
+| `INV-AUTH-USER` | OK `auth` login/logout/profile, `session-tokens` | — | OK `login`, `account` | — |
 | `INV-AUTH-VERIFY-PROFILE` | OK `auth` verify existing-user update | — | — | — |
-| `INV-AUTH-EMAIL-SCOPE` | OK `require-admin` | — | — | — |
+| `INV-AUTH-EMAIL-SCOPE` | OK `require-admin`, `orders` GET `/:id` | — | — | — |
 | `INV-B2B-GUARDS` | — | OK `b2b-order-success` | OK `order-summary-guard`, `b2b-order-success` | — |
 | `INV-B2B-SAVED-ADDRESS` | — | — | OK `order-summary-saved-address` | — |
 | `INV-ACCOUNT-ADDRESS-IDENTITY` | — | — | OK `account-logged-in`, `account-address-cart` | — |
 | `INV-I18N-COOKIE` | — | — | OK `language-i18n`, `smoke` | OK `smoke` |
-| `INV-CONTACT-NEXT` | — | OK `contact-route` | OK `contact` | — |
-| `INV-NO-PROD-WIPE` | OK `env.production` (parțial) | — | — | — |
+| `INV-CONTACT-NEXT` | OK `contact.route` (admin inbox) | OK `contact-route` | OK `contact` | — |
+| `INV-NO-PROD-WIPE` | OK `env.production`, `prod-wipe-guard` | — | — | — |
 
 ---
 

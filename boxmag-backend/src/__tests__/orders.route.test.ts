@@ -326,6 +326,157 @@ describe("orders routes", () => {
     expect(response.status).toBe(401);
   });
 
+  it("returns order detail for admin without email filter (INV-AUTH-EMAIL-SCOPE)", async () => {
+    const adminCookie = await adminCookieHeader();
+    queryMock.mockResolvedValueOnce([
+      [
+        {
+          id: 12,
+          box_type_name: "Standard Box",
+          cardboard_type: "B Wave",
+          cardboard_colour: "Brown",
+          box_print: "No print",
+          length_mm: 100,
+          width_mm: 80,
+          height_mm: 60,
+          size_type: "internal",
+          transport: "Own",
+          quantity: 100,
+          attachment_name: null,
+          attachment_object_name: null,
+          attachment_url: null,
+          message: "hello",
+          items_json: null,
+          status: "new",
+          payment_status: "pending",
+          stripe_session_id: null,
+          total_amount_cents: null,
+          subtotal_cents: null,
+          vat_percent: null,
+          vat_cents: null,
+          shipping_cents: null,
+          shipping_method: null,
+          shipping_eta: null,
+          offer_sent_at: null,
+          offer_sent_from: null,
+          currency: null,
+          created_at: "2026-07-01T00:00:00.000Z",
+          first_name: "Ana",
+          surname: "Ionescu",
+          company_name: "Boxmag SRL",
+          email: "ana@example.com",
+          phone: "+40700000000",
+          city: "Bucuresti",
+          country: "RO",
+        },
+      ],
+    ]);
+
+    const response = await request(app)
+      .get("/api/orders/12")
+      .set("Cookie", adminCookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data.orderNumber).toBe("ORD-0012");
+    expect(response.body.data.email).toBe("ana@example.com");
+    expect(queryMock).toHaveBeenCalledWith(
+      expect.stringContaining("WHERE o.id = ?"),
+      [12],
+    );
+  });
+
+  it("returns order detail scoped by matching user email (INV-AUTH-EMAIL-SCOPE)", async () => {
+    const userEmail = "scoped@example.com";
+    const token = createUserSessionToken(7, userEmail);
+    queryMock.mockResolvedValueOnce([
+      [
+        {
+          id: 44,
+          box_type_name: "Custom",
+          cardboard_type: "E Wave",
+          cardboard_colour: "White",
+          box_print: "1 color",
+          length_mm: null,
+          width_mm: null,
+          height_mm: null,
+          size_type: "external",
+          transport: "Courier",
+          quantity: 200,
+          attachment_name: null,
+          attachment_object_name: null,
+          attachment_url: null,
+          message: "",
+          items_json: null,
+          status: "in progress",
+          payment_status: null,
+          stripe_session_id: null,
+          total_amount_cents: null,
+          subtotal_cents: null,
+          vat_percent: null,
+          vat_cents: null,
+          shipping_cents: null,
+          shipping_method: null,
+          shipping_eta: null,
+          offer_sent_at: null,
+          offer_sent_from: null,
+          currency: null,
+          created_at: "2026-07-02T00:00:00.000Z",
+          first_name: "Ion",
+          surname: "Pop",
+          company_name: null,
+          email: userEmail,
+          phone: null,
+          city: "Cluj",
+          country: "RO",
+        },
+      ],
+    ]);
+
+    const response = await request(app)
+      .get("/api/orders/44")
+      .query({ email: userEmail })
+      .set("Cookie", `${USER_COOKIE_NAME}=${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.id).toBe(44);
+    expect(queryMock).toHaveBeenCalledWith(
+      expect.stringContaining("LOWER(c.email) = ?"),
+      [44, userEmail, userEmail],
+    );
+  });
+
+  it("returns 401 for order detail without admin or email scope", async () => {
+    const response = await request(app).get("/api/orders/12");
+    expect(response.status).toBe(401);
+  });
+
+  it("returns 404 when order detail is missing for admin", async () => {
+    const adminCookie = await adminCookieHeader();
+    queryMock.mockResolvedValueOnce([[]]);
+
+    const response = await request(app)
+      .get("/api/orders/999")
+      .set("Cookie", adminCookie);
+
+    expect(response.status).toBe(404);
+    expect(response.body.message).toContain("Order not found");
+  });
+
+  it("returns 401 for attachment when email does not match session (INV-AUTH-EMAIL-SCOPE)", async () => {
+    const response = await request(app)
+      .get("/api/orders/12/attachment")
+      .query({ email: "other@example.com" })
+      .set("Cookie", `${USER_COOKIE_NAME}=${createUserSessionToken(7, "mine@example.com")}`);
+
+    expect(response.status).toBe(401);
+  });
+
+  it("returns 401 for attachment without admin auth or email filter", async () => {
+    const response = await request(app).get("/api/orders/12/attachment");
+    expect(response.status).toBe(401);
+  });
+
   it("lists all orders for an admin with no email filter", async () => {
     const adminCookie = await adminCookieHeader();
     queryMock.mockResolvedValueOnce([
