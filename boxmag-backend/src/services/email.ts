@@ -689,6 +689,82 @@ export async function sendVerificationEmail(params: {
   });
 }
 
+export async function sendPasswordResetEmail(params: {
+  to: string;
+  resetUrl: string;
+  expiresMinutes: number;
+}): Promise<void> {
+  await transporter.sendMail({
+    from: env.emailFrom,
+    to: params.to,
+    subject: "Reset your Boxmag password",
+    text: [
+      "Reset your Boxmag password",
+      "",
+      "We received a request to reset your password.",
+      "Open this link to choose a new password:",
+      params.resetUrl,
+      "",
+      `This link expires in ${params.expiresMinutes} minutes.`,
+      "",
+      "If you did not request a password reset, you can ignore this email.",
+    ].join("\n"),
+    html: `
+      <div style="margin:0;background:#f5f7fb;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px;margin:0 auto;border-collapse:separate;border-spacing:0;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+          <tr>
+            <td style="background:#ef6b56;padding:18px 24px;">
+              <h1 style="margin:0;font-size:20px;line-height:1.3;color:#ffffff;font-weight:700;">Reset your password</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px;">
+              <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#374151;">
+                We received a request to reset the password for your Boxmag account.
+              </p>
+              <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;">
+                Click the button below to choose a new password.
+              </p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+                <tr>
+                  <td style="border-radius:10px;background:#ef6b56;">
+                    <a
+                      href="${params.resetUrl}"
+                      style="display:inline-block;padding:12px 20px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;"
+                    >
+                      Reset my password
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#6b7280;">
+                This link expires in <strong>${params.expiresMinutes} minutes</strong>.
+              </p>
+
+              <div style="margin:14px 0 0;padding:12px;border:1px dashed #d1d5db;border-radius:10px;background:#fafafa;">
+                <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:0.02em;color:#6b7280;text-transform:uppercase;">
+                  Can't click the button?
+                </p>
+                <p style="margin:0;word-break:break-all;font-size:13px;line-height:1.5;">
+                  <a href="${params.resetUrl}" style="color:#ef6b56;text-decoration:underline;">
+                    ${params.resetUrl}
+                  </a>
+                </p>
+              </div>
+
+              <p style="margin:18px 0 0;font-size:13px;line-height:1.6;color:#6b7280;">
+                If you did not request a password reset, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `,
+  });
+}
+
 export type NewOrderEmailParams = {
   orderId: number;
   customerName: string;

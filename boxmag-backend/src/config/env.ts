@@ -187,6 +187,7 @@ export const env = {
   infoEmail: process.env.NEXT_PUBLIC_INFO_EMAIL ?? "",
   b2bEmail: process.env.NEXT_PUBLIC_B2B_EMAIL ?? "",
   verificationExpiresMinutes: toNumber(process.env.VERIFICATION_EXPIRES_MINUTES, 60),
+  resetPasswordExpiresMinutes: toNumber(process.env.RESET_PASSWORD_EXPIRES_MINUTES, 60),
   minioEndpoint: process.env.MINIO_ENDPOINT ?? "localhost",
   minioPort: toNumber(process.env.MINIO_PORT_API, 9000),
   minioUseSSL: process.env.MINIO_USE_SSL === "true",

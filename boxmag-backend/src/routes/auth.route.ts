@@ -11,6 +11,7 @@ import { mysqlPool } from "../db/mysql";
 import { requireUser } from "../middleware/require-user";
 import {
   isEmailTransportConfigured,
+  sendPasswordResetEmail,
   sendVerificationEmail,
 } from "../services/email";
 import { linkGuestOrdersToUser } from "../services/link-guest-orders";
@@ -545,5 +546,162 @@ authRouter.get("/verify-email", async (req, res) => {
   } catch (error) {
     console.error("Failed to verify email", error);
     res.status(500).send("<h1>Failed to verify email.</h1>");
+  }
+});
+
+type ForgotPasswordPayload = {
+  email?: unknown;
+};
+
+type ResetPasswordPayload = {
+  token?: unknown;
+  password?: unknown;
+};
+
+type PasswordResetUserRow = RowDataPacket & {
+  id: number;
+  email: string;
+  is_active: number;
+  password_reset_expires_at: Date | string | null;
+};
+
+authRouter.post("/forgot-password", async (req, res) => {
+  const payload = (req.body ?? {}) as ForgotPasswordPayload;
+  const emailRaw = toOptionalString(payload.email);
+  const normalizedEmail = emailRaw ? emailRaw.toLowerCase() : "";
+
+  if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
+    res.status(400).json({
+      ok: false,
+      message: "Please enter a valid email address.",
+    });
+    return;
+  }
+
+  if (!isEmailTransportConfigured()) {
+    res.status(500).json({
+      ok: false,
+      message:
+        "Email service is not configured. Set SMTP_USER, SMTP_PASS and EMAIL_FROM.",
+    });
+    return;
+  }
+
+  try {
+    const [rows] = await mysqlPool.execute<PasswordResetUserRow[]>(
+      `SELECT id, email, is_active FROM users WHERE email = ? LIMIT 1`,
+      [normalizedEmail]
+    );
+
+    const user = rows[0];
+    if (!user || !user.is_active) {
+      // Account not found (or inactive): tell the caller so the UI can offer
+      // registration. Enumeration is intentionally allowed per product choice.
+      res.status(200).json({ ok: true, exists: false });
+      return;
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenHash = sha256Hex(resetToken);
+    const expiresMinutes = env.resetPasswordExpiresMinutes;
+    const resetExpiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
+
+    await mysqlPool.execute(
+      `UPDATE users
+       SET password_reset_token_hash = ?, password_reset_expires_at = ?
+       WHERE id = ?`,
+      [resetTokenHash, resetExpiresAt, user.id]
+    );
+
+    const resetUrl =
+      `${env.frontendBaseUrl.replace(/\/$/, "")}/reset-password` +
+      `?token=${encodeURIComponent(resetToken)}`;
+
+    await sendPasswordResetEmail({
+      to: user.email,
+      resetUrl,
+      expiresMinutes,
+    });
+
+    res.status(200).json({ ok: true, exists: true });
+  } catch (error) {
+    console.error("Failed to process forgot-password", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to process password reset request",
+    });
+  }
+});
+
+authRouter.post("/reset-password", async (req, res) => {
+  const payload = (req.body ?? {}) as ResetPasswordPayload;
+  const token = toOptionalString(payload.token);
+  const password = toOptionalString(payload.password);
+
+  if (!token) {
+    res.status(400).json({ ok: false, message: "Reset token is required" });
+    return;
+  }
+  if (!password || password.length < 6) {
+    res.status(400).json({
+      ok: false,
+      message: "Password must be at least 6 characters",
+    });
+    return;
+  }
+
+  const tokenHash = sha256Hex(token);
+  try {
+    const [rows] = await mysqlPool.execute<PasswordResetUserRow[]>(
+      `SELECT id, email, is_active, password_reset_expires_at
+       FROM users
+       WHERE password_reset_token_hash = ?
+       LIMIT 1`,
+      [tokenHash]
+    );
+
+    if (rows.length === 0) {
+      res.status(400).json({
+        ok: false,
+        message: "Reset link is invalid or has already been used.",
+      });
+      return;
+    }
+
+    const user = rows[0]!;
+    const expiresAtRaw = user.password_reset_expires_at;
+    const expiresAt = expiresAtRaw ? new Date(expiresAtRaw) : null;
+    if (
+      !expiresAt ||
+      Number.isNaN(expiresAt.getTime()) ||
+      expiresAt.getTime() < Date.now()
+    ) {
+      res.status(400).json({
+        ok: false,
+        message: "Reset link has expired. Please request a new one.",
+      });
+      return;
+    }
+
+    const passwordHash = hashPassword(password);
+    await mysqlPool.execute(
+      `UPDATE users
+       SET password_hash = ?,
+           password_reset_token_hash = NULL,
+           password_reset_expires_at = NULL
+       WHERE id = ?`,
+      [passwordHash, user.id]
+    );
+
+    res.status(200).json({
+      ok: true,
+      message: "Password updated. You can now sign in with your new password.",
+    });
+  } catch (error) {
+    console.error("Failed to reset password", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to reset password",
+    });
   }
 });

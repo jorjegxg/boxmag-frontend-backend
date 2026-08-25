@@ -232,8 +232,14 @@ function LoginRequiredView({
             {isSubmitting ? t("account.signingIn") : t("account.signInButton")}
           </button>
           <Link
-            href="/registration"
+            href="/forgot-password"
             className="text-sm font-semibold text-my-red hover:underline"
+          >
+            {t("account.forgotPassword.link")}
+          </Link>
+          <Link
+            href="/registration"
+            className={`${saveBtnClass} inline-block text-center`}
           >
             {t("account.newUserRegister")}
           </Link>

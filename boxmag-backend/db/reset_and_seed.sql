@@ -85,6 +85,8 @@ CREATE TABLE IF NOT EXISTS users (
   phone VARCHAR(80) NULL,
   email_verification_token_hash VARCHAR(255) NULL,
   email_verification_expires_at DATETIME NULL,
+  password_reset_token_hash CHAR(64) NULL,
+  password_reset_expires_at DATETIME NULL,
   email_verified_at TIMESTAMP NULL,
   role VARCHAR(40) NOT NULL DEFAULT 'customer',
   is_active TINYINT(1) NOT NULL DEFAULT 1,

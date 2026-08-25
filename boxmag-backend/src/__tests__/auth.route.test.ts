@@ -21,6 +21,7 @@ vi.mock("../db/mysql", () => ({
 vi.mock("../services/email", () => ({
   isEmailTransportConfigured: vi.fn(() => true),
   sendVerificationEmail: vi.fn(async () => undefined),
+  sendPasswordResetEmail: vi.fn(async () => undefined),
 }));
 
 import { app } from "../app";
@@ -447,5 +448,125 @@ describe("auth routes", () => {
       vatNumber: "RO12345678",
     });
     expect(executeMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("sends a reset link when forgot-password matches an active user", async () => {
+    const { sendPasswordResetEmail } = await import("../services/email");
+    executeMock
+      .mockResolvedValueOnce([[{ id: 42, email: TEST_USER_EMAIL, is_active: 1 }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+    const response = await request(app)
+      .post("/api/auth/forgot-password")
+      .send({ email: `  ${TEST_USER_EMAIL.toUpperCase()}  ` });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.exists).toBe(true);
+    expect(sendPasswordResetEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: TEST_USER_EMAIL,
+        resetUrl: expect.stringContaining("/reset-password?token="),
+      }),
+    );
+    expect(executeMock).toHaveBeenCalledWith(
+      expect.stringContaining("password_reset_token_hash"),
+      expect.any(Array),
+    );
+  });
+
+  it("returns exists:false for forgot-password with unknown email", async () => {
+    const { sendPasswordResetEmail } = await import("../services/email");
+    vi.mocked(sendPasswordResetEmail).mockClear();
+    executeMock.mockResolvedValueOnce([[]]);
+
+    const response = await request(app)
+      .post("/api/auth/forgot-password")
+      .send({ email: "nobody@example.com" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.exists).toBe(false);
+    expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+
+  it("rejects forgot-password with an invalid email", async () => {
+    const response = await request(app)
+      .post("/api/auth/forgot-password")
+      .send({ email: "not-an-email" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(executeMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects reset-password with a short password", async () => {
+    const response = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token: "some-token", password: "123" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain("at least 6 characters");
+  });
+
+  it("rejects reset-password when the token is unknown", async () => {
+    executeMock.mockResolvedValueOnce([[]]);
+
+    const response = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token: "bad-token", password: "Secret123!" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain("invalid or has already been used");
+  });
+
+  it("rejects reset-password when the token has expired", async () => {
+    const past = new Date(Date.now() - 60_000);
+    executeMock.mockResolvedValueOnce([
+      [
+        {
+          id: 42,
+          email: TEST_USER_EMAIL,
+          is_active: 1,
+          password_reset_expires_at: past.toISOString(),
+        },
+      ],
+    ]);
+
+    const response = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token: "expired-token", password: "Secret123!" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain("expired");
+  });
+
+  it("updates the password on a valid reset-password token", async () => {
+    const future = new Date(Date.now() + 60_000);
+    executeMock
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 42,
+            email: TEST_USER_EMAIL,
+            is_active: 1,
+            password_reset_expires_at: future.toISOString(),
+          },
+        ],
+      ])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+    const response = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token: "valid-token", password: "BrandNew123!" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(executeMock).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /UPDATE users[\s\S]*password_reset_token_hash = NULL/,
+      ),
+      expect.any(Array),
+    );
   });
 });
