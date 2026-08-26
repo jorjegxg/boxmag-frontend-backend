@@ -808,8 +808,8 @@ export default function AdminOrderDetailsPage() {
                           >
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <p className="font-semibold">
-                                {offer.fromEmail ? `De la ${offer.fromEmail}` : "Ofertă trimisă"}
-                                {" "}către {order.email || "—"}
+                                {offer.fromEmail || "Ofertă trimisă"}
+                                {" --> "}{order.email || "—"}
                               </p>
                               <p className="text-xs text-green-700">
                                 {formatAdminDate(offer.sentAt)}
