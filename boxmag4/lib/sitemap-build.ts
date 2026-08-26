@@ -73,32 +73,24 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
+/**
+ * One entry per box type. The `?itemNo=` variants are deliberately excluded:
+ * they render the same page and canonicalise to `/products/{key}`, so listing
+ * them only makes them compete with the canonical URL.
+ */
 function buildProductEntriesForType(
   siteUrl: string,
   boxType: BoxTypeApi,
-  products: BoxTypeProductApi[],
 ): SitemapEntry[] {
   const encodedKey = encodeURIComponent(boxType.key);
-  const entries: SitemapEntry[] = [
+
+  return [
     {
       url: `${siteUrl}/products/${encodedKey}`,
       changeFrequency: "weekly",
       priority: 0.7,
     },
   ];
-
-  for (const product of products) {
-    const itemNo = String(product.itemNo ?? "").trim();
-    if (!itemNo) continue;
-
-    entries.push({
-      url: `${siteUrl}/products/${encodedKey}?itemNo=${encodeURIComponent(itemNo)}`,
-      changeFrequency: "weekly",
-      priority: 0.65,
-    });
-  }
-
-  return entries;
 }
 
 async function fetchProductEntries(siteUrl: string): Promise<SitemapEntry[]> {
@@ -128,7 +120,7 @@ async function fetchProductEntries(siteUrl: string): Promise<SitemapEntry[]> {
         return [];
       }
 
-      return buildProductEntriesForType(siteUrl, boxType, productsPayload.data);
+      return buildProductEntriesForType(siteUrl, boxType);
     }),
   );
 

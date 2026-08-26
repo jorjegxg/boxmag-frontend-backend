@@ -80,6 +80,16 @@ server {
 
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
+    # X-Frame-Options / X-Content-Type-Options / Referrer-Policy / Permissions-Policy
+    # vin din boxmag4/next.config.ts (headers()).
+    #
+    # CSP: pornit in Report-Only. Verifica violarile in consola browserului pe
+    # /, /shop, /products/<key> si un checkout complet, apoi redenumeste headerul
+    # in "Content-Security-Policy" pentru enforcing.
+    # Nota: 'unsafe-inline' pe script-src e necesar pentru scripturile de bootstrap
+    # inline ale Next.js; se poate elimina doar trecand pe nonce-uri.
+    add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.boxmag.eu https://cdn.boxmag.eu; font-src 'self' data:; connect-src 'self' https://api.boxmag.eu https://storage.boxmag.eu https://cdn.boxmag.eu; frame-src https://www.google.com https://maps.google.com; form-action 'self' https://checkout.stripe.com; frame-ancestors 'self'; base-uri 'self'; object-src 'none'" always;
+
     client_max_body_size 25m;
 
     location / {

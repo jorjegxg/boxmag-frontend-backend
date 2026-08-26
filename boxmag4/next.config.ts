@@ -19,8 +19,24 @@ const allowedCorsOrigins = parseCorsOrigins(corsOriginRaw);
 const corsOriginEnv =
   corsOriginRaw.trim() || allowedCorsOrigins.join(",");
 
+// Security headers. HSTS and CSP stay in nginx (deploy/nginx/boxmag.conf.example)
+// so they also cover responses Next.js never sees.
+const SECURITY_HEADERS = [
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+  },
+];
+
 const nextConfig: NextConfig = {
   allowedDevOrigins: originsToDevHosts(allowedCorsOrigins),
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+  },
   images: {
     // Prefer serving CDN assets directly (see ProductCard). Local public/ assets
     // still use the optimizer; keep remotePatterns for any remaining next/image usage.
