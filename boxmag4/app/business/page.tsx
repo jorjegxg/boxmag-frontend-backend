@@ -118,7 +118,7 @@ const BussinessPage = () => {
       height: "section-box-size",
       transport: "section-transport",
       quantity: "section-quantity",
-      terms: "section-quantity",
+      terms: "section-terms",
       message: "section-message",
     };
 
@@ -157,10 +157,12 @@ const BussinessPage = () => {
 
     if (firstErrorKey) {
       notify({ type: "error", message: nextErrors[firstErrorKey] });
-      const sectionId = sectionByError[firstErrorKey];
-      const target = document.getElementById(sectionId);
-      if (target) {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (firstErrorKey !== "terms") {
+        const sectionId = sectionByError[firstErrorKey];
+        const target = document.getElementById(sectionId);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       }
       return;
     }
@@ -427,24 +429,26 @@ const BussinessPage = () => {
         ) : null}
         <Pt16 />
 
-        <FieldGroup className="mx-auto">
-          <Field orientation="horizontal">
-            <Checkbox
-              id="terms-checkbox-basic"
-              name="terms-checkbox-basic"
-              onCheckedChange={(checked) => {
-                setAcceptedTerms(checked === "indeterminate" ? false : checked);
-              }}
-              checked={acceptedTerms}
-            />
-            <FieldLabel htmlFor="terms-checkbox-basic">
-              {t("business.acceptTerms")}
-            </FieldLabel>
-          </Field>
-        </FieldGroup>
-        {errors.terms ? (
-          <p className="mt-2 text-sm text-red-600">{errors.terms}</p>
-        ) : null}
+        <div id="section-terms">
+          <FieldGroup className="mx-auto">
+            <Field orientation="horizontal">
+              <Checkbox
+                id="terms-checkbox-basic"
+                name="terms-checkbox-basic"
+                onCheckedChange={(checked) => {
+                  setAcceptedTerms(checked === "indeterminate" ? false : checked);
+                }}
+                checked={acceptedTerms}
+              />
+              <FieldLabel htmlFor="terms-checkbox-basic">
+                {t("business.acceptTerms")}
+              </FieldLabel>
+            </Field>
+          </FieldGroup>
+          {errors.terms ? (
+            <p className="mt-2 text-sm text-red-600">{errors.terms}</p>
+          ) : null}
+        </div>
         <Pt16 />
 
         <div className="flex justify-start">

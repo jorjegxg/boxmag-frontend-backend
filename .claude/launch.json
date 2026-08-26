@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "boxmag-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "boxmag4", "run", "dev"],
+      "port": 3006
+    }
+  ]
+}
