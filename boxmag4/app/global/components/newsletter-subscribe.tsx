@@ -122,7 +122,7 @@ export function NewsletterSubscribe() {
                 placeholder={t("newsletter.emailPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 min-w-0 h-12 rounded-lg border border-gray-200 bg-white px-4 text-black placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-my-blue"
+                className="flex-1 min-w-0 h-14 sm:h-12 rounded-md sm:rounded-lg border border-gray-200 bg-white px-4 text-black placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-my-blue appearance-none"
               />
               <button
                 type="button"

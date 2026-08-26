@@ -245,7 +245,7 @@ export function Header() {
 
   return (
     <header className="w-full border-b border-my-light-gray bg-white">
-      <div className="max-w-7xl mx-auto px-4 py-4 lg:px-8 flex gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="max-w-7xl mx-auto px-4 py-4 lg:px-8 flex items-center gap-4 lg:flex-row lg:justify-between">
         <div className="relative shrink-0" ref={menuContainerRef}>
           <button
             type="button"
@@ -301,7 +301,7 @@ export function Header() {
         <div className="max-md:flex-1 "></div>
 
         {/* Search bar - center on desktop */}
-        <div className="  max-w-xl mx-auto lg:mx-8 w-full max-md:hidden">
+        <div className="flex-1 max-w-xl mx-auto lg:mx-8 w-full max-md:hidden">
           <form
             ref={searchContainerRef}
             role="search"

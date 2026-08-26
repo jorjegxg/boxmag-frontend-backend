@@ -25,10 +25,9 @@ export function TopBar() {
 
   return (
     <div className="w-full border-b border-my-light-gray bg-white text-s text-black">
-      {/* i want to not wrap the text in full width on laptop */}
-      <div className=" max-w-7xl mx-auto grid grid-cols-1 place-items-center gap-3 px-4 py-2 lg:flex lg:place-items-stretch lg:flex-row lg:items-center lg:justify-between max-md:hidden ">
+      <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-2 max-md:hidden">
         {/* Left: contact info */}
-        <div className="flex flex-nowrap text-xs gap-x-4 max-lg:w-full ">
+        <div className="flex flex-nowrap items-center text-xs gap-x-4">
           <a
             href={`mailto:${siteEmails.info}`}
             className="flex shrink-0 items-center gap-1 whitespace-nowrap hover:underline"
@@ -53,11 +52,7 @@ export function TopBar() {
         </div>
 
         {/* Right: selectors */}
-        <div
-          className="flex max-md:flex-col 
-       max-md:grid max-md:grid-cols-2 
-        lg:justify-center lg:gap-x-4 w-full"
-        >
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Selector
             label={t("topBar.type")}
             value={t("topBar.company")}
