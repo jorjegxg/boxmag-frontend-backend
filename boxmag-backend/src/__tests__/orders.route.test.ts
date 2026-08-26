@@ -443,6 +443,7 @@ describe("orders routes", () => {
         },
       ],
     ]);
+    queryMock.mockResolvedValueOnce([[]]);
 
     const response = await request(app)
       .get("/api/orders/12")
@@ -504,6 +505,7 @@ describe("orders routes", () => {
         },
       ],
     ]);
+    queryMock.mockResolvedValueOnce([[]]);
 
     const response = await request(app)
       .get("/api/orders/44")
