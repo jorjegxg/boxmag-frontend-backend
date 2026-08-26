@@ -810,6 +810,8 @@
   "accountOrder.noItems": "Această comandă nu are produse de adăugat în coș.",
   "accountOrder.addedToCart": "{{count}} produs(e) din această comandă au fost adăugate în coș.",
   "accountOrder.notFound": "Comanda nu a fost găsită.",
+  "accountOrder.offers": "Oferte primite",
+  "accountOrder.offerFrom": "De la",
   "attachment.label": "Atașament",
   "attachment.download": "Descarcă",
   "attachment.open": "Deschide atașamentul",

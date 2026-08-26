@@ -63,6 +63,15 @@ type AdminOrderDetails = {
   createdAt: string;
   offerSentAt: string | null;
   offerSentFrom: string | null;
+  offers:
+    | {
+        id: number;
+        fromKey: string | null;
+        fromEmail: string | null;
+        message: string | null;
+        sentAt: string;
+      }[]
+    | null;
 };
 
 type OfferSenderOption = {
@@ -337,6 +346,16 @@ export default function AdminOrderDetailsPage() {
               ...current,
               offerSentAt: sentAt,
               offerSentFrom: sentFrom,
+              offers: [
+                ...(current.offers ?? []),
+                {
+                  id: -Date.now(),
+                  fromKey: selectedSenderKey,
+                  fromEmail: sentFrom,
+                  message: offerMessage,
+                  sentAt,
+                },
+              ],
             }
           : current,
       );
@@ -776,19 +795,33 @@ export default function AdminOrderDetailsPage() {
                       </p>
                     ) : null}
 
-                    {order.offerSentAt ? (
-                      <div
-                        role="status"
-                        className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800"
-                      >
-                        <p className="font-semibold">Ofertă deja trimisă</p>
-                        <p className="mt-1">
-                          Trimisă pe {formatAdminDate(order.offerSentAt)}
-                          {order.offerSentFrom
-                            ? ` de la ${order.offerSentFrom}`
-                            : ""}{" "}
-                          către {order.email || "—"}.
+                    {order.offers && order.offers.length > 0 ? (
+                      <div className="mt-4 space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          Oferte trimise ({order.offers.length})
                         </p>
+                        {order.offers.map((offer) => (
+                          <div
+                            key={offer.id}
+                            role="status"
+                            className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="font-semibold">
+                                {offer.fromEmail ? `De la ${offer.fromEmail}` : "Ofertă trimisă"}
+                                {" "}către {order.email || "—"}
+                              </p>
+                              <p className="text-xs text-green-700">
+                                {formatAdminDate(offer.sentAt)}
+                              </p>
+                            </div>
+                            {offer.message ? (
+                              <div className="mt-2 whitespace-pre-line text-sm text-green-900">
+                                {offer.message}
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
                       </div>
                     ) : null}
 

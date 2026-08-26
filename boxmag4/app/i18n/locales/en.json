@@ -810,6 +810,8 @@
   "accountOrder.noItems": "This order has no items to add to cart.",
   "accountOrder.addedToCart": "{{count}} item(s) from this order were added to cart.",
   "accountOrder.notFound": "Order not found.",
+  "accountOrder.offers": "Offers received",
+  "accountOrder.offerFrom": "From",
   "attachment.label": "Attachment",
   "attachment.download": "Download",
   "attachment.open": "Open attachment",

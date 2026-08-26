@@ -36,6 +36,14 @@ type PriceBreakdown = {
   shippingEta: string | null;
 };
 
+type OfferMessage = {
+  id: number;
+  fromKey: string | null;
+  fromEmail: string | null;
+  message: string | null;
+  sentAt: string;
+};
+
 type OrderDetails = {
   id: number;
   orderNumber: string;
@@ -60,6 +68,7 @@ type OrderDetails = {
   attachmentName: string | null;
   hasAttachment: boolean;
   createdAt: string;
+  offers: OfferMessage[] | null;
 };
 
 function statusBadgeClass(status: string): string {
@@ -515,6 +524,33 @@ export default function AccountOrderDetailsPage() {
                   </h3>
                   <div className="mt-3 whitespace-pre-line text-sm text-gray-700">
                     {cleanCustomerMessage}
+                  </div>
+                </div>
+              ) : null}
+
+              {order.offers && order.offers.length > 0 ? (
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
+                    {t("accountOrder.offers")}
+                  </h3>
+                  <div className="mt-3 space-y-3">
+                    {order.offers.map((offer) => (
+                      <div key={offer.id} className="rounded-md bg-gray-50 p-3">
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>
+                            {offer.fromEmail
+                              ? `${t("accountOrder.offerFrom")}: ${offer.fromEmail}`
+                              : null}
+                          </span>
+                          <span>{new Date(offer.sentAt).toLocaleString()}</span>
+                        </div>
+                        {offer.message ? (
+                          <div className="mt-2 whitespace-pre-line text-sm text-gray-700">
+                            {offer.message}
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ) : null}

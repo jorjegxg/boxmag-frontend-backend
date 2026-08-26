@@ -810,6 +810,8 @@
   "accountOrder.noItems": "Diese Bestellung hat keine Artikel für den Warenkorb.",
   "accountOrder.addedToCart": "{{count}} Artikel aus dieser Bestellung wurden in den Warenkorb gelegt.",
   "accountOrder.notFound": "Bestellung nicht gefunden.",
+  "accountOrder.offers": "Erhaltene Angebote",
+  "accountOrder.offerFrom": "Von",
   "attachment.label": "Anhang",
   "attachment.download": "Herunterladen",
   "attachment.open": "Anhang öffnen",

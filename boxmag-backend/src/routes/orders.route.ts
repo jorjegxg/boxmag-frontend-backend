@@ -140,6 +140,14 @@ type OrderOfferSentRow = RowDataPacket & {
   offer_sent_from: string | null;
 };
 
+type OrderOfferMessageRow = RowDataPacket & {
+  id: number;
+  from_key: string | null;
+  from_email: string | null;
+  message: string | null;
+  sent_at: string;
+};
+
 type OrderListRow = RowDataPacket & {
   id: number;
   box_type_name: string;
@@ -519,6 +527,11 @@ ordersRouter.post("/:orderId/send-offer", requireAdmin, async (req, res) => {
        WHERE id = ?`,
       [offerSentFrom, orderId],
     );
+    await mysqlPool.execute(
+      `INSERT INTO order_offer_messages (order_id, from_key, from_email, message)
+       VALUES (?, ?, ?, ?)`,
+      [orderId, fromKey, offerSentFrom, offerMessage ?? null],
+    );
 
     const [updatedRows] = await mysqlPool.query<OrderOfferSentRow[]>(
       `SELECT offer_sent_at, offer_sent_from FROM orders WHERE id = ? LIMIT 1`,
@@ -711,6 +724,14 @@ ordersRouter.get("/:orderId", requireAdminOrUserEmail, async (req, res) => {
     }
 
     const row = rows[0]!;
+    const [offerRows] = await mysqlPool.query<OrderOfferMessageRow[]>(
+      `SELECT id, from_key, from_email, message, sent_at
+       FROM order_offer_messages
+       WHERE order_id = ?
+       ORDER BY sent_at ASC`,
+      [orderId],
+    );
+
     res.json({
       ok: true,
       data: {
@@ -746,6 +767,13 @@ ordersRouter.get("/:orderId", requireAdminOrUserEmail, async (req, res) => {
         createdAt: row.created_at,
         offerSentAt: row.offer_sent_at ?? null,
         offerSentFrom: row.offer_sent_from ?? null,
+        offers: offerRows.map((offer) => ({
+          id: offer.id,
+          fromKey: offer.from_key,
+          fromEmail: offer.from_email,
+          message: offer.message,
+          sentAt: offer.sent_at,
+        })),
       },
     });
   } catch (error) {
