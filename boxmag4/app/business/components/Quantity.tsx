@@ -19,6 +19,7 @@ const Quantity = ({ quantity, onQuantityChange, quantityError }: QuantityProps) 
             text={t("business.quantity")}
             id="boxes-quantity"
             type={"number"}
+            min={1}
             placeholder={t("business.quantity")}
             value={quantity}
             onChange={onQuantityChange}

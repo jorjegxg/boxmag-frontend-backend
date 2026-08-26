@@ -65,6 +65,30 @@ vi.mock("../services/minio", () => ({
 import { app } from "../app";
 import { getOrderAttachmentFromMinio } from "../services/minio";
 
+/** Every field `POST /api/orders` requires, so tests can vary one at a time. */
+function validCreateOrderPayload() {
+  return {
+    boxTypeName: "Standard Box",
+    cardboardType: "3 straturi",
+    cardboardColour: "Maro",
+    boxPrint: "Fara print",
+    sizeType: "Standard",
+    transport: "Curier",
+    quantity: 100,
+    message: "Test order",
+    acceptedTerms: true,
+    firstName: "Ion",
+    surname: "Popescu",
+    companyName: "Test SRL",
+    email: "customer@example.com",
+    phone: "0700000000",
+    address: "Str. Test 1",
+    postcode: "010101",
+    city: "Bucuresti",
+    country: "Romania",
+  };
+}
+
 describe("orders routes", () => {
   beforeEach(() => {
     queryMock.mockReset();
@@ -140,6 +164,54 @@ describe("orders routes", () => {
     expect(response.status).toBe(400);
     expect(response.body.ok).toBe(false);
     expect(response.body.message).toContain("Invalid order payload");
+  });
+
+  it("returns 400 when create order quantity is negative", async () => {
+    const response = await request(app)
+      .post("/api/orders")
+      .send({ ...validCreateOrderPayload(), quantity: -500 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(response.body.message).toContain("Invalid order payload");
+  });
+
+  it("returns 400 when create order quantity is zero", async () => {
+    const response = await request(app)
+      .post("/api/orders")
+      .send({ ...validCreateOrderPayload(), quantity: 0 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+  });
+
+  it("returns 400 when create order quantity is a negative numeric string", async () => {
+    const response = await request(app)
+      .post("/api/orders")
+      .send({ ...validCreateOrderPayload(), quantity: "-500" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+  });
+
+  it("returns 400 when create order dimensions are negative", async () => {
+    const response = await request(app)
+      .post("/api/orders")
+      .send({ ...validCreateOrderPayload(), lengthMm: -10, widthMm: 200, heightMm: 300 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(response.body.message).toContain("Dimensions must be at least 1 mm");
+  });
+
+  it("returns 400 when create order boxTypeId is negative", async () => {
+    const response = await request(app)
+      .post("/api/orders")
+      .send({ ...validCreateOrderPayload(), boxTypeId: -3 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(response.body.message).toContain("Invalid boxTypeId");
   });
 
   it("returns order attachment for authorized account email", async () => {

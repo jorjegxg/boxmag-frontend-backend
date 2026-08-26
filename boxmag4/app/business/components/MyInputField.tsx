@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { blockNegativeInput, sanitizeNumericString } from "../../utils/number-input";
 
 export function MyInputField({
   text,
@@ -12,6 +13,9 @@ export function MyInputField({
   value,
   onChange,
   error,
+  min,
+  step,
+  allowDecimal = false,
 }: {
   text: string;
   id: string;
@@ -21,9 +25,13 @@ export function MyInputField({
   value?: string;
   onChange?: (value: string) => void;
   error?: string;
+  min?: number;
+  step?: number | string;
+  allowDecimal?: boolean;
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const isPasswordField = type === "password";
+  const isNumberField = type === "number";
   const resolvedType = isPasswordField ? (showPassword ? "text" : "password") : (type ?? "text");
 
   return (
@@ -39,7 +47,16 @@ export function MyInputField({
           className={`rounded-lg py-6 px-4 text-lg ${isPasswordField ? "pr-12" : ""} ${error ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
           disabled={disabled}
           value={value}
-          onChange={(e) => onChange?.(e.target.value)}
+          min={isNumberField ? (min ?? 0) : undefined}
+          step={isNumberField ? step : undefined}
+          onBeforeInput={
+            isNumberField ? (event) => blockNegativeInput(event, { allowDecimal }) : undefined
+          }
+          onChange={(e) =>
+            onChange?.(
+              isNumberField ? sanitizeNumericString(e.target.value, { allowDecimal }) : e.target.value
+            )
+          }
         />
         {isPasswordField ? (
           <button

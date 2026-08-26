@@ -11,6 +11,10 @@ import {
   Field,
   SectionTitle,
 } from "../components/admin-ui";
+import {
+  blockNegativeInput,
+  parseClampedNumber,
+} from "../../utils/number-input";
 
 export default function AdminShippingMethodsPage() {
   const { notify } = useNotification();
@@ -82,7 +86,8 @@ export default function AdminShippingMethodsPage() {
       !newShippingEtaText.trim() ||
       !Number.isFinite(priceValue) ||
       priceValue < 0 ||
-      !Number.isFinite(sortOrderValue)
+      !Number.isFinite(sortOrderValue) ||
+      sortOrderValue < 0
     ) {
       setShippingMethodsError(
         "Completează corect toate câmpurile metodei de livrare.",
@@ -257,12 +262,18 @@ export default function AdminShippingMethodsPage() {
                 placeholder="25"
                 value={newShippingPrice}
                 onChange={setNewShippingPrice}
+                numeric
+                min={0}
+                step="0.01"
               />
               <Field
                 label="Ordine sortare"
                 placeholder="1"
                 value={newShippingSortOrder}
                 onChange={setNewShippingSortOrder}
+                numeric
+                min={0}
+                allowDecimal={false}
               />
               <label className="flex items-end gap-2">
                 <input
@@ -389,15 +400,20 @@ export default function AdminShippingMethodsPage() {
                             <td className="px-4 py-3">
                               <input
                                 type="number"
+                                min={0}
+                                step="0.01"
                                 value={String(method.price)}
+                                onBeforeInput={blockNegativeInput}
                                 onChange={(event) =>
                                   setShippingMethods((prev) =>
                                     prev.map((item) =>
                                       item.id === method.id
                                         ? {
                                             ...item,
-                                            price:
-                                              Number(event.target.value) || 0,
+                                            price: parseClampedNumber(
+                                              event.target.value,
+                                              0,
+                                            ),
                                           }
                                         : item,
                                     ),
@@ -409,15 +425,21 @@ export default function AdminShippingMethodsPage() {
                             <td className="px-4 py-3">
                               <input
                                 type="number"
+                                min={0}
                                 value={String(method.sortOrder)}
+                                onBeforeInput={(event) =>
+                                  blockNegativeInput(event, { allowDecimal: false })
+                                }
                                 onChange={(event) =>
                                   setShippingMethods((prev) =>
                                     prev.map((item) =>
                                       item.id === method.id
                                         ? {
                                             ...item,
-                                            sortOrder:
-                                              Number(event.target.value) || 0,
+                                            sortOrder: parseClampedNumber(
+                                              event.target.value,
+                                              0,
+                                            ),
                                           }
                                         : item,
                                     ),

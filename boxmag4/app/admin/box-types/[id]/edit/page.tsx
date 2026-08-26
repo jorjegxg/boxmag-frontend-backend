@@ -6,6 +6,7 @@ import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { B2b } from "../../../../global/components/b2b";
 import { useAdminBoxTypesStore } from "../../../use-admin-box-types-store";
 import { getBackendBaseUrl } from "../../../components/admin-types";
+import { blockNegativeInput } from "../../../../utils/number-input";
 
 type EditablePrice = {
   id?: number;
@@ -649,6 +650,7 @@ export default function EditBoxTypePage() {
                           </div>
                           <NumberField
                             label="L"
+                            min={1}
                             value={product.internalDimensionsMM.l}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
@@ -662,6 +664,7 @@ export default function EditBoxTypePage() {
                           />
                           <NumberField
                             label="W"
+                            min={1}
                             value={product.internalDimensionsMM.w}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
@@ -675,6 +678,7 @@ export default function EditBoxTypePage() {
                           />
                           <NumberField
                             label="H"
+                            min={1}
                             value={product.internalDimensionsMM.h}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
@@ -711,6 +715,7 @@ export default function EditBoxTypePage() {
                           </div>
                           <NumberField
                             label="Palet L"
+                            min={1}
                             value={product.palletDimensionsCM.l}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
@@ -724,6 +729,7 @@ export default function EditBoxTypePage() {
                           />
                           <NumberField
                             label="Palet W"
+                            min={1}
                             value={product.palletDimensionsCM.w}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
@@ -737,6 +743,7 @@ export default function EditBoxTypePage() {
                           />
                           <NumberField
                             label="Palet H"
+                            min={1}
                             value={product.palletDimensionsCM.h}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
@@ -750,6 +757,7 @@ export default function EditBoxTypePage() {
                           />
                           <NumberField
                             label="Bucăți pe palet"
+                            min={1}
                             value={product.palletPcs}
                             onChange={(value) =>
                               updateProduct(productIndex, (current) => ({
@@ -794,7 +802,9 @@ export default function EditBoxTypePage() {
                                   <input
                                     type="number"
                                     step="0.01"
+                                    min={0}
                                     value={price.withoutTax}
+                                    onBeforeInput={blockNegativeInput}
                                     onChange={(event) =>
                                       updatePrice(
                                         productIndex,
@@ -955,19 +965,21 @@ function normalizePrices(prices: EditablePrice[]): EditablePrice[] {
   }));
 }
 
-function parseNumber(value: string): number {
+function parseNumber(value: string, min = 0): number {
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+  return Number.isFinite(parsed) ? Math.max(min, parsed) : min;
 }
 
 function NumberField({
   label,
   value,
   onChange,
+  min = 0,
 }: {
   label: string;
   value: number;
   onChange: (value: number) => void;
+  min?: number;
 }) {
   return (
     <label className="flex flex-col gap-1">
@@ -975,8 +987,10 @@ function NumberField({
       <input
         type="number"
         step="0.01"
+        min={min}
         value={value}
-        onChange={(event) => onChange(parseNumber(event.target.value))}
+        onBeforeInput={blockNegativeInput}
+        onChange={(event) => onChange(parseNumber(event.target.value, min))}
         className="h-8 rounded border border-gray-300 px-2 text-xs"
       />
     </label>

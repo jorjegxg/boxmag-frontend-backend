@@ -108,7 +108,7 @@ shippingMethodsRouter.post("/", requireAdmin, async (req, res) => {
   const isActive = payload.isActive !== false;
   const sortOrder = toOptionalNumber(payload.sortOrder) ?? 0;
 
-  if (!key || !name || !etaText || price == null || price < 0) {
+  if (!key || !name || !etaText || price == null || price < 0 || sortOrder < 0) {
     res.status(400).json({
       ok: false,
       message: "Invalid shipping method payload",
@@ -156,7 +156,8 @@ shippingMethodsRouter.put("/:shippingMethodId", requireAdmin, async (req, res) =
     !name ||
     !etaText ||
     price == null ||
-    price < 0
+    price < 0 ||
+    sortOrder < 0
   ) {
     res.status(400).json({
       ok: false,

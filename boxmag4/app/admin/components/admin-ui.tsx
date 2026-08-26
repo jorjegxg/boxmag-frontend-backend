@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { blockNegativeInput, sanitizeNumericString } from "../../utils/number-input";
 
 export function SectionTitle({
   title,
@@ -24,20 +25,39 @@ export function Field({
   placeholder,
   value,
   onChange,
+  numeric = false,
+  min = 0,
+  step,
+  allowDecimal = true,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
+  numeric?: boolean;
+  min?: number;
+  step?: number | string;
+  allowDecimal?: boolean;
 }) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-sm font-semibold text-gray-800">{label}</span>
       <input
-        type="text"
+        type={numeric ? "number" : "text"}
+        min={numeric ? min : undefined}
+        step={numeric ? step : undefined}
         placeholder={placeholder}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onBeforeInput={
+          numeric ? (event) => blockNegativeInput(event, { allowDecimal }) : undefined
+        }
+        onChange={(event) =>
+          onChange(
+            numeric
+              ? sanitizeNumericString(event.target.value, { allowDecimal })
+              : event.target.value
+          )
+        }
         className="h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
       />
     </label>

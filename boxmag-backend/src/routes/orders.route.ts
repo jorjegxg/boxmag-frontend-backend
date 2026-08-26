@@ -25,6 +25,7 @@ import {
   MAX_ORDER_ATTACHMENT_MB,
 } from "../config/uploads";
 import { parseCartItemsJson } from "../utils/cart-items";
+import { toPositiveInt } from "../utils/numbers";
 
 type CreateOrderPayload = {
   boxTypeId?: unknown;
@@ -89,11 +90,6 @@ function toOptionalNumber(value: unknown): number | null {
     if (Number.isFinite(parsed)) return parsed;
   }
   return null;
-}
-
-function toRequiredNumber(value: unknown): number | null {
-  const parsed = toOptionalNumber(value);
-  return parsed != null ? parsed : null;
 }
 
 function normalizeEmail(value: string): string {
@@ -794,7 +790,7 @@ ordersRouter.post("/", async (req, res) => {
   const boxPrint = toRequiredString(payload.boxPrint);
   const sizeType = toRequiredString(payload.sizeType);
   const transport = toRequiredString(payload.transport);
-  const quantity = toRequiredNumber(payload.quantity);
+  const quantity = toPositiveInt(payload.quantity);
   const message = toRequiredString(payload.message);
   const firstName = toRequiredString(payload.firstName);
   const surname = toRequiredString(payload.surname);
@@ -838,6 +834,27 @@ ordersRouter.post("/", async (req, res) => {
   const heightMm = toOptionalNumber(payload.heightMm);
   const boxTypeId = toOptionalNumber(payload.boxTypeId);
   const vatNumber = toOptionalString(payload.vatNumber);
+
+  // Dimensions are optional (standard sizes omit them), but when supplied they
+  // must describe a real box.
+  const invalidDimension = [lengthMm, widthMm, heightMm].some(
+    (dimension) => dimension != null && dimension < 1
+  );
+  if (invalidDimension) {
+    res.status(400).json({
+      ok: false,
+      message: "Dimensions must be at least 1 mm",
+    });
+    return;
+  }
+
+  if (boxTypeId != null && (!Number.isInteger(boxTypeId) || boxTypeId <= 0)) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid boxTypeId",
+    });
+    return;
+  }
   const attachmentName = toOptionalString(payload.attachmentName);
   const attachmentPayload = parseAttachmentPayload(payload.attachment);
   const attachmentBuffer =

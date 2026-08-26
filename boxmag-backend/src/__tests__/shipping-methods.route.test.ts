@@ -104,6 +104,58 @@ describe("shipping methods routes", () => {
     expect(response.body.message).toContain("Invalid shipping method payload");
   });
 
+  it("returns 400 when create price is negative", async () => {
+    const response = await request(app)
+      .post("/api/shipping-methods")
+      .set("Cookie", adminCookie())
+      .send({ key: "express", name: "Express", etaText: "1-2 days", price: -29.99 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(response.body.message).toContain("Invalid shipping method payload");
+    expect(executeMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when create sortOrder is negative", async () => {
+    const response = await request(app)
+      .post("/api/shipping-methods")
+      .set("Cookie", adminCookie())
+      .send({
+        key: "express",
+        name: "Express",
+        etaText: "1-2 days",
+        price: 29.99,
+        sortOrder: -1,
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(executeMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when update price or sortOrder is negative", async () => {
+    const negativeUpdates = [{ price: -1 }, { sortOrder: -1 }];
+
+    for (const override of negativeUpdates) {
+      const response = await request(app)
+        .put("/api/shipping-methods/5")
+        .set("Cookie", adminCookie())
+        .send({
+          key: "express",
+          name: "Express",
+          etaText: "1-2 days",
+          price: 29.99,
+          ...override,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.ok).toBe(false);
+      expect(response.body.message).toContain("Invalid update shipping method payload");
+    }
+
+    expect(executeMock).not.toHaveBeenCalled();
+  });
+
   it("creates a shipping method with admin auth", async () => {
     executeMock.mockResolvedValueOnce([{ insertId: 5, affectedRows: 1 }]);
 

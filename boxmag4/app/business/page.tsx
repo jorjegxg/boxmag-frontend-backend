@@ -32,6 +32,11 @@ import { useLanguage } from "../i18n/language-context";
 
 const MAX_ATTACHMENT_BYTES = 18 * 1024 * 1024;
 
+function isPositiveNumber(value: string): boolean {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 1;
+}
+
 const BussinessPage = () => {
   const isDevelopment = isDevelopmentAppEnv();
   const router = useRouter();
@@ -139,14 +144,22 @@ const BussinessPage = () => {
     }
 
     if (!length.trim()) nextErrors.length = t("business.errors.lengthRequired");
+    else if (!isPositiveNumber(length))
+      nextErrors.length = t("business.errors.lengthPositive");
     if (!width.trim()) nextErrors.width = t("business.errors.widthRequired");
+    else if (!isPositiveNumber(width))
+      nextErrors.width = t("business.errors.widthPositive");
     if (!height.trim()) nextErrors.height = t("business.errors.heightRequired");
+    else if (!isPositiveNumber(height))
+      nextErrors.height = t("business.errors.heightPositive");
 
     if (!transportOptions.some((option) => option.isSelected)) {
       nextErrors.transport = t("business.errors.transport");
     }
     if (!quantity.trim())
       nextErrors.quantity = t("business.errors.quantityRequired");
+    else if (!isPositiveNumber(quantity))
+      nextErrors.quantity = t("business.errors.quantityPositive");
     if (!message.trim())
       nextErrors.message = t("business.errors.messageRequired");
     if (!acceptedTerms) nextErrors.terms = t("business.errors.terms");
@@ -277,6 +290,7 @@ const BussinessPage = () => {
             text={t("business.lengthMm")}
             id="package-length"
             type={"number"}
+            min={1}
             placeholder={t("business.enterLengthMm")}
             value={length}
             onChange={setLength}
@@ -286,6 +300,7 @@ const BussinessPage = () => {
             text={t("business.widthMm")}
             id="package-width"
             type={"number"}
+            min={1}
             placeholder={t("business.enterWidthMm")}
             value={width}
             onChange={setWidth}
@@ -295,6 +310,7 @@ const BussinessPage = () => {
             text={t("business.heightMm")}
             id="package-height"
             type="number"
+            min={1}
             placeholder={t("business.enterHeightMm")}
             value={height}
             onChange={setHeight}

@@ -36,6 +36,22 @@ function adminCookie(): string {
   return `${ADMIN_COOKIE_NAME}=${createAdminSessionToken(ADMIN_PASSWORD)}`;
 }
 
+/** A product that passes every validation, so tests can vary one field. */
+function validProductPayload() {
+  return {
+    itemNo: "SB-001",
+    productName: "Small Box",
+    internalDimensionsMM: { l: 100, w: 100, h: 100 },
+    qualityCardboard: "B",
+    palletDimensionsCM: { l: 80, w: 60, h: 100 },
+    weightPieceGr: 50,
+    weightPalletKg: 20,
+    amountQtyInPcs: 100,
+    palletPcs: 200,
+    prices: [{ name: "300", withoutTax: 10 }],
+  };
+}
+
 function fakeConnection(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     beginTransaction: vi.fn(async () => undefined),
@@ -281,6 +297,72 @@ describe("box types routes", () => {
     expect(response.status).toBe(400);
     expect(response.body.ok).toBe(false);
     expect(response.body.message).toContain("Minimum order quantity");
+  });
+
+  it("returns 400 when a product has negative dimensions, weights or pallet count", async () => {
+    const negativeCases = [
+      { internalDimensionsMM: { l: -100, w: 100, h: 100 } },
+      { internalDimensionsMM: { l: 100, w: -100, h: 100 } },
+      { internalDimensionsMM: { l: 100, w: 100, h: -100 } },
+      { palletDimensionsCM: { l: -80, w: 60, h: 100 } },
+      { palletDimensionsCM: { l: 80, w: -60, h: 100 } },
+      { palletDimensionsCM: { l: 80, w: 60, h: -100 } },
+      { weightPieceGr: -50 },
+      { weightPalletKg: -20 },
+      { palletPcs: -200 },
+    ];
+
+    for (const override of negativeCases) {
+      getConnectionMock.mockResolvedValueOnce(fakeConnection());
+
+      const response = await request(app)
+        .put("/api/box-types/1/products")
+        .set("Cookie", adminCookie())
+        .send({ products: [{ ...validProductPayload(), ...override }] });
+
+      expect(response.status).toBe(400);
+      expect(response.body.ok).toBe(false);
+      expect(response.body.message).toContain("Invalid product payload");
+    }
+  });
+
+  it("returns 400 when a product dimension is zero", async () => {
+    getConnectionMock.mockResolvedValueOnce(fakeConnection());
+
+    const response = await request(app)
+      .put("/api/box-types/1/products")
+      .set("Cookie", adminCookie())
+      .send({
+        products: [
+          {
+            ...validProductPayload(),
+            internalDimensionsMM: { l: 0, w: 100, h: 100 },
+          },
+        ],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain("Invalid product payload");
+  });
+
+  it("returns 400 when a product price is negative", async () => {
+    getConnectionMock.mockResolvedValueOnce(fakeConnection());
+
+    const response = await request(app)
+      .put("/api/box-types/1/products")
+      .set("Cookie", adminCookie())
+      .send({
+        products: [
+          {
+            ...validProductPayload(),
+            prices: [{ name: "300", withoutTax: -10 }],
+          },
+        ],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(response.body.message).toContain("Invalid price payload");
   });
 
   it("replaces box type products with admin auth", async () => {

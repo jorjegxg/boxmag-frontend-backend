@@ -7,6 +7,7 @@ import { mysqlPool } from "../db/mysql";
 import { optimizeUploadedBoxImage } from "../services/image-optimize";
 import { uploadBoxImageToMinio } from "../services/minio";
 import { MIN_ORDER_QTY } from "../constants/order";
+import { isNumberAtLeast } from "../utils/numbers";
 import {
   clampToMinOrderQty,
   filterShopPrices,
@@ -196,7 +197,9 @@ function normalizeImages(images: unknown): NormalizedBoxTypeImage[] | null {
     normalized.push({
       url: candidate.url.trim(),
       sortOrder:
-        typeof candidate.sortOrder === "number" && Number.isInteger(candidate.sortOrder)
+        typeof candidate.sortOrder === "number" &&
+        Number.isInteger(candidate.sortOrder) &&
+        candidate.sortOrder >= 0
           ? candidate.sortOrder
           : index,
       altText:
@@ -525,16 +528,16 @@ boxTypesRouter.put("/:id/products", requireAdmin, async (req, res) => {
       typeof product.itemNo !== "string" ||
       typeof product.productName !== "string" ||
       typeof product.qualityCardboard !== "string" ||
-      typeof product.amountQtyInPcs !== "number" ||
-      typeof product.palletPcs !== "number" ||
-      typeof product.weightPieceGr !== "number" ||
-      typeof product.weightPalletKg !== "number" ||
-      typeof product.internalDimensionsMM?.l !== "number" ||
-      typeof product.internalDimensionsMM?.w !== "number" ||
-      typeof product.internalDimensionsMM?.h !== "number" ||
-      typeof product.palletDimensionsCM?.l !== "number" ||
-      typeof product.palletDimensionsCM?.w !== "number" ||
-      typeof product.palletDimensionsCM?.h !== "number" ||
+      !isNumberAtLeast(product.amountQtyInPcs, 1) ||
+      !isNumberAtLeast(product.palletPcs, 1) ||
+      !isNumberAtLeast(product.weightPieceGr, 0) ||
+      !isNumberAtLeast(product.weightPalletKg, 0) ||
+      !isNumberAtLeast(product.internalDimensionsMM?.l, 1) ||
+      !isNumberAtLeast(product.internalDimensionsMM?.w, 1) ||
+      !isNumberAtLeast(product.internalDimensionsMM?.h, 1) ||
+      !isNumberAtLeast(product.palletDimensionsCM?.l, 1) ||
+      !isNumberAtLeast(product.palletDimensionsCM?.w, 1) ||
+      !isNumberAtLeast(product.palletDimensionsCM?.h, 1) ||
       !Array.isArray(product.prices)
     ) {
       res.status(400).json({
@@ -546,7 +549,7 @@ boxTypesRouter.put("/:id/products", requireAdmin, async (req, res) => {
 
     const normalizedPrices: Array<{ name: string; withoutTax: number }> = [];
     for (const price of product.prices) {
-      if (typeof price.name !== "string" || typeof price.withoutTax !== "number") {
+      if (typeof price.name !== "string" || !isNumberAtLeast(price.withoutTax, 0)) {
         res.status(400).json({
           ok: false,
           message: "Invalid price payload",

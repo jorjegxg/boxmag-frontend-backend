@@ -11,6 +11,7 @@ import {
 } from "../services/email";
 import { getStripeClient, isStripeConfigured } from "../services/stripe";
 import { parseCartItemsJson } from "../utils/cart-items";
+import { toNonNegativeNumber, toPositiveInt } from "../utils/numbers";
 import { MIN_ORDER_QTY } from "../constants/order";
 import {
   MAX_ORDER_ATTACHMENT_BYTES,
@@ -92,24 +93,6 @@ function parseVatNumber(value: unknown): string | null {
   if (!raw) return null;
   const normalized = normalizeVatNumber(raw);
   return VAT_NUMBER_REGEX.test(normalized) ? normalized : null;
-}
-
-function toNonNegativeNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim().length > 0) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed) && parsed >= 0) return parsed;
-  }
-  return null;
-}
-
-function toPositiveInt(value: unknown): number | null {
-  const parsed = toNonNegativeNumber(value);
-  if (parsed == null) return null;
-  const rounded = Math.floor(parsed);
-  return rounded > 0 ? rounded : null;
 }
 
 function parseCheckoutCurrency(value: unknown): CheckoutCurrency {
