@@ -223,7 +223,7 @@ function CorrugatedEnvelopesSection({ onSeeNow }: { onSeeNow: () => void }) {
     <section className="bg-white w-full py-16 px-6 lg:px-20">
       <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
         {/* Left: product image in yellow card */}
-        <div className="relative flex justify-center lg:justify-start">
+        <div className="relative flex justify-center lg:justify-start order-2 lg:order-1">
           <div className="bg-my-yellow rounded-3xl p-8 lg:p-10 w-full max-w-md aspect-4/5 flex items-center justify-center overflow-hidden">
             <Image
               src="/b2b/boxes/envelope.png"
@@ -236,7 +236,7 @@ function CorrugatedEnvelopesSection({ onSeeNow }: { onSeeNow: () => void }) {
         </div>
 
         {/* Right: copy and CTA */}
-        <div className="flex flex-col items-start">
+        <div className="flex flex-col items-start order-1 lg:order-2">
           <p className="text-my-red text-xl lg:text-2xl font-semibold mb-3 uppercase tracking-wide">
             {t("home.weOffer")}
           </p>
