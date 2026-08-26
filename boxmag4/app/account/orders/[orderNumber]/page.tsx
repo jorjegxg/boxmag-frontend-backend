@@ -530,7 +530,7 @@ export default function AccountOrderDetailsPage() {
 
               {order.offers && order.offers.length > 0 ? (
                 <div className="rounded-lg border border-gray-200 p-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wide text-gray-800">
+                  <h3 className="text-base font-extrabold uppercase tracking-wide text-blue-900">
                     {t("accountOrder.offers")}
                   </h3>
                   <div className="mt-3 space-y-3">

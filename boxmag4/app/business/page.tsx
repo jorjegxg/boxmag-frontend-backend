@@ -12,6 +12,8 @@ import { TypeOfSizes } from "./components/TypeOfSizes";
 import TransportOptions from "./components/TransportOptions";
 import { MyInputField } from "./components/MyInputField";
 import Quantity from "./components/Quantity";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
 import { B2b } from "../global/components/b2b";
 import { ServicesSection } from "../global/components/services-section";
@@ -317,10 +319,7 @@ const BussinessPage = () => {
         <Quantity
           quantity={quantity}
           onQuantityChange={setQuantity}
-          acceptedTerms={acceptedTerms}
-          onAcceptedTermsChange={setAcceptedTerms}
           quantityError={errors.quantity}
-          termsError={errors.terms}
         />
         <Pt16 />
 
@@ -425,6 +424,26 @@ const BussinessPage = () => {
         />
         {errors.message ? (
           <p className="mt-2 text-sm text-red-600">{errors.message}</p>
+        ) : null}
+        <Pt16 />
+
+        <FieldGroup className="mx-auto">
+          <Field orientation="horizontal">
+            <Checkbox
+              id="terms-checkbox-basic"
+              name="terms-checkbox-basic"
+              onCheckedChange={(checked) => {
+                setAcceptedTerms(checked === "indeterminate" ? false : checked);
+              }}
+              checked={acceptedTerms}
+            />
+            <FieldLabel htmlFor="terms-checkbox-basic">
+              {t("business.acceptTerms")}
+            </FieldLabel>
+          </Field>
+        </FieldGroup>
+        {errors.terms ? (
+          <p className="mt-2 text-sm text-red-600">{errors.terms}</p>
         ) : null}
         <Pt16 />
 

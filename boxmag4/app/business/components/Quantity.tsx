@@ -1,26 +1,14 @@
 "use client";
 import { MyInputField } from "./MyInputField";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useLanguage } from "../../i18n/language-context";
 
 type QuantityProps = {
   quantity: string;
   onQuantityChange: (value: string) => void;
-  acceptedTerms: boolean;
-  onAcceptedTermsChange: (value: boolean) => void;
   quantityError?: string;
-  termsError?: string;
 };
 
-const Quantity = ({
-  quantity,
-  onQuantityChange,
-  acceptedTerms,
-  onAcceptedTermsChange,
-  quantityError,
-  termsError,
-}: QuantityProps) => {
+const Quantity = ({ quantity, onQuantityChange, quantityError }: QuantityProps) => {
   const { t } = useLanguage();
 
   return (
@@ -38,25 +26,6 @@ const Quantity = ({
           />
         </div>
       </div>
-
-      <div className="pt-4 "></div>
-
-      <FieldGroup className="mx-auto ">
-        <Field orientation="horizontal">
-          <Checkbox
-            id="terms-checkbox-basic"
-            name="terms-checkbox-basic"
-            onCheckedChange={(checked) => {
-              onAcceptedTermsChange(checked === "indeterminate" ? false : checked);
-            }}
-            checked={acceptedTerms}
-          />
-          <FieldLabel htmlFor="terms-checkbox-basic">
-            {t("business.acceptTerms")}
-          </FieldLabel>
-        </Field>
-      </FieldGroup>
-      {termsError ? <p className="mt-2 text-sm text-red-600">{termsError}</p> : null}
     </div>
   );
 };
