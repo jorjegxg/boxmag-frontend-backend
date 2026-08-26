@@ -223,7 +223,7 @@ function LoginRequiredView({
         {error ? (
           <p className="text-sm font-medium text-red-700">{error}</p>
         ) : null}
-        <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-start sm:justify-between">
           <button
             type="submit"
             className={saveBtnClass}
@@ -231,18 +231,20 @@ function LoginRequiredView({
           >
             {isSubmitting ? t("account.signingIn") : t("account.signInButton")}
           </button>
-          <Link
-            href="/forgot-password"
-            className="text-sm font-semibold text-my-red hover:underline"
-          >
-            {t("account.forgotPassword.link")}
-          </Link>
-          <Link
-            href="/registration"
-            className={`${saveBtnClass} inline-block text-center`}
-          >
-            {t("account.newUserRegister")}
-          </Link>
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <Link
+              href="/registration"
+              className={`${saveBtnClass} inline-block text-center`}
+            >
+              {t("account.newUserRegister")}
+            </Link>
+            <Link
+              href="/forgot-password"
+              className="text-sm font-semibold text-my-red hover:underline"
+            >
+              {t("account.forgotPassword.link")}
+            </Link>
+          </div>
         </div>
       </form>
     </div>
