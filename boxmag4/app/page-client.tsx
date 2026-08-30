@@ -323,7 +323,7 @@ function ProducersBanner() {
         <div className="flex-1 min-w-0 pr-4 text-white text-xl font-semibold">
           {t("home.producersBanner")}
           <span className="block text-sm font-normal mt-1">
-            BOXMAG is{" "}
+            {t("home.producersBanner.rekoBefore")}{" "}
             <a
               href="https://rekopackaging.com"
               className="underline hover:no-underline"
@@ -332,7 +332,7 @@ function ProducersBanner() {
             >
               REKOPACKAGING
             </a>{" "}
-            · Since 1993
+            {t("home.producersBanner.rekoAfter")}
           </span>
         </div>
         <div className="shrink-0 w-28 md:w-36">
