@@ -92,6 +92,10 @@ function validCreateOrderPayload() {
 describe("orders routes", () => {
   beforeEach(() => {
     queryMock.mockReset();
+    // Safe default: any query not explicitly stubbed returns an empty result set
+    // instead of undefined, so adding a new query to a route can't crash unrelated
+    // tests with a destructure-of-undefined 500. Per-test mockResolvedValueOnce wins.
+    queryMock.mockResolvedValue([[]]);
     executeMock.mockReset();
     getOrderAttachmentFromMinioMock.mockReset();
     getOrderAttachmentFromMinioMock.mockResolvedValue({
