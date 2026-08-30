@@ -432,7 +432,7 @@ authRouter.post("/register", async (req, res) => {
         email: normalizedEmail,
         requiresEmailVerification: true,
       },
-      message: "Registration successful. Check your email for the verification link.",
+      message: "Registration successful. Check your email and click the Validate email button.",
     });
   } catch (error) {
     console.error("Failed to register user", error);

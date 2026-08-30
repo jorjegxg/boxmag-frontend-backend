@@ -226,15 +226,15 @@ function LoginRequiredView({
         <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-start sm:justify-between">
           <button
             type="submit"
-            className={saveBtnClass}
+            className={`${saveBtnClass} w-full sm:w-auto`}
             disabled={isSubmitting}
           >
             {isSubmitting ? t("account.signingIn") : t("account.signInButton")}
           </button>
-          <div className="flex flex-col items-start gap-2 sm:items-end">
+          <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end">
             <Link
               href="/registration"
-              className={`${saveBtnClass} inline-block text-center`}
+              className={`${saveBtnClass} block w-full text-center sm:w-auto`}
             >
               {t("account.newUserRegister")}
             </Link>

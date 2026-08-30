@@ -135,7 +135,7 @@ describe("B2B full order flow – guest with VAT RO2816464", () => {
       statusCode: 200,
       body: {
         ok: true,
-        message: "Registration successful. Check your email for the verification link.",
+        message: "Registration successful. Check your email and click the Validate email button.",
       },
     }).as("register");
 

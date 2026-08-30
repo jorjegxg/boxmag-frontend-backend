@@ -621,15 +621,17 @@ export async function sendVerificationEmail(params: {
   await transporter.sendMail({
     from: env.emailFrom,
     to: params.to,
-    subject: "Welcome to Boxmag - Confirm your email",
+    subject: "Welcome to Boxmag - Validate your email",
     text: [
       "Welcome to Boxmag!",
       "",
       "Thanks for creating an account.",
-      "Please confirm your email by opening this link:",
+      "Open this email and click the Validate email button to activate your account.",
+      "",
+      `If the button is not available, copy and paste this URL into your browser:`,
       params.verifyUrl,
       "",
-      `This link expires in ${params.expiresMinutes} minutes.`,
+      `This verification expires in ${params.expiresMinutes} minutes.`,
       "",
       "If you did not create this account, you can ignore this email.",
     ].join("\n"),
@@ -647,7 +649,7 @@ export async function sendVerificationEmail(params: {
                 Thanks for creating your account.
               </p>
               <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;">
-                Please confirm your email address to activate your account.
+                Click the button below to validate your email and activate your account.
               </p>
 
               <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
@@ -657,26 +659,15 @@ export async function sendVerificationEmail(params: {
                       href="${params.verifyUrl}"
                       style="display:inline-block;padding:12px 20px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;"
                     >
-                      Confirm my email
+                      Validate email
                     </a>
                   </td>
                 </tr>
               </table>
 
               <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#6b7280;">
-                This link expires in <strong>${params.expiresMinutes} minutes</strong>.
+                This verification expires in <strong>${params.expiresMinutes} minutes</strong>.
               </p>
-
-              <div style="margin:14px 0 0;padding:12px;border:1px dashed #d1d5db;border-radius:10px;background:#fafafa;">
-                <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:0.02em;color:#6b7280;text-transform:uppercase;">
-                  Can't click the button?
-                </p>
-                <p style="margin:0;word-break:break-all;font-size:13px;line-height:1.5;">
-                  <a href="${params.verifyUrl}" style="color:#ef6b56;text-decoration:underline;">
-                    ${params.verifyUrl}
-                  </a>
-                </p>
-              </div>
 
               <p style="margin:18px 0 0;font-size:13px;line-height:1.6;color:#6b7280;">
                 If you did not create this account, you can safely ignore this email.
