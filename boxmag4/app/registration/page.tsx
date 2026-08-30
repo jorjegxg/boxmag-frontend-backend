@@ -247,12 +247,10 @@ function RegistrationPageContent() {
         clearB2bOrderSuccessPayload();
       }
 
-      setFeedback({
-        kind: "success",
-        message: t("registration.success.checkEmail"),
-      });
+      setFeedback(null);
       setRegisteredEmail(normalizedEmail);
       setIsRegistered(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
       setIsRegistered(false);
       setRegisteredEmail("");
@@ -293,22 +291,61 @@ function RegistrationPageContent() {
 
       <section className="w-full px-4 sm:px-6 lg:px-20 pb-12">
         <div className="max-w-4xl mx-auto rounded-lg border-2 border-gray-200 bg-white px-6 py-6 sm:px-8 sm:py-8">
-          {fromSource === "b2b-order" ? (
-            <p className="text-gray-600 text-sm mb-6">
-              {t("registration.hint.b2b")}
-            </p>
-          ) : fromSource === "checkout" ? (
-            <p className="text-gray-600 text-sm mb-6">
-              {t("registration.hint.checkout")}
-            </p>
+          {isRegistered ? (
+            <div
+              role="status"
+              aria-live="polite"
+              className="rounded-xl border border-green-200 bg-green-50 px-5 py-6 sm:px-7 sm:py-7"
+            >
+              <div className="flex items-start gap-3">
+                <FaCheckCircle className="mt-0.5 h-7 w-7 shrink-0 text-green-600" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold uppercase tracking-wide text-green-700">
+                    {t("registration.successBanner")}
+                  </p>
+                  <h2 className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">
+                    {t("registration.confirmEmailTitle")}
+                  </h2>
+                  <p className="mt-3 text-sm text-gray-700 sm:text-base">
+                    {t("registration.successBody")}
+                  </p>
+                  <div className="mt-4 rounded-xl border border-my-red/30 bg-white px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      {t("registration.verificationEmail")}
+                    </p>
+                    <p className="mt-1 break-all text-base font-semibold text-my-red sm:text-lg">
+                      {registeredEmail}
+                    </p>
+                  </div>
+                  <div className="mt-6">
+                    <Link
+                      href={returnTo}
+                      className="inline-flex items-center justify-center rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white hover:bg-my-red/90 transition-colors"
+                    >
+                      {t("registration.backToLogin")}
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
-            <p className="text-gray-600 text-sm mb-6">
-              {t("registration.hint.defaultPrefix")}{" "}
-              <Link href="/regulations" className="text-my-red font-semibold hover:underline">{t("registration.regulations")}</Link>
-              {t("registration.period")}
-            </p>
-          )}
-          <form onSubmit={handleSubmit} className="space-y-4">
+            <>
+              {fromSource === "b2b-order" ? (
+                <p className="text-gray-600 text-sm mb-6">
+                  {t("registration.hint.b2b")}
+                </p>
+              ) : fromSource === "checkout" ? (
+                <p className="text-gray-600 text-sm mb-6">
+                  {t("registration.hint.checkout")}
+                </p>
+              ) : (
+                <p className="text-gray-600 text-sm mb-6">
+                  {t("registration.hint.defaultPrefix")}{" "}
+                  <Link href="/regulations" className="text-my-red font-semibold hover:underline">{t("registration.regulations")}</Link>
+                  {t("registration.period")}
+                </p>
+              )}
+              <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="reg-vat" className="block text-sm font-semibold text-gray-800 mb-1">{t("registration.vatNumber")}</label>
@@ -444,7 +481,7 @@ function RegistrationPageContent() {
               <p className="text-sm text-red-700 font-medium">{feedback.message}</p>
             ) : null}
             <div className="flex flex-col sm:flex-row gap-4 pt-2">
-              <button type="submit" disabled={isSubmitting || isRegistered} className="px-6 py-3 rounded-lg bg-my-red text-white font-semibold hover:bg-my-red/90 transition-colors disabled:opacity-70 disabled:cursor-not-allowed">
+              <button type="submit" disabled={isSubmitting} className="px-6 py-3 rounded-lg bg-my-red text-white font-semibold hover:bg-my-red/90 transition-colors disabled:opacity-70 disabled:cursor-not-allowed">
                 {isSubmitting ? t("registration.registering") : t("registration.register")}
               </button>
               <p className="flex items-center text-sm text-gray-600">
@@ -455,55 +492,14 @@ function RegistrationPageContent() {
               </p>
             </div>
           </form>
+            </>
+          )}
         </div>
       </section>
 
       <ServicesSection />
       <HaveAQuestion />
       <NewsletterSubscribe />
-      {isRegistered ? (
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-[1px]">
-          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
-            <div className="border-b border-gray-100 bg-gray-50 px-6 py-4 sm:px-8">
-              <div className="flex items-center gap-3">
-                <FaCheckCircle className="h-7 w-7 text-green-600" />
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-wide text-green-700">
-                    {t("registration.successBanner")}
-                  </p>
-                  <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">
-                    {t("registration.confirmEmailTitle")}
-                  </h2>
-                </div>
-              </div>
-            </div>
-
-            <div className="px-6 py-6 sm:px-8 sm:py-7">
-              <p className="text-sm text-gray-600 sm:text-base">
-                {t("registration.successBody")}
-              </p>
-
-              <div className="mt-4 rounded-xl border border-my-red/30 bg-my-red/5 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  {t("registration.verificationEmail")}
-                </p>
-                <p className="mt-1 break-all text-base font-semibold text-my-red sm:text-lg">
-                  {registeredEmail}
-                </p>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <Link
-                  href={returnTo}
-                  className="inline-flex items-center justify-center rounded-lg bg-my-red px-5 py-2.5 text-sm font-semibold text-white hover:bg-my-red/90 transition-colors"
-                >
-                  {t("registration.backToLogin")}
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

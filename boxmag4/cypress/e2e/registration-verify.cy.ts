@@ -3,7 +3,7 @@
  *
  * Coverage:
  * - page load + form fields
- * - registration success + confirmation modal
+ * - registration success + inline confirmation banner
  * - registered fields appear on /account profile
  * - validation (passwords, terms, duplicate email)
  * - B2B query prefill (?from=b2b-order)
@@ -41,6 +41,17 @@ const visitRegistration = (path = "/registration") => {
       win.localStorage.removeItem(VAT_CACHE_KEY);
     },
   });
+};
+
+const assertRegistrationSuccessBanner = (email: string, returnTo = "/account#orders") => {
+  cy.get('[role="status"]').should("exist");
+  cy.contains("Registration Successful").should("exist");
+  cy.contains(email).should("exist");
+  cy.contains("a", "Back to login")
+    .should("have.attr", "href")
+    .and("eq", returnTo);
+  cy.get(".fixed.inset-0").should("not.exist");
+  cy.get("#reg-vat").should("not.exist");
 };
 
 const fillRegistrationForm = (
@@ -104,7 +115,7 @@ describe("Registration page", () => {
     cy.contains("a", "Sign in").should("have.attr", "href", "/account");
   });
 
-  it("registers successfully and shows confirmation modal", () => {
+  it("registers successfully and shows confirmation banner", () => {
     cy.intercept("POST", "**/api/auth/register", {
       statusCode: 201,
       body: { ok: true, message: "Registration successful" },
@@ -123,11 +134,7 @@ describe("Registration page", () => {
       expect(body.acceptRegulations).to.eq(true);
     });
 
-    cy.contains("Registration Successful").should("exist");
-    cy.contains(data.email).should("exist");
-    cy.contains("a", "Back to login")
-      .should("have.attr", "href")
-      .and("eq", "/account#orders");
+    assertRegistrationSuccessBanner(data.email);
   });
 
   it("shows every registration field on the account profile panel", () => {
@@ -146,7 +153,7 @@ describe("Registration page", () => {
     });
     cy.contains("button", "Register").click();
     cy.wait("@registerSuccess");
-    cy.contains("Registration Successful").should("exist");
+    assertRegistrationSuccessBanner(data.email);
 
     // After verify + login, profile API returns the same data submitted at register
     cy.intercept("POST", "**/api/auth/login", {
@@ -280,10 +287,7 @@ describe("Registration page — B2B query prefill", () => {
     cy.contains("button", "Register").click();
 
     cy.wait("@registerB2b");
-    cy.contains("Registration Successful").should("exist");
-    cy.contains("a", "Back to login")
-      .should("have.attr", "href")
-      .and("eq", "/account#orders");
+    assertRegistrationSuccessBanner("guest@example.com");
   });
 });
 

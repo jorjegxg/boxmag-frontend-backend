@@ -17,7 +17,7 @@ Dev mode pre-completează formularul (email demo, VAT, parole). Testele mock-uie
 | VAT invalid / lookup fail | golește company + mesaj eroare |
 | Submit fără termeni | eroare: accept Regulations / Privacy Policy |
 | Parole diferite | eroare: Passwords do not match |
-| Register OK | modal „Registration Successful” + email + link `returnTo` (default `/account#orders`) |
+| Register OK | banner inline sus „Registration Successful” + email + link `returnTo` (default `/account#orders`); formular ascuns |
 | Login după register | `GET /api/auth/profile` populează `#acc-first` … `#acc-company` + email (read-only) |
 | `?from=b2b-order&email=` | email locked (readonly); copy B2B |
 | `/verify-email?token=` valid | success + Go to Sign In |
@@ -40,7 +40,7 @@ Dev mode pre-completează formularul (email demo, VAT, parole). Testele mock-uie
 2. Completează formularul (VAT → wait lookup → restul)
 3. Click Register
 4. **CHECK:** body include `email`, `firstName`, `surname`, `phone`, `vatNumber`, `companyName`, `acceptRegulations: true`
-5. **CHECK:** modal Confirmation; email afișat; Back to login → `/account#orders`
+5. **CHECK:** banner inline (role=status); email afișat; fără overlay `.fixed.inset-0`; formular ascuns; Back to login → `/account#orders`
 
 ### 3. Datele din registration apar pe profil
 
@@ -109,6 +109,7 @@ cy.get("#reg-phone")
 cy.get("#reg-accept")
 cy.contains("button", "Register")
 cy.contains("Registration Successful")
+cy.get('[role="status"]')
 cy.contains("a", "Back to login")
 
 // profil /account#account
