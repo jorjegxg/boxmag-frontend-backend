@@ -11,6 +11,7 @@ import {
   type VatLookupAddressFields,
 } from "../../../lib/parse-vat-address";
 import {
+  classifyVatLookup,
   fetchVatLookup,
   getCachedVatCompany,
   vatPayloadToAddressFields,
@@ -24,6 +25,9 @@ function normalizeVatNumber(value: string): string {
 
 const lockedInputClass =
   "w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600 cursor-not-allowed focus:outline-none";
+
+const editableInputClass =
+  "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
 
 export type CheckoutUserAddress = {
   id: number;
@@ -97,6 +101,8 @@ export function CheckoutShippingInformation({
   const { t } = useLanguage();
   const [isLookingUpVat, setIsLookingUpVat] = useState(false);
   const [vatLookupError, setVatLookupError] = useState<string | null>(null);
+  const [vatManualNameRequired, setVatManualNameRequired] = useState(false);
+  const [vatLookupInfo, setVatLookupInfo] = useState<string | null>(null);
   const hasSavedAddresses = addresses.length > 0;
   const useManualAddressForm = !hasSavedAddresses || addressType === "another";
   const displayCompanyName =
@@ -114,6 +120,8 @@ export function CheckoutShippingInformation({
     if (!VAT_NUMBER_REGEX.test(normalizedVat)) {
       setManualAddress((prev) => ({ ...prev, companyName: "" }));
       setVatLookupError(null);
+      setVatManualNameRequired(false);
+      setVatLookupInfo(null);
       return;
     }
 
@@ -121,6 +129,8 @@ export function CheckoutShippingInformation({
     if (cachedCompany) {
       setManualAddress((prev) => ({ ...prev, companyName: cachedCompany }));
       setVatLookupError(null);
+      setVatManualNameRequired(false);
+      setVatLookupInfo(null);
       updateIsLookingUpVat(false);
       return;
     }
@@ -130,23 +140,49 @@ export function CheckoutShippingInformation({
     const timeoutId = window.setTimeout(async () => {
       updateIsLookingUpVat(true);
       setVatLookupError(null);
+      setVatLookupInfo(null);
 
       try {
         const payload = await fetchVatLookup(normalizedVat, controller.signal);
 
         if (isCancelled) return;
 
-        if (payload.ok !== true || !payload.companyName) {
+        const outcome = classifyVatLookup(payload);
+        if (outcome.kind === "error") {
           setManualAddress((prev) => ({ ...prev, companyName: "" }));
-          setVatLookupError(
-            payload.message ?? t("contact.vatLookupFailed"),
-          );
+          setVatManualNameRequired(false);
+          setVatLookupError(outcome.message ?? t("contact.vatLookupFailed"));
           return;
         }
 
         const lookupFields: VatLookupAddressFields =
-          vatPayloadToAddressFields(payload);
+          vatPayloadToAddressFields(outcome.payload);
 
+        if (outcome.kind === "manual_name") {
+          setManualAddress((prev) =>
+            mergeVatLookupFields(
+              { ...prev, companyName: "" },
+              lookupFields,
+              {
+                addressLine1: "addressLine1",
+                addressLine2: "addressLine2",
+                city: "city",
+                postcode: "postcode",
+                country: "country",
+                phone: "phone",
+              },
+            ),
+          );
+          setVatManualNameRequired(true);
+          setVatLookupInfo(t("contact.vatVerifiedManualName"));
+          setVatLookupError(null);
+          window.setTimeout(() => {
+            document.getElementById("checkout-companyName")?.focus();
+          }, 0);
+          return;
+        }
+
+        setVatManualNameRequired(false);
         setManualAddress((prev) =>
           mergeVatLookupFields(prev, lookupFields, {
             companyName: "companyName",
@@ -164,6 +200,7 @@ export function CheckoutShippingInformation({
           return;
         }
         setManualAddress((prev) => ({ ...prev, companyName: "" }));
+        setVatManualNameRequired(false);
         setVatLookupError(t("contact.vatLookupFailed"));
       } finally {
         if (!isCancelled) {
@@ -350,16 +387,31 @@ export function CheckoutShippingInformation({
           <input
             id="checkout-companyName"
             type="text"
-            readOnly
+            readOnly={!vatManualNameRequired}
             value={manualAddress.companyName}
+            onChange={
+              vatManualNameRequired
+                ? (e) =>
+                    setManualAddress((prev) => ({
+                      ...prev,
+                      companyName: e.target.value,
+                    }))
+                : undefined
+            }
             placeholder={
               isLookingUpVat
                 ? t("contact.vatLookupLoading")
-                : t("contact.companyNameAuto")
+                : vatManualNameRequired
+                  ? t("contact.companyNameManualPlaceholder")
+                  : t("contact.companyNameAuto")
             }
-            className={lockedInputClass}
+            className={vatManualNameRequired ? editableInputClass : lockedInputClass}
             aria-busy={isLookingUpVat}
+            required={vatManualNameRequired}
           />
+          {!isLookingUpVat && vatLookupInfo ? (
+            <p className="mt-1 text-sm text-blue-700">{vatLookupInfo}</p>
+          ) : null}
         </div>
         {!isLoggedIn ? (
           <div>

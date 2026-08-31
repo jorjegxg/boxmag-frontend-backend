@@ -2,7 +2,9 @@ import type { VatLookupAddressFields } from "./parse-vat-address";
 
 export type VatLookupPayload = {
   ok?: boolean;
-  companyName?: string;
+  valid?: boolean;
+  companyNameUnavailable?: boolean;
+  companyName?: string | null;
   addressLine1?: string | null;
   addressLine2?: string | null;
   city?: string | null;
@@ -11,6 +13,24 @@ export type VatLookupPayload = {
   phone?: string | null;
   message?: string;
 };
+
+export type VatLookupOutcome =
+  | { kind: "filled"; payload: VatLookupPayload }
+  | { kind: "manual_name"; payload: VatLookupPayload }
+  | { kind: "error"; message: string };
+
+export function classifyVatLookup(payload: VatLookupPayload): VatLookupOutcome {
+  if (payload.ok === true && payload.companyNameUnavailable === true) {
+    return { kind: "manual_name", payload };
+  }
+  if (payload.ok === true && payload.companyName) {
+    return { kind: "filled", payload };
+  }
+  return {
+    kind: "error",
+    message: payload.message ?? "VAT lookup failed",
+  };
+}
 
 const VAT_COMPANY_CACHE_KEY = "boxmag.vatCompanyCache.v1";
 
@@ -103,7 +123,10 @@ export async function fetchVatLookup(
     { signal },
   );
   const payload = (await response.json()) as VatLookupPayload;
-  payload.ok = response.ok && payload.ok === true && !!payload.companyName;
+  payload.ok =
+    response.ok &&
+    payload.ok === true &&
+    (!!payload.companyName || payload.companyNameUnavailable === true);
   if (payload.ok && payload.companyName) {
     rememberVatCompany(vat, payload.companyName);
   }

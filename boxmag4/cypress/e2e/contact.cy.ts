@@ -158,6 +158,29 @@ describe("Contact page – validare VAT", () => {
 
     cy.contains("Invalid VAT number").should("exist");
   });
+
+  it("permite nume manual când TVA e valid dar fără nume firmă", () => {
+    cy.window().then((win) => {
+      win.localStorage.removeItem("boxmag.vatCompanyCache.v1");
+    });
+
+    cy.intercept("GET", "/api/vat-lookup*", {
+      statusCode: 200,
+      body: {
+        ok: true,
+        companyNameUnavailable: true,
+        companyName: null,
+        country: "DE",
+      },
+    }).as("vatLookupManual");
+
+    cy.get("#vatNumber").clear().type("DE115235681");
+    cy.wait("@vatLookupManual");
+    cy.get("#companyName").should("not.have.attr", "readonly");
+    cy.contains("VAT number verified").should("exist");
+    cy.get("#companyName").type("Muster GmbH");
+    cy.get("#companyName").should("have.value", "Muster GmbH");
+  });
 });
 
 // ---------------------------------------------------------------------------

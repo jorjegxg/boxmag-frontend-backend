@@ -18,6 +18,7 @@ import { useNotification } from "../global/components/notification-center";
 import europeanCountries from "./european-countries.json";
 import type { VatLookupAddressFields } from "../../lib/parse-vat-address";
 import {
+  classifyVatLookup,
   fetchVatLookup,
   getCachedVatCompany,
   rememberVatCompany,
@@ -132,6 +133,8 @@ export default function OrderSummaryPage() {
   const [vatFormatError, setVatFormatError] = useState(false);
   const [isLookingUpVat, setIsLookingUpVat] = useState(false);
   const [vatLookupError, setVatLookupError] = useState<string | null>(null);
+  const [vatManualNameRequired, setVatManualNameRequired] = useState(false);
+  const [vatLookupInfo, setVatLookupInfo] = useState<string | null>(null);
   const [requiredFieldErrors, setRequiredFieldErrors] = useState<Record<RequiredFieldKey, boolean>>({
     firstName: false,
     surname: false,
@@ -345,6 +348,8 @@ export default function OrderSummaryPage() {
     if (!VAT_LOOKUP_REGEX.test(normalizedVat)) {
       setCompanyName("");
       setVatLookupError(null);
+      setVatManualNameRequired(false);
+      setVatLookupInfo(null);
       return;
     }
 
@@ -352,6 +357,8 @@ export default function OrderSummaryPage() {
     if (cachedCompany) {
       setCompanyName((prev) => prev.trim() || cachedCompany);
       setVatLookupError(null);
+      setVatManualNameRequired(false);
+      setVatLookupInfo(null);
       setIsLookingUpVat(false);
       return;
     }
@@ -361,28 +368,62 @@ export default function OrderSummaryPage() {
     const timeoutId = window.setTimeout(async () => {
       setIsLookingUpVat(true);
       setVatLookupError(null);
+      setVatLookupInfo(null);
 
       try {
         const payload = await fetchVatLookup(normalizedVat, controller.signal);
 
         if (isCancelled) return;
 
-        if (payload.ok !== true || !payload.companyName) {
+        const outcome = classifyVatLookup(payload);
+        if (outcome.kind === "error") {
           setCompanyName("");
-          setVatLookupError(payload.message ?? t("contact.vatLookupFailed"));
+          setVatManualNameRequired(false);
+          setVatLookupError(outcome.message ?? t("contact.vatLookupFailed"));
           return;
         }
 
         const lookupFields: VatLookupAddressFields = {
-          companyName: payload.companyName,
-          addressLine1: payload.addressLine1,
-          addressLine2: payload.addressLine2,
-          city: payload.city,
-          postcode: payload.postcode,
-          country: payload.country,
-          phone: payload.phone,
+          companyName: outcome.payload.companyName ?? undefined,
+          addressLine1: outcome.payload.addressLine1,
+          addressLine2: outcome.payload.addressLine2,
+          city: outcome.payload.city,
+          postcode: outcome.payload.postcode,
+          country: outcome.payload.country,
+          phone: outcome.payload.phone,
         };
 
+        if (outcome.kind === "manual_name") {
+          setCompanyName("");
+          setVatManualNameRequired(true);
+          setVatLookupInfo(t("contact.vatVerifiedManualName"));
+          setVatLookupError(null);
+
+          if (addressType !== "company") {
+            const addressFromLookup = [lookupFields.addressLine1, lookupFields.addressLine2]
+              .filter(Boolean)
+              .join(", ");
+            const lookupCountry = lookupFields.country?.trim().toUpperCase() ?? "";
+
+            setAddress((prev) => prev.trim() || addressFromLookup || prev);
+            setPostcode((prev) => prev.trim() || lookupFields.postcode?.trim() || prev);
+            setCity((prev) => prev.trim() || lookupFields.city?.trim() || prev);
+            setCountry((prev) => {
+              if (prev.trim()) return prev;
+              if (lookupCountry && EUROPEAN_COUNTRY_CODES.has(lookupCountry)) {
+                return lookupCountry;
+              }
+              return lookupFields.country?.trim() || prev;
+            });
+          }
+
+          window.setTimeout(() => {
+            document.getElementById("os-companyName")?.focus();
+          }, 0);
+          return;
+        }
+
+        setVatManualNameRequired(false);
         setCompanyName(
           (prev) => prev.trim() || lookupFields.companyName?.trim() || "",
         );
@@ -411,6 +452,7 @@ export default function OrderSummaryPage() {
           return;
         }
         setCompanyName("");
+        setVatManualNameRequired(false);
         setVatLookupError(t("contact.vatLookupFailed"));
       } finally {
         if (!isCancelled) {
@@ -548,7 +590,7 @@ export default function OrderSummaryPage() {
     if (!submitCompanyName.trim()) {
       notify({
         type: "error",
-        message: vatLookupError ?? t("contact.vatLookupFailed"),
+        message: vatLookupError ?? t("contact.companyNameRequired"),
       });
       return;
     }
@@ -777,17 +819,27 @@ export default function OrderSummaryPage() {
                 <input
                   id="os-companyName"
                   type="text"
-                  readOnly
+                  readOnly={!vatManualNameRequired}
                   value={companyName}
+                  onChange={
+                    vatManualNameRequired
+                      ? (e) => setCompanyName(e.target.value)
+                      : undefined
+                  }
                   placeholder={
                     isLookingUpVat
                       ? t("contact.vatLookupLoading")
-                      : t("contact.companyNameAuto")
+                      : vatManualNameRequired
+                        ? t("contact.companyNameManualPlaceholder")
+                        : t("contact.companyNameAuto")
                   }
-                  className={lockedInputClass}
+                  className={vatManualNameRequired ? inputClass : lockedInputClass}
                   aria-busy={isLookingUpVat}
                   required
                 />
+                {!isLookingUpVat && vatLookupInfo ? (
+                  <p className="mt-1 text-sm text-blue-700">{vatLookupInfo}</p>
+                ) : null}
                 {requiredFieldErrors.companyName ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.companyNameRequired")}</p> : null}
               </div>
             </div>

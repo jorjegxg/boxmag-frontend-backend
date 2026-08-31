@@ -43,4 +43,28 @@ describe("GET /api/vat-lookup", () => {
     const payload = (await response.json()) as { message?: string };
     expect(payload.message).toContain("not found or invalid");
   });
+
+  it("returns 200 with companyNameUnavailable when VIES valid but no name", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          { valid: true, name: "---", address: "---" },
+          { status: 200 },
+        ),
+      ),
+    );
+    const response = await getVat("DE115235681");
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as {
+      ok?: boolean;
+      companyNameUnavailable?: boolean;
+      companyName?: string | null;
+      country?: string;
+    };
+    expect(payload.ok).toBe(true);
+    expect(payload.companyNameUnavailable).toBe(true);
+    expect(payload.companyName).toBeNull();
+    expect(payload.country).toBe("DE");
+  });
 });

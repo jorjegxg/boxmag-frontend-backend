@@ -56,6 +56,7 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 | `INV-ACCOUNT-ADDRESS-IDENTITY` | Tab Address: `companyName` read-only din profil (edit doar My Account / VAT); `firstName` / `lastName` / `phone` prefilled din profil la adresă nouă, editabile per adresă; create/update trimite `companyName` din profil. | `account/page.tsx` (`AddressTab`) |
 | `INV-I18N-COOKIE` | Limba = cookie `boxmag.language`. Prefix `/ro/*`, `/de/*` → path fără prefix + set cookie. | `middleware.ts` |
 | `INV-CONTACT-NEXT` | Formular contact = doar Next.js `POST /api/contact` (nu `boxmag-backend`). | `boxmag4/app/api/contact` |
+| `INV-VAT-MANUAL-NAME` | VIES `valid=true` fără nume (ex. DE/ES) → `/api/vat-lookup` răspunde `ok` + `companyNameUnavailable`; UI afișează mesaj info și `companyName` editabil manual; submit cere nume completat. | `vat-lookup/route.ts`, `vat-company.ts`, checkout/contact/registration/order-summary/account |
 
 ### Ops (nu e2e produs)
 
@@ -130,6 +131,7 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-ACCOUNT-ADDRESS-IDENTITY` | — | — | OK `account-logged-in`, `account-address-cart` | — |
 | `INV-I18N-COOKIE` | — | — | OK `language-i18n`, `smoke` | OK `smoke` |
 | `INV-CONTACT-NEXT` | OK `contact.route` (admin inbox) | OK `contact-route` | OK `contact` | — |
+| `INV-VAT-MANUAL-NAME` | — | OK `vat-lookup`, `vat-company` | OK `contact` | — |
 | `INV-NO-PROD-WIPE` | OK `env.production`, `prod-wipe-guard` | — | — | — |
 
 ---

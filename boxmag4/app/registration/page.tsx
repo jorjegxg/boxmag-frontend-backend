@@ -13,7 +13,7 @@ import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { siteEmails } from "../../lib/site-emails";
 import { clearB2bOrderSuccessPayload } from "../../lib/b2b-order-success";
 import { checkVAT, countries } from "jsvat";
-import { fetchVatLookup, getCachedVatCompany } from "../../lib/vat-company";
+import { classifyVatLookup, fetchVatLookup, getCachedVatCompany } from "../../lib/vat-company";
 import { getBackendBaseUrl } from "../../lib/backend-url";
 import { useLanguage } from "../i18n/language-context";
 
@@ -48,6 +48,8 @@ function RegistrationPageContent() {
   );
   const [isLookingUpVat, setIsLookingUpVat] = useState(false);
   const [vatLookupError, setVatLookupError] = useState<string | null>(null);
+  const [vatManualNameRequired, setVatManualNameRequired] = useState(false);
+  const [vatLookupInfo, setVatLookupInfo] = useState<string | null>(null);
   const [password, setPassword] = useState(isDevelopment && !hasQueryPrefill ? "dummy123" : "");
   const [confirmPassword, setConfirmPassword] = useState(
     isDevelopment && !hasQueryPrefill ? "dummy123" : "",
@@ -106,6 +108,8 @@ function RegistrationPageContent() {
     if (!VAT_NUMBER_REGEX.test(normalizedVat)) {
       setCompanyName("");
       setVatLookupError(null);
+      setVatManualNameRequired(false);
+      setVatLookupInfo(null);
       setIsLookingUpVat(false);
       return;
     }
@@ -114,6 +118,8 @@ function RegistrationPageContent() {
     if (cachedCompany) {
       setCompanyName(cachedCompany);
       setVatLookupError(null);
+      setVatManualNameRequired(false);
+      setVatLookupInfo(null);
       setIsLookingUpVat(false);
       return;
     }
@@ -123,18 +129,33 @@ function RegistrationPageContent() {
     const timeoutId = window.setTimeout(async () => {
       setIsLookingUpVat(true);
       setVatLookupError(null);
+      setVatLookupInfo(null);
 
       try {
         const payload = await fetchVatLookup(normalizedVat, controller.signal);
         if (isCancelled) return;
 
-        if (payload.ok !== true || !payload.companyName) {
+        const outcome = classifyVatLookup(payload);
+        if (outcome.kind === "error") {
           setCompanyName("");
-          setVatLookupError(payload.message ?? "VAT lookup failed.");
+          setVatManualNameRequired(false);
+          setVatLookupError(outcome.message ?? t("contact.vatLookupFailed"));
           return;
         }
 
-        setCompanyName(payload.companyName);
+        if (outcome.kind === "manual_name") {
+          setCompanyName("");
+          setVatManualNameRequired(true);
+          setVatLookupInfo(t("contact.vatVerifiedManualName"));
+          setVatLookupError(null);
+          window.setTimeout(() => {
+            document.getElementById("reg-company")?.focus();
+          }, 0);
+          return;
+        }
+
+        setVatManualNameRequired(false);
+        setCompanyName(outcome.payload.companyName ?? "");
         setVatLookupError(null);
       } catch (error) {
         if (
@@ -144,7 +165,8 @@ function RegistrationPageContent() {
           return;
         }
         setCompanyName("");
-        setVatLookupError("VAT lookup failed.");
+        setVatManualNameRequired(false);
+        setVatLookupError(t("contact.vatLookupFailed"));
       } finally {
         if (!isCancelled) {
           setIsLookingUpVat(false);
@@ -157,7 +179,7 @@ function RegistrationPageContent() {
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [vatNumber]);
+  }, [vatNumber, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,7 +218,7 @@ function RegistrationPageContent() {
         kind: "error",
         message:
           vatLookupError?.trim() ||
-          t("registration.error.companyFromVat"),
+          t("contact.companyNameRequired"),
       });
       return;
     }
@@ -378,14 +400,26 @@ function RegistrationPageContent() {
                   id="reg-company"
                   type="text"
                   value={companyName}
-                  readOnly
-                  placeholder={
-                    isLookingUpVat ? t("registration.lookingUpVat") : t("registration.autoFilledFromVat")
+                  readOnly={!vatManualNameRequired}
+                  onChange={
+                    vatManualNameRequired
+                      ? (e) => setCompanyName(e.target.value)
+                      : undefined
                   }
-                  className={lockedInputClass}
+                  placeholder={
+                    isLookingUpVat
+                      ? t("registration.lookingUpVat")
+                      : vatManualNameRequired
+                        ? t("contact.companyNameManualPlaceholder")
+                        : t("registration.autoFilledFromVat")
+                  }
+                  className={vatManualNameRequired ? inputClass : lockedInputClass}
                   aria-busy={isLookingUpVat}
                   required
                 />
+                {!isLookingUpVat && vatLookupInfo ? (
+                  <p className="mt-1 text-sm text-blue-700">{vatLookupInfo}</p>
+                ) : null}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

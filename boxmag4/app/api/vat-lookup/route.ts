@@ -271,10 +271,21 @@ export async function GET(request: NextRequest) {
     }
 
     if (!lookup.companyName) {
-      return NextResponse.json(
-        { ok: false, message: "Company name not found for this VAT number" },
-        { status: 404 },
-      );
+      return NextResponse.json({
+        ok: true,
+        valid: true,
+        companyNameUnavailable: true,
+        companyName: null,
+        address: viesResult.address?.trim() && viesResult.address !== "---"
+          ? viesResult.address
+          : null,
+        addressLine1: lookup.addressLine1,
+        addressLine2: lookup.addressLine2,
+        city: lookup.city,
+        postcode: lookup.postcode,
+        country: lookup.country ?? parsed.countryCode,
+        phone: lookup.phone,
+      });
     }
 
     return NextResponse.json({

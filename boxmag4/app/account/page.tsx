@@ -25,6 +25,7 @@ import {
 } from "../../lib/customer-auth";
 import { siteEmails } from "../../lib/site-emails";
 import {
+  classifyVatLookup,
   fetchVatLookup,
   getCachedVatCompany,
   rememberVatCompany,
@@ -274,6 +275,8 @@ function MyAccountTab({
   const [vatNumber, setVatNumber] = useState(profile.vatNumber);
   const [isLookingUpVat, setIsLookingUpVat] = useState(false);
   const [vatLookupError, setVatLookupError] = useState<string | null>(null);
+  const [vatManualNameRequired, setVatManualNameRequired] = useState(false);
+  const [vatLookupInfo, setVatLookupInfo] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -299,6 +302,8 @@ function MyAccountTab({
     if (!VAT_NUMBER_REGEX.test(normalizedVat)) {
       setCompanyName("");
       setVatLookupError(null);
+      setVatManualNameRequired(false);
+      setVatLookupInfo(null);
       return;
     }
 
@@ -306,6 +311,8 @@ function MyAccountTab({
     if (cachedCompany) {
       setCompanyName(cachedCompany);
       setVatLookupError(null);
+      setVatManualNameRequired(false);
+      setVatLookupInfo(null);
       setIsLookingUpVat(false);
       return;
     }
@@ -315,21 +322,36 @@ function MyAccountTab({
     const timeoutId = window.setTimeout(async () => {
       setIsLookingUpVat(true);
       setVatLookupError(null);
+      setVatLookupInfo(null);
 
       try {
         const payload = await fetchVatLookup(normalizedVat, controller.signal);
 
         if (isCancelled) return;
 
-        if (payload.ok !== true || !payload.companyName) {
+        const outcome = classifyVatLookup(payload);
+        if (outcome.kind === "error") {
           setCompanyName("");
+          setVatManualNameRequired(false);
           setVatLookupError(
-            payload.message ?? t("contact.vatLookupFailed"),
+            outcome.message ?? t("contact.vatLookupFailed"),
           );
           return;
         }
 
-        setCompanyName(payload.companyName);
+        if (outcome.kind === "manual_name") {
+          setCompanyName("");
+          setVatManualNameRequired(true);
+          setVatLookupInfo(t("contact.vatVerifiedManualName"));
+          setVatLookupError(null);
+          window.setTimeout(() => {
+            document.getElementById("acc-company")?.focus();
+          }, 0);
+          return;
+        }
+
+        setVatManualNameRequired(false);
+        setCompanyName(outcome.payload.companyName ?? "");
         setVatLookupError(null);
       } catch (error) {
         if (
@@ -339,6 +361,7 @@ function MyAccountTab({
           return;
         }
         setCompanyName("");
+        setVatManualNameRequired(false);
         setVatLookupError(t("contact.vatLookupFailed"));
       } finally {
         if (!isCancelled) {
@@ -497,15 +520,25 @@ function MyAccountTab({
             id="acc-company"
             type="text"
             value={companyName}
-            readOnly
+            readOnly={!vatManualNameRequired}
+            onChange={
+              vatManualNameRequired
+                ? (e) => setCompanyName(e.target.value)
+                : undefined
+            }
             placeholder={
               isLookingUpVat
                 ? t("contact.vatLookupLoading")
-                : t("contact.companyNameAuto")
+                : vatManualNameRequired
+                  ? t("contact.companyNameManualPlaceholder")
+                  : t("contact.companyNameAuto")
             }
-            className={lockedInputClass}
+            className={vatManualNameRequired ? inputClass : lockedInputClass}
             aria-busy={isLookingUpVat}
           />
+          {!isLookingUpVat && vatLookupInfo ? (
+            <p className="mt-1 text-sm text-blue-700">{vatLookupInfo}</p>
+          ) : null}
         </div>
         <button type="button" className={saveBtnClass} onClick={() => void handleSave()} disabled={isSaving || isLookingUpVat}>
           {isSaving ? t("account.saving") : t("account.save")}

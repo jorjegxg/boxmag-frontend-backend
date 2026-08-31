@@ -438,7 +438,7 @@ export default function CheckoutPage() {
     setVatFormatError(false);
 
     if (!activeAddress.companyName) {
-      setSubmitOrderMessage(t("contact.vatLookupFailed"));
+      setSubmitOrderMessage(t("contact.companyNameRequired"));
       return;
     }
 
