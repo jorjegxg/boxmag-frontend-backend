@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { href: "/admin/orders", label: "Comenzi", match: "/admin/orders" },
   {
     href: "/admin/box-types",
-    label: "Tipuri de cutii",
+    label: "Tipuri de cutii și prețuri",
     match: "/admin/box-types",
   },
   {

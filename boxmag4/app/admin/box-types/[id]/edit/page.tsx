@@ -438,7 +438,7 @@ export default function EditBoxTypePage() {
           </Link>{" "}
           <span className="mx-2">→</span>
           <Link href="/admin/box-types" className="hover:underline">
-            Tipuri de cutii
+            Tipuri de cutii și prețuri
           </Link>{" "}
           <span className="mx-2">→</span>
           <span className="text-gray-700 font-semibold">Editare tip cutie</span>

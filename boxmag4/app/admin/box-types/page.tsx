@@ -144,7 +144,7 @@ export default function AdminBoxTypesPage() {
 
   return (
     <div>
-      <AdminBreadcrumb current="Tipuri de cutii" />
+      <AdminBreadcrumb current="Tipuri de cutii și prețuri" />
 
       <section className="w-full bg-white px-6 lg:px-20 py-8">
         <div className="max-w-7xl mx-auto rounded-[28px] border border-black/15 bg-white overflow-hidden">
