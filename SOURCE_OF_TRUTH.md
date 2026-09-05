@@ -57,6 +57,7 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 | `INV-I18N-COOKIE` | Limba = cookie `boxmag.language`. Prefix `/ro/*`, `/de/*` → path fără prefix + set cookie. | `middleware.ts` |
 | `INV-CONTACT-NEXT` | Formular contact = doar Next.js `POST /api/contact` (nu `boxmag-backend`). | `boxmag4/app/api/contact` |
 | `INV-VAT-MANUAL-NAME` | VIES `valid=true` fără nume (ex. DE/ES) → `/api/vat-lookup` răspunde `ok` + `companyNameUnavailable`; UI afișează mesaj info și `companyName` editabil manual; submit cere nume completat. | `vat-lookup/route.ts`, `vat-company.ts`, checkout/contact/registration/order-summary/account |
+| `INV-VAT-LOOKUP-FALLBACK` | VIES indisponibil: pentru RO încearcă ANAF ca sursă primară; dacă tot nu merge (sau non-RO) → `ok` + `companyNameUnavailable` + `lookupUnavailable` (nu 502); UI cere nume manual. VIES `valid=false` rămâne 404 (fără override ANAF). | `vat-lookup/route.ts`, `vat-company.ts`, checkout/contact/registration/order-summary/account |
 
 ### Ops (nu e2e produs)
 
@@ -132,6 +133,7 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-I18N-COOKIE` | — | — | OK `language-i18n`, `smoke` | OK `smoke` |
 | `INV-CONTACT-NEXT` | OK `contact.route` (admin inbox) | OK `contact-route` | OK `contact` | — |
 | `INV-VAT-MANUAL-NAME` | — | OK `vat-lookup`, `vat-company` | OK `contact` | — |
+| `INV-VAT-LOOKUP-FALLBACK` | — | OK `vat-lookup`, `vat-company` | — | — |
 | `INV-NO-PROD-WIPE` | OK `env.production`, `prod-wipe-guard` | — | — | — |
 
 ---

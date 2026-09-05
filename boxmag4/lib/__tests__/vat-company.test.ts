@@ -23,6 +23,20 @@ describe("classifyVatLookup", () => {
     expect(outcome.kind).toBe("manual_name");
   });
 
+  it("returns manual_name when lookup services are unavailable", () => {
+    const outcome = classifyVatLookup({
+      ok: true,
+      companyNameUnavailable: true,
+      lookupUnavailable: true,
+      companyName: null,
+      country: "DE",
+    });
+    expect(outcome.kind).toBe("manual_name");
+    if (outcome.kind === "manual_name") {
+      expect(outcome.payload.lookupUnavailable).toBe(true);
+    }
+  });
+
   it("returns error when lookup failed", () => {
     const outcome = classifyVatLookup({
       ok: false,

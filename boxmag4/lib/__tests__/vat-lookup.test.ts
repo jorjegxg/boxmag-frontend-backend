@@ -67,4 +67,105 @@ describe("GET /api/vat-lookup", () => {
     expect(payload.companyName).toBeNull();
     expect(payload.country).toBe("DE");
   });
+
+  it("falls back to ANAF when VIES is unavailable for RO", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const href = String(url);
+      if (href.includes("vies")) {
+        return new Response("forbidden", { status: 403 });
+      }
+      if (href.includes("anaf")) {
+        return Response.json({
+          found: [
+            {
+              date_generale: {
+                denumire: "DANTE INTERNATIONAL SA",
+                adresa:
+                  "MUNICIPIUL BUCUREŞTI, SECTOR 2, STR. GARA HERĂSTRĂU, NR.6",
+                telefon: "0210000000",
+                codPostal: "020334",
+              },
+            },
+          ],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await getVat("RO14399840");
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as {
+      ok?: boolean;
+      companyName?: string | null;
+      country?: string | null;
+      lookupUnavailable?: boolean;
+    };
+    expect(payload.ok).toBe(true);
+    expect(payload.companyName).toBe("DANTE INTERNATIONAL SA");
+    expect(payload.country).toBe("RO");
+    expect(payload.lookupUnavailable).toBeUndefined();
+    expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it("soft-fails with lookupUnavailable when VIES is down for non-RO", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("unavailable", { status: 503 })),
+    );
+    const response = await getVat("DE115235681");
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as {
+      ok?: boolean;
+      companyNameUnavailable?: boolean;
+      lookupUnavailable?: boolean;
+      companyName?: string | null;
+      country?: string;
+    };
+    expect(payload.ok).toBe(true);
+    expect(payload.companyNameUnavailable).toBe(true);
+    expect(payload.lookupUnavailable).toBe(true);
+    expect(payload.companyName).toBeNull();
+    expect(payload.country).toBe("DE");
+  });
+
+  it("does not call ANAF to override VIES invalid for RO", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const href = String(url);
+      if (href.includes("vies")) {
+        return Response.json({ isValid: false }, { status: 200 });
+      }
+      throw new Error(`unexpected fetch: ${href}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await getVat("RO12345678");
+    expect(response.status).toBe(404);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("soft-fails when VIES is down and ANAF misses for RO", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const href = String(url);
+      if (href.includes("vies")) {
+        return new Response("unavailable", { status: 502 });
+      }
+      if (href.includes("anaf")) {
+        return Response.json({ found: [] });
+      }
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await getVat("RO99999999");
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as {
+      ok?: boolean;
+      lookupUnavailable?: boolean;
+      companyNameUnavailable?: boolean;
+    };
+    expect(payload.ok).toBe(true);
+    expect(payload.lookupUnavailable).toBe(true);
+    expect(payload.companyNameUnavailable).toBe(true);
+  });
 });

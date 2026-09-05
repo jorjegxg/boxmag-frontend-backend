@@ -4,6 +4,8 @@ export type VatLookupPayload = {
   ok?: boolean;
   valid?: boolean;
   companyNameUnavailable?: boolean;
+  /** True when VIES/ANAF could not be reached; company name must be entered manually. */
+  lookupUnavailable?: boolean;
   companyName?: string | null;
   addressLine1?: string | null;
   addressLine2?: string | null;

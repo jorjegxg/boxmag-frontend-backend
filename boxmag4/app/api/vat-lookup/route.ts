@@ -94,32 +94,53 @@ function mergeLookupFields(
   };
 }
 
+function lookupUnavailableResponse(countryCode: string) {
+  return NextResponse.json({
+    ok: true,
+    valid: true,
+    companyNameUnavailable: true,
+    lookupUnavailable: true,
+    companyName: null,
+    address: null,
+    addressLine1: null,
+    addressLine2: null,
+    city: null,
+    postcode: null,
+    country: countryCode,
+    phone: null,
+  });
+}
+
 async function lookupWithVies(
   countryCode: string,
   vatNumber: string,
 ): Promise<ViesLookupResult | null> {
-  const viesCountryCode = toViesCountryCode(countryCode);
-  const response = await fetch(VIES_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ countryCode: viesCountryCode, vatNumber }),
-    signal: AbortSignal.timeout(10000),
-  });
+  try {
+    const viesCountryCode = toViesCountryCode(countryCode);
+    const response = await fetch(VIES_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ countryCode: viesCountryCode, vatNumber }),
+      signal: AbortSignal.timeout(10000),
+    });
 
-  if (!response.ok) return null;
+    if (!response.ok) return null;
 
-  const payload = (await response.json()) as ViesResponse;
-  const isValid = payload.isValid === true || payload.valid === true;
-  if (!isValid) return { valid: false };
+    const payload = (await response.json()) as ViesResponse;
+    const isValid = payload.isValid === true || payload.valid === true;
+    if (!isValid) return { valid: false };
 
-  return {
-    valid: true,
-    companyName: normalizeCompanyName(payload.name),
-    address: payload.address?.trim() || null,
-  };
+    return {
+      valid: true,
+      companyName: normalizeCompanyName(payload.name),
+      address: payload.address?.trim() || null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function parseAnafStructuredAddress(
@@ -148,59 +169,96 @@ function parseAnafStructuredAddress(
 }
 
 async function lookupWithAnaf(vatNumber: string): Promise<AnafLookupResult | null> {
-  const cuiNumber = Number.parseInt(vatNumber.replace(/\D/g, ""), 10);
-  if (!Number.isFinite(cuiNumber) || cuiNumber <= 0) return null;
+  try {
+    const cuiNumber = Number.parseInt(vatNumber.replace(/\D/g, ""), 10);
+    if (!Number.isFinite(cuiNumber) || cuiNumber <= 0) return null;
 
-  const today = new Date().toISOString().slice(0, 10);
-  const response = await fetch(ANAF_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify([{ cui: cuiNumber, data: today }]),
-    signal: AbortSignal.timeout(10000),
+    const today = new Date().toISOString().slice(0, 10);
+    const response = await fetch(ANAF_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ cui: cuiNumber, data: today }]),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!response.ok) return null;
+
+    const payload = (await response.json()) as {
+      found?: Array<{
+        date_generale?: {
+          denumire?: string;
+          adresa?: string;
+          telefon?: string;
+          codPostal?: string;
+        };
+        adresa_sediu_social?: Record<string, unknown>;
+        adresa_domiciliu_fiscal?: Record<string, unknown>;
+      }>;
+    };
+
+    const entry = payload.found?.[0];
+    const general = entry?.date_generale;
+    const companyName = general?.denumire?.trim();
+    if (!companyName) return null;
+
+    const structured =
+      parseAnafStructuredAddress(entry?.adresa_sediu_social, "s") ??
+      parseAnafStructuredAddress(entry?.adresa_domiciliu_fiscal, "d");
+
+    const parsedGeneralAddress = parseViesAddress(general?.adresa, "RO");
+
+    return {
+      companyName,
+      addressLine1:
+        buildAddressLine1(structured?.street, structured?.streetNumber) ??
+        parsedGeneralAddress.addressLine1 ??
+        null,
+      addressLine2: parsedGeneralAddress.addressLine2 ?? null,
+      city: structured?.city ?? parsedGeneralAddress.city ?? null,
+      postcode:
+        structured?.postcode ??
+        normalizeOptionalText(general?.codPostal) ??
+        parsedGeneralAddress.postcode ??
+        null,
+      country: normalizeCountryCode(structured?.country, "RO"),
+      phone: normalizeOptionalText(general?.telefon),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function successFromLookup(
+  lookup: VatLookupAddressFields,
+  address: string | null,
+) {
+  if (!lookup.companyName) {
+    return NextResponse.json({
+      ok: true,
+      valid: true,
+      companyNameUnavailable: true,
+      companyName: null,
+      address: address?.trim() && address !== "---" ? address : null,
+      addressLine1: lookup.addressLine1,
+      addressLine2: lookup.addressLine2,
+      city: lookup.city,
+      postcode: lookup.postcode,
+      country: lookup.country,
+      phone: lookup.phone,
+    });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    companyName: lookup.companyName,
+    address,
+    addressLine1: lookup.addressLine1,
+    addressLine2: lookup.addressLine2,
+    city: lookup.city,
+    postcode: lookup.postcode,
+    country: lookup.country,
+    phone: lookup.phone,
   });
-
-  if (!response.ok) return null;
-
-  const payload = (await response.json()) as {
-    found?: Array<{
-      date_generale?: {
-        denumire?: string;
-        adresa?: string;
-        telefon?: string;
-        codPostal?: string;
-      };
-      adresa_sediu_social?: Record<string, unknown>;
-      adresa_domiciliu_fiscal?: Record<string, unknown>;
-    }>;
-  };
-
-  const entry = payload.found?.[0];
-  const general = entry?.date_generale;
-  const companyName = general?.denumire?.trim();
-  if (!companyName) return null;
-
-  const structured =
-    parseAnafStructuredAddress(entry?.adresa_sediu_social, "s") ??
-    parseAnafStructuredAddress(entry?.adresa_domiciliu_fiscal, "d");
-
-  const parsedGeneralAddress = parseViesAddress(general?.adresa, "RO");
-
-  return {
-    companyName,
-    addressLine1:
-      buildAddressLine1(structured?.street, structured?.streetNumber) ??
-      parsedGeneralAddress.addressLine1 ??
-      null,
-    addressLine2: parsedGeneralAddress.addressLine2 ?? null,
-    city: structured?.city ?? parsedGeneralAddress.city ?? null,
-    postcode:
-      structured?.postcode ??
-      normalizeOptionalText(general?.codPostal) ??
-      parsedGeneralAddress.postcode ??
-      null,
-    country: normalizeCountryCode(structured?.country, "RO"),
-    phone: normalizeOptionalText(general?.telefon),
-  };
 }
 
 export async function GET(request: NextRequest) {
@@ -223,11 +281,26 @@ export async function GET(request: NextRequest) {
 
   try {
     const viesResult = await lookupWithVies(parsed.countryCode, parsed.vatNumber);
+
     if (!viesResult) {
-      return NextResponse.json(
-        { ok: false, message: "VAT lookup service unavailable" },
-        { status: 502 },
-      );
+      if (parsed.countryCode === "RO") {
+        const anafResult = await lookupWithAnaf(parsed.vatNumber);
+        if (anafResult) {
+          return successFromLookup(
+            {
+              companyName: anafResult.companyName,
+              addressLine1: anafResult.addressLine1,
+              addressLine2: anafResult.addressLine2,
+              city: anafResult.city,
+              postcode: anafResult.postcode,
+              country: anafResult.country,
+              phone: anafResult.phone,
+            },
+            null,
+          );
+        }
+      }
+      return lookupUnavailableResponse(parsed.countryCode);
     }
 
     if (!viesResult.valid) {
@@ -270,35 +343,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (!lookup.companyName) {
-      return NextResponse.json({
-        ok: true,
-        valid: true,
-        companyNameUnavailable: true,
-        companyName: null,
-        address: viesResult.address?.trim() && viesResult.address !== "---"
-          ? viesResult.address
-          : null,
-        addressLine1: lookup.addressLine1,
-        addressLine2: lookup.addressLine2,
-        city: lookup.city,
-        postcode: lookup.postcode,
-        country: lookup.country ?? parsed.countryCode,
-        phone: lookup.phone,
-      });
-    }
-
-    return NextResponse.json({
-      ok: true,
-      companyName: lookup.companyName,
-      address: viesResult.address,
-      addressLine1: lookup.addressLine1,
-      addressLine2: lookup.addressLine2,
-      city: lookup.city,
-      postcode: lookup.postcode,
-      country: lookup.country,
-      phone: lookup.phone,
-    });
+    return successFromLookup(
+      { ...lookup, country: lookup.country ?? parsed.countryCode },
+      viesResult.address,
+    );
   } catch {
     return NextResponse.json(
       { ok: false, message: "VAT lookup failed" },

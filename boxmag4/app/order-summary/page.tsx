@@ -396,7 +396,11 @@ export default function OrderSummaryPage() {
         if (outcome.kind === "manual_name") {
           setCompanyName("");
           setVatManualNameRequired(true);
-          setVatLookupInfo(t("contact.vatVerifiedManualName"));
+          setVatLookupInfo(
+            outcome.payload.lookupUnavailable
+              ? t("contact.vatLookupUnavailableManualName")
+              : t("contact.vatVerifiedManualName"),
+          );
           setVatLookupError(null);
 
           if (addressType !== "company") {

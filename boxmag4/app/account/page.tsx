@@ -342,7 +342,11 @@ function MyAccountTab({
         if (outcome.kind === "manual_name") {
           setCompanyName("");
           setVatManualNameRequired(true);
-          setVatLookupInfo(t("contact.vatVerifiedManualName"));
+          setVatLookupInfo(
+            outcome.payload.lookupUnavailable
+              ? t("contact.vatLookupUnavailableManualName")
+              : t("contact.vatVerifiedManualName"),
+          );
           setVatLookupError(null);
           window.setTimeout(() => {
             document.getElementById("acc-company")?.focus();

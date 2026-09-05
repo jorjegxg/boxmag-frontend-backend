@@ -392,6 +392,7 @@
   "contact.companyNameManualPlaceholder": "Introduceți numele firmei",
   "contact.companyNameRequired": "Introduceți numele firmei.",
   "contact.vatVerifiedManualName": "Cod TVA verificat. Introduceți manual numele firmei.",
+  "contact.vatLookupUnavailableManualName": "Verificarea TVA este temporar indisponibilă. Introduceți manual numele firmei.",
   "contact.vatLookupLoading": "Se caută datele companiei...",
   "contact.vatLookupFailed": "Nu am găsit o companie pentru acest cod TVA.",
   "contact.vatLookupInProgress": "Așteaptă verificarea codului TVA.",

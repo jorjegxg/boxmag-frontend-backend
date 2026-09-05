@@ -174,7 +174,11 @@ export function CheckoutShippingInformation({
             ),
           );
           setVatManualNameRequired(true);
-          setVatLookupInfo(t("contact.vatVerifiedManualName"));
+          setVatLookupInfo(
+            outcome.payload.lookupUnavailable
+              ? t("contact.vatLookupUnavailableManualName")
+              : t("contact.vatVerifiedManualName"),
+          );
           setVatLookupError(null);
           window.setTimeout(() => {
             document.getElementById("checkout-companyName")?.focus();

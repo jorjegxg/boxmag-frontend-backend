@@ -392,6 +392,7 @@
   "contact.companyNameManualPlaceholder": "Firmennamen eingeben",
   "contact.companyNameRequired": "Bitte geben Sie den Firmennamen ein.",
   "contact.vatVerifiedManualName": "USt-IdNr. bestätigt. Bitte geben Sie den Firmennamen manuell ein.",
+  "contact.vatLookupUnavailableManualName": "USt-Prüfung vorübergehend nicht verfügbar. Bitte geben Sie den Firmennamen manuell ein.",
   "contact.vatLookupLoading": "Firmendaten werden abgerufen...",
   "contact.vatLookupFailed": "Für diese USt-Nummer wurde keine Firma gefunden.",
   "contact.vatLookupInProgress": "Bitte warten Sie, während die USt-Nummer geprüft wird.",
