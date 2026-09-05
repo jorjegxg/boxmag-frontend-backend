@@ -45,6 +45,7 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 | `INV-AUTH-ADMIN` | Admin: cookie `boxmag-admin-session` **sau** `Authorization: Bearer` / `x-admin-token`. Fără config → 503 pe rute protejate. | `require-admin.ts` |
 | `INV-AUTH-USER` | Customer: cookie `boxmag-user-session` (HMAC, TTL 14 zile) + `localStorage` pe FE (`boxmag.auth.*`). | `require-user.ts`, `user-auth.ts` |
 | `INV-AUTH-EMAIL-SCOPE` | `GET /api/orders` fără `?email=` = admin only. Cu `?email=` = admin sau user cu email potrivit. | `require-admin-or-user-email.ts` |
+| `INV-PASSWORD-RESET` | `POST /api/auth/forgot-password` stochează **doar** sha256 al token-ului (`users.password_reset_token_hash`) + expirare `RESET_PASSWORD_EXPIRES_MINUTES`; token-ul brut există doar în link-ul emailat. `POST /api/auth/reset-password` cere parolă ≥ 6 caractere, respinge token expirat/inexistent și golește hash + expirare la succes (single-use). Cont inexistent sau inactiv → `200 { ok: true, exists: false }` (enumerare acceptată intenționat, ca UI-ul să ofere înregistrare). Fără SMTP → 500. | `auth.route.ts`, `db/migrations/011_add_password_reset_tokens.sql` |
 | `INV-AUTH-VERIFY-PROFILE` | `GET /api/auth/verify-email`: creează user din `pending_user_registrations` **sau**, dacă email-ul există deja în `users`, actualizează `password_hash` + profil (`first_name`, `last_name`, `company_name`, `vat_number`, `phone`) + `email_verified_at` / `is_active` din pending, apoi șterge pending. | `auth.route.ts` |
 
 ### Fluxuri FE
@@ -55,7 +56,8 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 | `INV-B2B-SAVED-ADDRESS` | User logat pe `/order-summary` cu adrese în cont: default adresa salvată (shipping); toggle altă adresă / adresă salvată ca la checkout; `POST /api/orders` folosește adresa activă. Guest / fără adrese = formular manual. | `order-summary/page.tsx` |
 | `INV-ACCOUNT-ADDRESS-IDENTITY` | Tab Address: `companyName` read-only din profil (edit doar My Account / VAT); `firstName` / `lastName` / `phone` prefilled din profil la adresă nouă, editabile per adresă; create/update trimite `companyName` din profil. | `account/page.tsx` (`AddressTab`) |
 | `INV-I18N-COOKIE` | Limba = cookie `boxmag.language`. Prefix `/ro/*`, `/de/*` → path fără prefix + set cookie. | `middleware.ts` |
-| `INV-CONTACT-NEXT` | Formular contact = doar Next.js `POST /api/contact` (nu `boxmag-backend`). | `boxmag4/app/api/contact` |
+| `INV-CONTACT-NEXT` | Formularul de contact trimite **doar** către Next.js `POST /api/contact`, care trimite emailul (Nodemailer). Aceeași rută forwardează payload-ul server-to-server către `POST /api/contact` din backend pentru persistare în `contact_messages` — **best-effort**: dacă backendul pică, emailul tot pleacă și submit-ul rămâne `ok`. Browserul nu apelează niciodată backendul direct pentru contact. | `boxmag4/app/api/contact/route.ts`, `contact.route.ts` |
+| `INV-ADMIN-MESSAGES` | Inbox mesaje contact = admin only (`requireAdmin`) pe `GET /api/contact`, `GET /api/contact/:id`, `GET /api/contact/reply-senders`, `POST /api/contact/:id/reply`. Reply acceptă `fromKey` ∈ `info` / `b2b` / `orders`; la succes setează `status = 'replied'` + `replied_at` + `replied_from`. Fără SMTP → 503. Status: `new` → `read` (la deschidere detaliu, doar din `new`) → `replied`. | `contact.route.ts`, `admin/messages/page.tsx` |
 | `INV-VAT-MANUAL-NAME` | VIES `valid=true` fără nume (ex. DE/ES) → `/api/vat-lookup` răspunde `ok` + `companyNameUnavailable`; UI afișează mesaj info și `companyName` editabil manual; submit cere nume completat. | `vat-lookup/route.ts`, `vat-company.ts`, checkout/contact/registration/order-summary/account |
 | `INV-VAT-LOOKUP-FALLBACK` | VIES indisponibil: pentru RO încearcă ANAF ca sursă primară; dacă tot nu merge (sau non-RO) → `ok` + `companyNameUnavailable` + `lookupUnavailable` (nu 502); UI cere nume manual. VIES `valid=false` rămâne 404 (fără override ANAF). | `vat-lookup/route.ts`, `vat-company.ts`, checkout/contact/registration/order-summary/account |
 
@@ -94,17 +96,26 @@ Așteptări: guards `INV-B2B-GUARDS`; attachment opțional → MinIO; guest OK.
 ```
 /registration → email verify → /verify-email?token=
   → login pe /account → profile / addresses / orders
+  (parolă uitată: /forgot-password → /reset-password?token=)
 ```
 
 Așteptări: cont inactiv până la verify; verify creează **sau actualizează** `users` din pending (`INV-AUTH-VERIFY-PROFILE`); `INV-GUEST-LINK` la verify și la login; B2C logat setează `user_id` din sesiune. Fail load profil pe `/account` → eroare + retry, fără formular gol editabil.
 
+### Password reset
+
+```
+/forgot-password → email cu link → /reset-password?token= → login
+```
+
+Așteptări: `INV-PASSWORD-RESET`; token single-use; cont inexistent/inactiv → `exists: false`, fără email.
+
 ### Admin
 
 ```
-/admin/login → cookie → /admin → orders | box-types | shipping-methods
+/admin/login → cookie → /admin → orders | box-types | shipping-methods | messages
 ```
 
-Așteptări: middleware pe `/admin/*` except login; UI RO; `INV-STRIPE-LOCK` pe detalii comandă.
+Așteptări: middleware pe `/admin/*` except login; UI RO; `INV-STRIPE-LOCK` pe detalii comandă; `INV-ADMIN-MESSAGES` pe inbox contact.
 
 ---
 
@@ -126,6 +137,8 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-AUTH-ADMIN` | OK `require-admin` (`x-admin-token`, 503), `session-tokens` | OK `admin-auth` | OK `admin-login` | — |
 | `INV-AUTH-USER` | OK `auth` login/logout/profile, `session-tokens` | — | OK `login`, `account` | — |
 | `INV-AUTH-VERIFY-PROFILE` | OK `auth` verify existing-user update | — | — | — |
+| `INV-PASSWORD-RESET` | OK `auth` forgot/reset-password | TODO | TODO | — |
+| `INV-ADMIN-MESSAGES` | OK `contact.route` (admin list/detail/reply, 503, read bump) | — | TODO `admin-messages` | — |
 | `INV-AUTH-EMAIL-SCOPE` | OK `require-admin`, `orders` GET `/:id` | — | — | — |
 | `INV-B2B-GUARDS` | — | OK `b2b-order-success` | OK `order-summary-guard`, `b2b-order-success` | — |
 | `INV-B2B-SAVED-ADDRESS` | — | — | OK `order-summary-saved-address` | — |

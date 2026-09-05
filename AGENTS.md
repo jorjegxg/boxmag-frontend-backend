@@ -42,6 +42,8 @@ Quick-reference for AI agents working in the Boxmag monorepo. For local setup an
 
 **Customer API access:** `requireUser` middleware reads `boxmag-user-session`. Orders can also be scoped via `?email=` with `requireAdminOrUserEmail`.
 
+**Password reset:** `/forgot-password` → emailed link → `/reset-password?token=`. Only the sha256 hash is stored (`users.password_reset_token_hash`), cleared on use.
+
 ---
 
 ## Core business flows
@@ -68,8 +70,8 @@ Quick-reference for AI agents working in the Boxmag monorepo. For local setup an
 ### Admin
 
 ```
-/admin/login → /admin (hub) → /admin/orders | /admin/box-types | /admin/shipping-methods
-                              → /admin/orders/[id] | /admin/box-types/[id]/edit
+/admin/login → /admin (hub) → /admin/orders | /admin/box-types | /admin/shipping-methods | /admin/messages
+                              → /admin/orders/[id] | /admin/box-types/[id]/edit | /admin/messages/[id]
 ```
 
 - UI is in Romanian
@@ -307,6 +309,34 @@ Each section follows: **Purpose → What to expect → Key files → Backend/API
 
 ---
 
+### `/forgot-password` — Request password reset
+
+**Purpose:** Ask for a reset link by email.
+
+**What to expect:** Single email field with form / sent / error states. Backend answers `{ ok: true, exists: false }` for unknown or inactive accounts so the UI can offer registration (email enumeration is an intentional product choice, not a bug).
+
+**Key files:** `boxmag4/app/forgot-password/page.tsx`
+
+**Backend/API:** `POST /api/auth/forgot-password`
+
+**Gotchas:** Returns 500 when SMTP is not configured (`SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`). Reset link points at `${FRONTEND_BASE_URL}/reset-password?token=`.
+
+---
+
+### `/reset-password` — Set a new password
+
+**Purpose:** Consume the emailed `?token=` and set a new password.
+
+**What to expect:** Error state immediately if `?token=` is missing. Password minimum 6 characters.
+
+**Key files:** `boxmag4/app/reset-password/page.tsx`
+
+**Backend/API:** `POST /api/auth/reset-password` (`{ token, password }`)
+
+**Gotchas:** Token is single-use — the hash and expiry are cleared on success. Expiry from `RESET_PASSWORD_EXPIRES_MINUTES`.
+
+---
+
 ### `/about` — About us
 
 **Purpose:** Company information, factory image, testimonials.
@@ -475,6 +505,37 @@ Each section follows: **Purpose → What to expect → Key files → Backend/API
 
 ---
 
+### `/admin/messages` — Admin contact inbox
+
+**Purpose:** Listă mesaje trimise din formularul de contact.
+
+**What to expect:** Tabel cu status (`new` → `read` → `replied`), sortat descrescător după dată; click pe rând → detaliu.
+
+**Key files:** `boxmag4/app/admin/messages/page.tsx`, `boxmag4/app/admin/components/AdminNav.tsx`
+
+**Backend/API:** `GET /api/contact` (admin)
+
+**Gotchas:** Mesajele sunt persistate de backend, nu de ruta Next `/api/contact` (aceea doar forwardează).
+
+---
+
+### `/admin/messages/[id]` — Admin message detail and reply
+
+**Purpose:** Detaliu mesaj de contact + trimitere răspuns pe email.
+
+**What to expect:** Datele expeditorului, mesajul, selector adresă expeditor, formular răspuns.
+
+**Key files:** `boxmag4/app/admin/messages/[id]/page.tsx`
+
+**Backend/API:**
+- `GET /api/contact/:id`
+- `GET /api/contact/reply-senders`
+- `POST /api/contact/:id/reply`
+
+**Gotchas:** `GET /api/contact/:id` marchează mesajul `read` la deschidere (doar din `new`). `fromKey` acceptă doar `info` / `b2b` / `orders`. Răspunsul trimis setează `status = 'replied'` + `replied_at` / `replied_from`. Fără SMTP configurat → 503.
+
+---
+
 ### `/admin/orders/[id]` — Admin order detail
 
 **Purpose:** View and manage a single order: status, payment, send offer email, download attachment.
@@ -554,7 +615,10 @@ Route files in `boxmag-backend/src/routes/`:
 ### `/api/auth` (`auth.route.ts`)
 - `POST /login`, `POST /logout`, `POST /register`
 - `GET /verify-email?token=`
+- `POST /forgot-password`, `POST /reset-password` — password reset (sha256 token hash on `users`)
 - `GET|PUT /profile` (requires user session)
+
+Rate-limited via `authRateLimiter` in `app.ts`.
 
 ### `/api/box-types` (`box-types.route.ts`)
 - `GET /` — List active box types with images
@@ -588,6 +652,15 @@ Route files in `boxmag-backend/src/routes/`:
 ### `/api/exchange-rate` (`exchange-rate.route.ts`)
 - `GET /eur-ron` — EUR→RON rate (BNR XML, 1h cache)
 
+### `/api/contact` (`contact.route.ts`)
+- `POST /` — Public; persists a submission into `contact_messages` (called server-to-server by the Next `/api/contact` route, not by the browser)
+- `GET /` — Admin; inbox list
+- `GET /:id` — Admin; message detail
+- `GET /reply-senders` — Admin; configured sender addresses (`info` / `b2b` / `orders`)
+- `POST /:id/reply` — Admin; sends the reply email and sets `status = 'replied'`
+
+Rate-limited via `publicFormRateLimiter` in `app.ts`.
+
 **Stripe webhook** is mounted in `boxmag-backend/src/app.ts` before JSON body parser (requires raw body).
 
 ---
@@ -615,10 +688,14 @@ Schema: `boxmag-backend/db/reset_and_seed.sql` (+ ordered migrations in `boxmag-
 | `box_types`, `box_type_images`, `box_type_products`, `box_type_product_prices` | Catalog |
 | `users`, `pending_user_registrations` | Customer auth |
 | `orders`, `contacts` | B2B + B2C orders |
+| `order_offer_messages` | Offer emails sent from admin order detail |
 | `addresses` | Saved customer addresses |
 | `shipping_methods` | Checkout shipping options |
+| `contact_messages` | Contact form submissions + admin replies |
 | `newsletter_subscribers` | Newsletter |
-| `schema_migrations` | Applied migration filenames |
+| `schema_migrations` | Applied migration filenames (created by `db/migrate.sh`) |
+
+Password reset uses columns on `users` (`password_reset_token_hash`, `password_reset_expires_at`), not a separate table.
 
 **Order statuses:** `new`, `in progress`, `completed`  
 **Payment statuses:** `pending`, `paid`, `failed`
@@ -641,7 +718,7 @@ Schema: `boxmag-backend/db/reset_and_seed.sql` (+ ordered migrations in `boxmag-
 ### Don't
 
 - Commit `.next/`, `.env`, or MinIO artifacts
-- Add contact form logic to backend (it lives in Next.js `/api/contact`)
+- Move contact **email sending** to the backend — it lives in Next.js `/api/contact` (Nodemailer). That route also forwards the payload to backend `POST /api/contact` for persistence (best-effort); the admin inbox reads from the backend
 - Assume route-based i18n (`/ro/about` redirects to `/about`)
 - Break B2B flow guards on `/order-summary` or `/business/order-success`
 - Manually change payment status for Stripe orders in admin
@@ -677,6 +754,5 @@ cd boxmag4 && npx cypress run
 ## Related docs
 
 - [SOURCE_OF_TRUTH.md](SOURCE_OF_TRUTH.md) — behavioral invariants and test matrix
-- [DOCUMENTATIE_PROIECT.md](DOCUMENTATIE_PROIECT.md) — Romanian setup guide (partially outdated on tests/ports)
-- [CE_MAI_E_DE_FACUT.md](CE_MAI_E_DE_FACUT.md) — Backlog and priorities
-- [README.md](README.md) — Docker dev bind-mount setup
+- [DOCUMENTATIE_PROIECT.md](DOCUMENTATIE_PROIECT.md) — Romanian setup guide (env, Docker, local run)
+- [README.md](README.md) — Docker production vs dev bind-mount setup

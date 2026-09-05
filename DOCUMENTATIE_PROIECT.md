@@ -24,7 +24,10 @@ La nivel de infrastructura locala, proiectul foloseste:
 - `docker-compose.yml` - MySQL + MinIO (+ backend/frontend cu profilul `app`).
 - `boxmag-backend/Dockerfile`, `boxmag4/Dockerfile` - imagini production pentru API si Next.js.
 - `.env.example` - variabile de mediu pentru frontend, backend, DB, SMTP, MinIO.
-- `README.md` (root) - momentan minimal.
+- `README.md` (root) - rulare cu Docker (productie vs. development).
+- `AGENTS.md`, `SOURCE_OF_TRUTH.md` - harta aplicatiei si comportamentul asteptat.
+- `scripts/` - deploy, reset DB, smoke HTTP.
+- `.github/workflows/` - CI (teste) si deploy.
 
 ---
 
@@ -32,7 +35,7 @@ La nivel de infrastructura locala, proiectul foloseste:
 
 ### Frontend (`boxmag4`)
 
-- Next.js (App Router)
+- Next.js 16 (App Router)
 - React 19
 - TypeScript
 - Tailwind CSS
@@ -41,16 +44,20 @@ La nivel de infrastructura locala, proiectul foloseste:
 
 ### Backend (`boxmag-backend`)
 
-- Node.js + Express
+- Node.js + Express 5
 - TypeScript
 - mysql2 (pool DB)
 - multer (upload)
 - MinIO SDK (object storage)
+- Stripe (plati B2C)
+- Nodemailer (emailuri tranzactionale)
 
 ### Alte integrari
 
-- SMTP/Nodemailer pentru formularul de contact.
-- `jsvat` pentru validare TVA in endpoint-ul de contact.
+- SMTP/Nodemailer pentru contact, verificare email, reset parola, notificari comenzi.
+- `jsvat` + VIES/ANAF pentru validare TVA (`boxmag4/app/api/vat-lookup`).
+- Stripe Checkout + webhook pentru platile B2C.
+- BNR (XML) pentru cursul EUR/RON.
 
 ---
 
@@ -62,7 +69,9 @@ Variabilele principale sunt in `.env.example`:
 - Taxe: `TAX_PERCENT`, `NEXT_PUBLIC_TAX_PERCENT`
 - DB: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
 - Docker DB bootstrap: `MYSQL_PORT`, `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`
-- SMTP: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `CONTACT_TO`
+- SMTP: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`, `CONTACT_TO`, `ORDERS_NOTIFICATION_TO`
+- Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_SUCCESS_URL`, `STRIPE_CANCEL_URL`, `STRIPE_CURRENCY`
+- Auth: `ADMIN_PASSWORD`, `ADMIN_API_TOKEN`, `USER_SESSION_SECRET`, `FRONTEND_BASE_URL`
 - MinIO: `MINIO_ENDPOINT`, `MINIO_PORT_API`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_BUCKET_NAME`, `MINIO_PUBLIC_BASE_URL`
 
 ---
@@ -87,139 +96,71 @@ Porturi uzuale observate:
 
 ---
 
-## 6) Frontend - pagini si fluxuri
+## 6) Comportament, pagini si API
 
-### Pagini principale
+Acest fisier acopera **doar setup-ul**. Pentru restul, sursele autoritative sunt:
 
-- Home: `boxmag4/app/page.tsx`
-- Shop: `boxmag4/app/shop/page.tsx`
-- Corrugated envelopes: `boxmag4/app/corrugated-envelopes/page.tsx`
-- Business (configurator B2B): `boxmag4/app/business/page.tsx`
-- Order summary: `boxmag4/app/order-summary/page.tsx`
-- Checkout: `boxmag4/app/checkout/page.tsx`
-- Contact: `boxmag4/app/contact/page.tsx`
-- Account/Registration: `boxmag4/app/account/page.tsx`, `boxmag4/app/registration/page.tsx`
-- Pagini informative: `about`, `delivery`, `how-to-buy`, `regulations`, `privacy-policy`, `complaints-and-returns`
+- [SOURCE_OF_TRUTH.md](SOURCE_OF_TRUTH.md) - comportamentul asteptat al produsului: invariante `INV-*`,
+  fluxuri canonice (B2C, B2B, auth, password reset, admin) si matricea invarianta -> test.
+- [AGENTS.md](AGENTS.md) - harta de navigare: fiecare pagina (scop, fisiere cheie, API, capcane),
+  rutele Next.js `app/api/*`, rutele backend `/api/*`, store-urile Zustand si tabelele MySQL.
+- [README.md](README.md) - rulare cu Docker (productie vs. override de development).
 
-### Layout si sectiuni globale
-
-- Layout global: `boxmag4/app/layout.tsx`
-- Componente globale: `boxmag4/app/global/components/*`
-- Internationalizare de baza: `boxmag4/app/i18n/*` + `boxmag4/middleware.ts`
-
-### State management (frontend)
-
-- Cart: `boxmag4/app/stores/cart_store.ts`
-- Tabele e-commerce: `boxmag4/app/stores/table_e_commerce_store.ts`
-- Business flow: `boxmag4/app/business/store/business_store.ts`
-- Draft comanda business: `boxmag4/app/stores/business_order_store.ts`
+Nu duplica fluxurile aici; la conflict castiga codul + `SOURCE_OF_TRUTH.md`.
 
 ---
 
-## 7) Zona admin
+## 7) Baza de date
 
-- Dashboard admin: `boxmag4/app/admin/page.tsx`
-- Editare box type: `boxmag4/app/admin/box-types/[id]/edit/page.tsx`
-- Store admin: `boxmag4/app/admin/use-admin-box-types-store.ts`
+- Schema + seed pentru DB locala noua: `boxmag-backend/db/reset_and_seed.sql`
+- Migratii numerotate, aplicate in ordine: `boxmag-backend/db/migrations/` (`npm run db:migrate`)
+- Imagini demo in MinIO: `boxmag-backend/db/seed_minio_images.js`
 
-Capabilitati actuale:
+Orice schimbare de schema = fisier nou in `migrations/` + oglindire in `reset_and_seed.sql`.
 
-- Vizualizare comenzi.
-- Update status comenzi.
-- CRUD partial pentru box types/produse/preturi.
-- Upload imagine produs (prin backend, stocat in MinIO).
+**Atentie:** `reset_and_seed.sql` / `db:reset` sunt doar pentru local/dev. Scripturile refuza
+`NODE_ENV=production` fara `ALLOW_PROD_WIPE=1`.
 
 ---
 
-## 8) Backend - API si servicii
+## 8) Testare
 
-### Fisiere de baza
+| Unde | Framework | Comanda |
+|------|-----------|---------|
+| `boxmag-backend/src/__tests__/` | Vitest + Supertest | `cd boxmag-backend && npm test` |
+| `boxmag4/lib/__tests__/` | Vitest + RTL | `cd boxmag4 && npm test` |
+| `boxmag4/cypress/e2e/` | Cypress | `cd boxmag4 && npm run cypress:run` |
+| Smoke HTTP | bash | `npm run smoke` (din root) |
 
-- Entry/server: `boxmag-backend/src/server.ts`
-- App init + middleware: `boxmag-backend/src/app.ts`
-- Config env: `boxmag-backend/src/config/env.ts`
-- DB pool: `boxmag-backend/src/db/mysql.ts`
-- MinIO service: `boxmag-backend/src/services/minio.ts`
-
-### Rute
-
-- Health: `boxmag-backend/src/routes/health.route.ts`
-- Box types + produse + preturi + upload: `boxmag-backend/src/routes/box-types.route.ts`
-- Orders + update status: `boxmag-backend/src/routes/orders.route.ts`
-
-### Baza de date
-
-Schema + seed:
-
-- `boxmag-backend/db/reset_and_seed.sql`
-- `boxmag-backend/db/reset_and_seed.sh`
-- `boxmag-backend/db/seed_minio_images.js`
-
-Entitati principale:
-
-- `box_types`
-- `box_type_products`
-- `box_type_product_prices`
-- `orders`
-- `contacts`
+Ambele suite unit din root: `npm test`.
+CI: `.github/workflows/test.yml` (PR) si `.github/workflows/deploy.yml` (deploy pe `main`).
 
 ---
 
-## 9) API intern si comunicare frontend-backend
+## 9) Comenzi utile
 
-Frontend-ul face request-uri catre:
+### Root
 
-- `${NEXT_PUBLIC_BACKEND_URL}/api/box-types...`
-- `${NEXT_PUBLIC_BACKEND_URL}/api/orders...`
+- `npm test` - unit backend + frontend
+- `npm run smoke` - smoke HTTP pe serviciile pornite
+- `npm run reset:db` - reset DB locala
+- `npm run optimize:images`
 
-Formularul de contact foloseste un endpoint Next local:
+### Frontend (`boxmag4`)
 
-- `boxmag4/app/api/contact/route.ts`
+- `npm run dev` (port 3006), `npm run build`, `npm run start`, `npm run lint`
+- `npm test`, `npm run cypress:open`, `npm run cypress:run`
 
-Acest endpoint trimite email prin SMTP.
+### Backend (`boxmag-backend`)
 
----
-
-## 10) Testing si calitate
-
-- Nu exista in prezent o suita standard de teste automate (Jest/Vitest/Playwright) configurata la nivel principal.
-- Exista doar cod de test punctual in `boxmag4/app/test/test.tsx`.
-
----
-
-## 11) Observatii importante (stare actuala)
-
-- Exista fisiere de runtime `.next` neversionabile in working tree (artefacte dev).
-- README-urile curente nu reflecta complet setup-ul real al proiectului.
-- Exista nealiniere intre unele valori documentate si configuratia efectiva (ex. port backend in README backend vs `.env.example`).
+- `npm run dev`, `npm run build`, `npm run start`, `npm run check`
+- `npm test`
+- `npm run db:migrate`, `npm run db:reset`, `npm run db:seed:images`
 
 ---
 
-## 12) Comenzi utile
+## 10) Deploy
 
-### Frontend (`boxmag4/package.json`)
-
-- `npm run dev`
-- `npm run build`
-- `npm run start`
-- `npm run lint`
-
-### Backend (`boxmag-backend/package.json`)
-
-- `npm run dev`
-- `npm run build`
-- `npm run start`
-- `npm run check`
-- `npm run db:reset`
-- `npm run db:seed:images`
-
----
-
-## 13) Recomandare de documentare ulterioara
-
-Pentru onboarding mai rapid, urmatorii pasi utili:
-
-- completare `README.md` din root cu setup complet end-to-end;
-- exemplu clar de flux B2B (de la selectare box pana la order submit);
-- documentatie endpoint-uri API (request/response examples);
-- clarificare strategii de auth/admin pentru productie.
+Redeploy productie: **doar** [`scripts/deploy.sh`](scripts/deploy.sh) (direct sau via GitHub Actions).
+Scriptul ruleaza migratiile (`db:migrate`) inainte de restart. Nu rula `docker-compose.dev.yml` pe VPS-ul public
+(vezi [README.md](README.md)).

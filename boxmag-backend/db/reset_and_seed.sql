@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS box_type_product_prices;
 DROP TABLE IF EXISTS box_type_images;
 DROP TABLE IF EXISTS box_type_products;
 DROP TABLE IF EXISTS newsletter_subscribers;
+DROP TABLE IF EXISTS order_offer_messages;
 DROP TABLE IF EXISTS contact_messages;
 DROP TABLE IF EXISTS pending_user_registrations;
 DROP TABLE IF EXISTS contacts;
@@ -245,6 +246,18 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY idx_contact_messages_created_at (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS order_offer_messages (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_id INT UNSIGNED NOT NULL,
+  from_key VARCHAR(64) NULL,
+  from_email VARCHAR(255) NULL,
+  message TEXT NULL,
+  sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_order_offer_messages_order_id (order_id),
+  CONSTRAINT fk_order_offer_messages_order
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
 INSERT INTO box_types (id, title, `key`, is_active)
