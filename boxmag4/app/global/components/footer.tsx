@@ -12,9 +12,9 @@ export function Footer() {
 
   return (
     <footer className="w-full bg-[#f36a45] text-white ">
-      <div className="mx-auto px-6 lg:px-20 pt-10 pb-6 relative overflow-hidden">
-        {/* Lion illustration on the left */}
-        <div className="absolute inset-y-0 left-0 w-40 lg:w-56 opacity-80 pointer-events-none select-none">
+      <div className="mx-auto px-6 md:pl-48 lg:pl-64 lg:pr-20 pt-10 pb-6 relative overflow-hidden">
+        {/* Lion illustration on the left; content is padded past it so text never overlaps */}
+        <div className="absolute inset-y-0 left-0 hidden md:block w-40 lg:w-56 opacity-80 pointer-events-none select-none">
           <Image
             src="/svgs/footer_lion.svg"
             alt="Lion illustration"
