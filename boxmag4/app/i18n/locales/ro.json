@@ -638,6 +638,8 @@
   "business.message": "Mesaj",
   "business.enterMessageHere": "Introdu mesajul aici...",
   "business.needMoreInfo": "Ai nevoie de mai multe informații?",
+  "business.contactUs": "Contactează-ne:",
+  "business.hours": "Lun–Vin 08:00–16:30",
   "business.step": "PAS",
   "business.steps.chooseBoxType": "Alege tipul\ncutiei",
   "business.steps.setParameters": "Setează\nparametrii",

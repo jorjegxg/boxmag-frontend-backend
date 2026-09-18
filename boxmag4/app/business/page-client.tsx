@@ -14,20 +14,18 @@ import { MyInputField } from "./components/MyInputField";
 import Quantity from "./components/Quantity";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Checkbox } from "@/components/ui/checkbox";
-import Image from "next/image";
 import { B2b } from "../global/components/b2b";
 import { ServicesSection } from "../global/components/services-section";
 import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
-import { FaEnvelope, FaPhoneAlt, FaClock } from "react-icons/fa";
 import { Bar } from "./components/Bar";
+import { B2bProfessionalsSection } from "./components/B2bProfessionalsSection";
 import { useRouter, useSearchParams } from "next/navigation";
 import useBusinessStore from "./store/business_store";
 import useBusinessOrderStore from "../stores/business_order_store";
 import { useNotification } from "../global/components/notification-center";
 import { getBackendBaseUrl } from "../../lib/backend-url";
 import { isDevelopmentAppEnv } from "../../lib/app-env";
-import { siteEmails } from "../../lib/site-emails";
 import { useLanguage } from "../i18n/language-context";
 
 const MAX_ATTACHMENT_BYTES = 18 * 1024 * 1024;
@@ -482,55 +480,7 @@ const BussinessPage = () => {
         <Pt16 />
       </ResponsiveLayoutWithPadding>
 
-      {/* Custom B2B Professionals section */}
-      <section className="w-full bg-my-blue py-4 px-6 lg:px-20">
-        <div className="max-w-4xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-5 lg:gap-8">
-          <div className="flex items-center gap-3 text-center lg:text-left">
-            <div className="shrink-0 bg-my-yellow rounded-xl h-10 w-10 lg:h-11 lg:w-11 flex items-center justify-center shadow-md border-2 border-white/30">
-              <Image
-                src="/svgs/shake_hands.svg"
-                alt=""
-                width={22}
-                height={22}
-                className="w-5 h-5 lg:w-6 lg:h-6"
-              />
-            </div>
-            <div>
-              <h2 className="text-white text-base lg:text-lg font-normal uppercase tracking-wide">
-                B2B <span className="font-bold">{t("b2b.professionals")}</span>
-              </h2>
-              <p className="text-white/95 text-xs lg:text-sm mt-0.5">
-                {t("b2b.tagline")}
-              </p>
-            </div>
-          </div>
-          <div className="lg:border-l lg:border-white/20 lg:pl-8 flex flex-col items-center lg:items-start text-center lg:text-left">
-            <p className="text-my-yellow font-semibold text-sm lg:text-base mb-2">
-              {t("business.needMoreInfo")}
-            </p>
-            <div className="space-y-1.5 text-white text-sm">
-              <a
-                href={`mailto:${siteEmails.b2b}`}
-                className="flex items-center justify-center lg:justify-start gap-3 hover:text-my-yellow transition-colors"
-              >
-                <FaEnvelope className="w-4 h-4 text-my-yellow shrink-0" />
-                <span>{siteEmails.b2b}</span>
-              </a>
-              <a
-                href="tel:+40799553345"
-                className="flex items-center justify-center lg:justify-start gap-3 hover:text-my-yellow transition-colors"
-              >
-                <FaPhoneAlt className="w-4 h-4 text-my-yellow shrink-0" />
-                <span>+40 799 553 345</span>
-              </a>
-              <div className="flex items-center justify-center lg:justify-start gap-3">
-                <FaClock className="w-4 h-4 text-my-yellow shrink-0" />
-                <span>MO-FRI 08:00 - 16:30</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <B2bProfessionalsSection />
 
       <ServicesSection />
       <HaveAQuestion />

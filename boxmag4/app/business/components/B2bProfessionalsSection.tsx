@@ -3,8 +3,11 @@
 import Image from "next/image";
 import { FaEnvelope, FaPhoneAlt, FaClock } from "react-icons/fa";
 import { siteEmails } from "../../../lib/site-emails";
+import { useLanguage } from "../../i18n/language-context";
 
 export function B2bProfessionalsSection() {
+  const { t } = useLanguage();
+
   return (
     <section className="w-full bg-my-blue py-4 px-6 lg:px-20">
       <div className="max-w-4xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-5 lg:gap-8">
@@ -20,35 +23,35 @@ export function B2bProfessionalsSection() {
           </div>
           <div>
             <h2 className="text-white text-base lg:text-lg font-normal uppercase tracking-wide">
-              B2B <span className="font-bold">Professionals</span>
+              B2B <span className="font-bold">{t("b2b.professionals")}</span>
             </h2>
             <p className="text-white/95 text-xs lg:text-sm mt-0.5">
-              Step By Step To The Best Offer
+              {t("b2b.tagline")}
             </p>
           </div>
         </div>
         <div className="lg:border-l lg:border-white/20 lg:pl-8 flex flex-col items-center lg:items-start text-center lg:text-left">
-          <p className="text-my-yellow font-semibold text-sm lg:text-base mb-2">
-            Do you need more informations?
+          <p className="text-my-yellow font-semibold text-sm lg:text-base mb-1.5">
+            {t("business.needMoreInfo")} {t("business.contactUs")}
           </p>
-          <div className="space-y-1.5 text-white text-sm">
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-1.5 text-white text-sm">
             <a
               href={`mailto:${siteEmails.b2b}`}
-              className="flex items-center justify-center lg:justify-start gap-3 hover:text-my-yellow transition-colors"
+              className="flex items-center gap-2 whitespace-nowrap hover:text-my-yellow transition-colors"
             >
               <FaEnvelope className="w-4 h-4 text-my-yellow shrink-0" />
               <span>{siteEmails.b2b}</span>
             </a>
             <a
               href="tel:+40799553345"
-              className="flex items-center justify-center lg:justify-start gap-3 hover:text-my-yellow transition-colors"
+              className="flex items-center gap-2 whitespace-nowrap hover:text-my-yellow transition-colors"
             >
               <FaPhoneAlt className="w-4 h-4 text-my-yellow shrink-0" />
               <span>+40 799 553 345</span>
             </a>
-            <div className="flex items-center justify-center lg:justify-start gap-3">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <FaClock className="w-4 h-4 text-my-yellow shrink-0" />
-              <span>MO-FRI 08:00 - 16:30</span>
+              <span>{t("business.hours")}</span>
             </div>
           </div>
         </div>

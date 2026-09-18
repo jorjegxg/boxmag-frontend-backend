@@ -638,6 +638,8 @@
   "business.message": "Nachricht",
   "business.enterMessageHere": "Nachricht hier eingeben...",
   "business.needMoreInfo": "Benötigen Sie weitere Informationen?",
+  "business.contactUs": "Kontaktieren Sie uns:",
+  "business.hours": "Mo–Fr 08:00–16:30",
   "business.step": "SCHRITT",
   "business.steps.chooseBoxType": "Boxtyp\nauswählen",
   "business.steps.setParameters": "Parameter\nfestlegen",
