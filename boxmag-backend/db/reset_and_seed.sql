@@ -262,14 +262,14 @@ CREATE TABLE IF NOT EXISTS order_offer_messages (
 
 INSERT INTO box_types (id, title, `key`, is_active)
 VALUES
-  (1, 'Boxfix, E-commerce Boxes Fefco 703 - B Wave', 'boxfix-fefco-703-b-wave', 1),
+  (1, 'BoxFix, E-commerce Boxes Fefco 703', 'boxfix-fefco-703-b-wave', 1),
   (2, 'Flaps Box - Fefco 201', 'flaps-box-fefco-201', 1),
-  (3, 'Shipping Box With Tape And Tear Strip - Fefco 427 (Size: 343X245X47 mm) - B Wave', 'shipping-box-tape-tear-strip-fefco-427', 1),
-  (4, 'Shipping Box - Fefco 427 (Size: 343X245X47 mm) - B Wave', 'shipping-box-fefco-427', 1),
-  (5, 'Footwear shipping box - Boxfix (Size: 350x255x135 mm) - B Wave', 'footwear-shipping-box-boxfix', 1),
-  (6, 'Flat Box (Size: 220x155x39 mm, A5 - DIN)', 'flat-box-a5-din', 1),
-  (7, 'Pizza Box (Size: 325x325x39mm) - E Wave', 'pizza-box-325x325x39-e-wave', 1),
-  (8, 'Height Adjustable Shipping Box - Fefco 710, B Wave', 'height-adjustable-shipping-box-fefco-710', 1),
+  (3, 'Shipping Box With Tape And Tear Strip - Fefco 427', 'shipping-box-tape-tear-strip-fefco-427', 1),
+  (4, 'Shipping Box - Fefco 427', 'shipping-box-fefco-427', 1),
+  (5, 'Footwear shipping box - Boxfix', 'footwear-shipping-box-boxfix', 1),
+  (6, 'Flat Box', 'flat-box-a5-din', 1),
+  (7, 'Pizza Box', 'pizza-box-325x325x39-e-wave', 1),
+  (8, 'Height Adjustable Shipping Box - Fefco 710', 'height-adjustable-shipping-box-fefco-710', 1),
   (9, 'Corrugated cardboard envelope', 'corrugated-cardboard-envelope', 1);
 
 INSERT INTO shipping_methods

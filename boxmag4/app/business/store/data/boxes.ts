@@ -4,7 +4,7 @@ const boxes: Box[] = [
   {
     id: 1,
     key: "ecommerce_boxes_fefco_703",
-    name: "Boxfix, E-commerce Boxes Fefco 703 - B Wave",
+    name: "BoxFix, E-commerce Boxes Fefco 703",
     imageUrl: "/b2b/boxes/ecommerce.png",
   },
   {
@@ -16,37 +16,37 @@ const boxes: Box[] = [
   {
     id: 3,
     key: "shipping_box_with_tape_and_tear_strip_fefco_427",
-    name: "Shipping Box With Tape And Tear Strip - Fefco 427 (Size: 343X245X47 mm) - B Wave",
+    name: "Shipping Box With Tape And Tear Strip - Fefco 427",
     imageUrl: "/b2b/boxes/tear_strip.png",
   },
   {
     id: 4,
     key: "shipping_box_fefco_427",
-    name: "Shipping Box - Fefco 427 (Size: 343X245X47 mm) - B Wave",
+    name: "Shipping Box - Fefco 427",
     imageUrl: "/b2b/boxes/felco.png",
   },
   {
     id: 5,
     key: "footwear_shipping_box_boxfix",
-    name: "Footwear shipping box - Boxfix (Size: 350x255x135 mm) - B Wave",
+    name: "Footwear shipping box - BoxFix",
     imageUrl: "/b2b/boxes/footwear.png",
   },
   {
     id: 6,
     key: "flat_box",
-    name: "Flat Box (Size: 220x155x39 mm, A5 - DIN)",
+    name: "Flat Box",
     imageUrl: "/b2b/boxes/flat_box.png",
   },
   {
     id: 7,
     key: "pizza_box",
-    name: "Pizza Box (Size: 325x325x39mm) - E Wave",
+    name: "Pizza Box",
     imageUrl: "/b2b/boxes/pizza.png",
   },
   {
     id: 8,
     key: "height_adjustable_shipping_box",
-    name: "Height Adjustable Shipping Box - Fefco 710, B Wave",
+    name: "Height Adjustable Shipping Box - Fefco 710",
     imageUrl: "/b2b/boxes/adjustable.png",
   },
 ];
