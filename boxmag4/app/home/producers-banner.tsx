@@ -19,9 +19,8 @@ export default function ProducersBanner() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              REKOPACKAGING
-            </a>{" "}
-            {t("home.producersBanner.rekoAfter")}
+              Reko Packaging SRL
+            </a>
           </span>
         </div>
         <div className="shrink-0 w-28 md:w-36">
