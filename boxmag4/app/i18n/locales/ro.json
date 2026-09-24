@@ -925,5 +925,14 @@
   "resetPassword.expired": "Linkul de resetare este invalid sau a expirat. Te rugăm să soliciți unul nou.",
   "resetPassword.tryAgain": "Nu am putut reseta parola acum. Te rugăm să încerci din nou.",
   "resetPassword.goToSignIn": "Mergi la autentificare",
-  "resetPassword.backHome": "Înapoi acasă"
+  "resetPassword.backHome": "Înapoi acasă",
+  "boxTypes.boxfix-fefco-703-b-wave": "Cutii e-commerce cu bandă de închidere (Fefco 703)",
+  "boxTypes.flaps-box-fefco-201": "Cutii clasice (Fefco 201)",
+  "boxTypes.shipping-box-tape-tear-strip-fefco-427": "Cutii de expediere cu autoadeziv (Fefco 427)",
+  "boxTypes.shipping-box-fefco-427": "Cutii de expediere (Fefco 427)",
+  "boxTypes.footwear-shipping-box-boxfix": "Cutii de încălțăminte",
+  "boxTypes.flat-box-a5-din": "Cutii de carton pliate",
+  "boxTypes.pizza-box-325x325x39-e-wave": "Cutii pizza",
+  "boxTypes.height-adjustable-shipping-box-fefco-710": "Cutii cu înălțime reglabilă (Fefco 710)",
+  "boxTypes.corrugated-cardboard-envelope": "Plicuri de expediție"
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaBars, FaSearch, FaTimes } from "react-icons/fa";
 import { useLanguage } from "../../i18n/language-context";
+import { boxTypeTitle } from "../../i18n/box-type-title";
 import { useCurrency } from "../../currency/currency-context";
 import { useCartStore } from "../../stores/cart_store";
 import { getBackendBaseUrl } from "../../../lib/backend-url";
@@ -172,7 +173,9 @@ export function Header() {
           (type) => type.isActive,
         );
         const matchingTypes = activeTypes.filter((type) =>
-          type.title.toLowerCase().includes(trimmedQuery.toLowerCase()),
+          [type.title, boxTypeTitle(t, type.key, type.title)].some((title) =>
+            title.toLowerCase().includes(trimmedQuery.toLowerCase()),
+          ),
         );
 
         const productResponses = await Promise.all(
@@ -241,7 +244,7 @@ export function Header() {
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [backendBaseUrl, query]);
+  }, [backendBaseUrl, query, t]);
 
   return (
     <header className="w-full border-b border-my-light-gray bg-white">
@@ -278,7 +281,7 @@ export function Header() {
                         className="block rounded px-2 py-1.5 text-sm text-black hover:bg-gray-100"
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        {type.title}
+                        {boxTypeTitle(t, type.key, type.title)}
                       </Link>
                     </li>
                   ))}
@@ -352,7 +355,7 @@ export function Header() {
                               className="block rounded px-2 py-1.5 text-sm text-black hover:bg-gray-100"
                               onClick={() => setIsDropdownOpen(false)}
                             >
-                              {type.title}
+                              {boxTypeTitle(t, type.key, type.title)}
                             </Link>
                           </li>
                         ))}
@@ -376,7 +379,7 @@ export function Header() {
                                 className="block rounded px-2 py-1.5 text-sm text-black hover:bg-gray-100"
                                 onClick={() => setIsDropdownOpen(false)}
                               >
-                                {type.title}
+                                {boxTypeTitle(t, type.key, type.title)}
                               </Link>
                             </li>
                           ))}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "../i18n/language-context";
+import { boxTypeTitle } from "../i18n/box-type-title";
 import { useCurrency } from "../currency/currency-context";
 import { FaCheck, FaShoppingCart } from "react-icons/fa";
 import { useCartStore } from "../stores/cart_store";
@@ -247,7 +248,7 @@ function ShopPageContent() {
                       : "border-my-light-gray text-black hover:bg-gray-50"
                   }`}
                 >
-                  {type.title}
+                  {boxTypeTitle(t, type.key, type.title)}
                 </Link>
               ))}
             </div>
@@ -287,15 +288,15 @@ function ShopPageContent() {
                       <div className="mb-4 h-44 w-full shrink-0 overflow-hidden rounded-lg bg-my-light-gray2">
                         <img
                           src={imageUrl}
-                          alt={boxType?.title ?? product.productName}
+                          alt={boxType ? boxTypeTitle(t, boxType.key, boxType.title) : product.productName}
                           className="h-full w-full object-contain"
                         />
                       </div>
                       <p
                         className="line-clamp-2 min-h-8 text-xs uppercase leading-snug tracking-wide text-gray-500"
-                        title={boxType?.title ?? t("shop.boxTypeFallback")}
+                        title={boxType ? boxTypeTitle(t, boxType.key, boxType.title) : t("shop.boxTypeFallback")}
                       >
-                        {boxType?.title ?? t("shop.boxTypeFallback")}
+                        {boxType ? boxTypeTitle(t, boxType.key, boxType.title) : t("shop.boxTypeFallback")}
                       </p>
                       <h2
                         className="mt-1 line-clamp-2 min-h-12 text-base font-semibold leading-snug text-black"

@@ -4,8 +4,11 @@ import ContentLoader from "react-content-loader";
 import { PrductCard } from "./ProductCard";
 import useBusinessStore from "../store/business_store";
 import MyGrid from "./MyGrid";
+import { useLanguage } from "../../i18n/language-context";
+import { boxTypeTitle } from "../../i18n/box-type-title";
 
 export default function GridOfBoxes() {
+  const { t } = useLanguage();
   const boxes = useBusinessStore((state) => state.boxes);
   const confirmBox = useBusinessStore((state) => state.confirmBox);
   const isLoadingBoxes = useBusinessStore((state) => state.isLoadingBoxes);
@@ -42,7 +45,7 @@ export default function GridOfBoxes() {
       {boxes.map((box) => (
         <PrductCard
           key={box.id}
-          title={box.name}
+          title={boxTypeTitle(t, box.slug, box.name)}
           id={box.id}
           imageUrl={box.imageUrl}
           isSelected={box.isSelected}

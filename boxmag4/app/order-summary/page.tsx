@@ -13,6 +13,7 @@ import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import useBusinessStore from "../business/store/business_store";
 import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { useLanguage } from "../i18n/language-context";
+import { boxTypeTitle } from "../i18n/box-type-title";
 import useBusinessOrderStore from "../stores/business_order_store";
 import { useNotification } from "../global/components/notification-center";
 import europeanCountries from "./european-countries.json";
@@ -480,7 +481,7 @@ export default function OrderSummaryPage() {
   }, [hasRequiredOrderData, router, submitSucceeded]);
 
   const orderRows = [
-    { label: t("orderSummary.boxType"), value: selectedBox?.name ?? "—" },
+    { label: t("orderSummary.boxType"), value: selectedBox ? boxTypeTitle(t, selectedBox.slug, selectedBox.name) : "—" },
     { label: t("orderSummary.cardboardType"), value: selectedType?.name ?? "—" },
     { label: t("orderSummary.cardboardColour"), value: selectedColor?.name ?? "—" },
     {

@@ -46,6 +46,7 @@ const useBusinessStore = create<BusinessState>((set) => ({
                 data?: Array<{
                     id: number;
                     title: string;
+                    key: string;
                     isActive: boolean;
                     images: Array<{ url: string; isPrimary: boolean }>;
                 }>;
@@ -61,6 +62,7 @@ const useBusinessStore = create<BusinessState>((set) => ({
                     id: box.id,
                     key: String(box.id),
                     name: box.title,
+                    slug: box.key,
                     imageUrl:
                         box.images.find((image) => image.isPrimary)?.url ??
                         box.images[0]?.url ??

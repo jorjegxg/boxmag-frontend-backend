@@ -3,6 +3,8 @@ export type Box = {
   key: string;
   name: string;
   imageUrl: string;
+  /** Backend box type slug, used for localized titles. */
+  slug?: string;
 };
 export type BoxState = {
     isSelected?: boolean;
