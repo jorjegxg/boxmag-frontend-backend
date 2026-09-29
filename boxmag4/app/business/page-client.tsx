@@ -209,10 +209,10 @@ const BussinessPage = () => {
         </div>
       </section>
 
-      <div className="pt-8 md:pt-12 lg:pt-16" />
+      <div className="pt-6 md:pt-8" />
       <ResponsiveLayoutWithPadding>
         <Bar />
-        <Pt16 />
+        <SectionGap />
 
         <div id="section-box-type">
           <RedTitle title={t("business.selectBoxType")} />
@@ -220,7 +220,7 @@ const BussinessPage = () => {
         {errors.boxType ? (
           <p className="mt-3 text-sm text-red-600">{errors.boxType}</p>
         ) : null}
-        <Pt16 />
+        <TitleGap />
         <div id="section-box-type-cards">
           {boxesError ? (
             <p className="text-sm text-red-600">
@@ -229,7 +229,7 @@ const BussinessPage = () => {
           ) : null}
           <GridOfBoxes />
         </div>
-        <Pt16 />
+        <SectionGap />
 
         <div id="section-cardboard-type">
           <RedTitle title={t("business.selectCardboardType")} />
@@ -237,11 +237,11 @@ const BussinessPage = () => {
         {errors.cardboardType ? (
           <p className="mt-3 text-sm text-red-600">{errors.cardboardType}</p>
         ) : null}
-        <Pt16 />
+        <TitleGap />
         <div id="section-cardboard-type-cards">
           <CarboardType />
         </div>
-        <Pt16 />
+        <SectionGap />
 
         <div id="section-cardboard-color">
           <RedTitle title={t("business.selectCardboardColor")} />
@@ -249,11 +249,11 @@ const BussinessPage = () => {
         {errors.cardboardColor ? (
           <p className="mt-3 text-sm text-red-600">{errors.cardboardColor}</p>
         ) : null}
-        <Pt16 />
+        <TitleGap />
         <div id="section-cardboard-color-cards">
           <CarboardColors />
         </div>
-        <Pt16 />
+        <SectionGap />
 
         <div id="section-box-print">
           <RedTitle title={t("business.boxPrint")} />
@@ -261,11 +261,11 @@ const BussinessPage = () => {
         {errors.boxPrint ? (
           <p className="mt-3 text-sm text-red-600">{errors.boxPrint}</p>
         ) : null}
-        <Pt16 />
+        <TitleGap />
         <div id="section-box-print-cards">
           <BoxPrintButtons />
         </div>
-        <Pt16 />
+        <SectionGap />
 
         <div id="section-size-type">
           <RedTitle title={t("business.typeOfSizes")} />
@@ -273,16 +273,16 @@ const BussinessPage = () => {
         {errors.sizeType ? (
           <p className="mt-3 text-sm text-red-600">{errors.sizeType}</p>
         ) : null}
-        <Pt16 />
+        <TitleGap />
         <div id="section-size-type-cards">
           <TypeOfSizes />
         </div>
-        <Pt16 />
+        <SectionGap />
 
         <div id="section-box-size">
           <RedTitle title={t("business.boxSize")} />
         </div>
-        <Pt16 />
+        <TitleGap />
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-x-8">
           <MyInputField
             text={t("business.lengthMm")}
@@ -315,7 +315,7 @@ const BussinessPage = () => {
             error={errors.height}
           />
         </div>
-        <Pt16 />
+        <SectionGap />
 
         <div id="section-transport">
           <RedTitle title={t("business.transport")} />
@@ -323,24 +323,24 @@ const BussinessPage = () => {
         {errors.transport ? (
           <p className="mt-3 text-sm text-red-600">{errors.transport}</p>
         ) : null}
-        <Pt16 />
+        <TitleGap />
         <TransportOptions />
 
-        <Pt16 />
+        <SectionGap />
 
         <div id="section-quantity">
           <RedTitle title={t("business.quantity")} />
         </div>
-        <Pt16 />
+        <TitleGap />
         <Quantity
           quantity={quantity}
           onQuantityChange={setQuantity}
           quantityError={errors.quantity}
         />
-        <Pt16 />
+        <SectionGap />
 
         <RedTitle title={t("business.attachment")} />
-        <Pt16 />
+        <TitleGap />
         <div className="w-full max-w-md">
           <label
             htmlFor="pdf"
@@ -425,12 +425,12 @@ const BussinessPage = () => {
           ) : null}
         </div>
 
-        <Pt16 />
+        <SectionGap />
 
         <div id="section-message">
           <RedTitle title={t("business.message")} />
         </div>
-        <Pt16 />
+        <TitleGap />
         <textarea
           className="w-full min-h-48 sm:min-h-60 p-3 rounded-lg border border-gray-300 bg-white text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red resize-y"
           placeholder={t("business.enterMessageHere")}
@@ -441,7 +441,7 @@ const BussinessPage = () => {
         {errors.message ? (
           <p className="mt-2 text-sm text-red-600">{errors.message}</p>
         ) : null}
-        <Pt16 />
+        <SectionGap />
 
         <div id="section-terms">
           <FieldGroup className="mx-auto">
@@ -463,7 +463,7 @@ const BussinessPage = () => {
             <p className="mt-2 text-sm text-red-600">{errors.terms}</p>
           ) : null}
         </div>
-        <Pt16 />
+        <SectionGap />
 
         <div className="flex justify-start">
           <button
@@ -477,7 +477,7 @@ const BussinessPage = () => {
             <span aria-hidden>→</span>
           </button>
         </div>
-        <Pt16 />
+        <SectionGap />
       </ResponsiveLayoutWithPadding>
 
       <B2bProfessionalsSection />
@@ -488,8 +488,12 @@ const BussinessPage = () => {
     </div>
   );
 
-  function Pt16() {
-    return <div className="pt-8 md:pt-12 lg:pt-16" />;
+  function SectionGap() {
+    return <div className="pt-5 md:pt-6" />;
+  }
+
+  function TitleGap() {
+    return <div className="pt-4 md:pt-5" />;
   }
 
   function RedTitle({
