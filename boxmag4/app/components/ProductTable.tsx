@@ -185,47 +185,90 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                     );
                   })}
 
-                  <td className="min-w-[220px] px-3 py-2.5">
-                    <div className="mx-auto flex w-full max-w-[240px] flex-col gap-1.5">
-                      <p className="text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                        {t("productTable.quantityLabel")}
-                      </p>
-                      <div className="flex items-center justify-between gap-1.5 rounded-md border border-gray-300 bg-white px-2 py-1">
+                  <td className="min-w-[270px] px-3 py-1.5">
+                    <div className="mx-auto flex w-full max-w-[300px] flex-col gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <div
+                          role="group"
+                          aria-label={t("productTable.quantityLabel")}
+                          className="flex h-8 min-w-0 flex-1 items-center overflow-hidden rounded-md border border-gray-300 bg-white"
+                        >
+                          <button
+                            type="button"
+                            onPointerDown={(event) => {
+                              event.preventDefault();
+                              startHold(() => decrementProducts(product.itemNo));
+                            }}
+                            onPointerUp={stopHold}
+                            onPointerLeave={stopHold}
+                            onPointerCancel={stopHold}
+                            className="inline-flex h-full w-7 shrink-0 items-center justify-center border-r border-gray-300 bg-gray-50 text-gray-800 transition hover:bg-gray-100 select-none touch-none"
+                            aria-label={t("productTable.decreaseQtyAria")}
+                          >
+                            <FaMinus className="h-2.5 w-2.5" />
+                          </button>
+                          <span className="min-w-0 flex-1 text-center text-sm font-bold tabular-nums text-gray-900">
+                            {product.amountQtyInPcs}
+                          </span>
+                          <button
+                            type="button"
+                            onPointerDown={(event) => {
+                              event.preventDefault();
+                              startHold(() => incrementProducts(product.itemNo));
+                            }}
+                            onPointerUp={stopHold}
+                            onPointerLeave={stopHold}
+                            onPointerCancel={stopHold}
+                            className="inline-flex h-full w-7 shrink-0 items-center justify-center border-l border-gray-300 bg-gray-50 text-gray-800 transition hover:bg-gray-100 select-none touch-none"
+                            aria-label={t("productTable.increaseQtyAria")}
+                          >
+                            <FaPlus className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+
                         <button
                           type="button"
-                          onPointerDown={(event) => {
-                            event.preventDefault();
-                            startHold(() => decrementProducts(product.itemNo));
+                          disabled={!canAddToCart}
+                          onClick={() => {
+                            if (!canAddToCart) return;
+                            addCartItem({
+                              itemNo: product.itemNo,
+                              name: product.name,
+                              imageUrl: product.imageUrl,
+                              unitPrice: basePrice,
+                              quantity: qtyToAdd,
+                            });
+                            notify({
+                              type: "success",
+                              message: t("productTable.addedNotification").replace(
+                                "{{qty}}",
+                                String(qtyToAdd),
+                              ),
+                            });
+                            triggerAddToCartAnimation(product.itemNo);
+                            resetAmountQty(product.itemNo);
                           }}
-                          onPointerUp={stopHold}
-                          onPointerLeave={stopHold}
-                          onPointerCancel={stopHold}
-                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-gray-800 transition hover:bg-gray-100 select-none touch-none"
-                          aria-label={t("productTable.decreaseQtyAria")}
+                          className={`inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-xs font-bold transition-all duration-300 ${
+                            canAddToCart
+                              ? isAnimated
+                                ? "bg-green-600 text-white scale-[1.02]"
+                                : "bg-my-yellow text-black hover:brightness-95"
+                              : "cursor-not-allowed bg-gray-200 text-gray-500"
+                          }`}
                         >
-                          <FaMinus className="h-3 w-3" />
-                        </button>
-                        <span className="min-w-12 text-center text-base font-bold tabular-nums text-gray-900">
-                          {product.amountQtyInPcs}
-                        </span>
-                        <button
-                          type="button"
-                          onPointerDown={(event) => {
-                            event.preventDefault();
-                            startHold(() => incrementProducts(product.itemNo));
-                          }}
-                          onPointerUp={stopHold}
-                          onPointerLeave={stopHold}
-                          onPointerCancel={stopHold}
-                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-gray-800 transition hover:bg-gray-100 select-none touch-none"
-                          aria-label={t("productTable.increaseQtyAria")}
-                        >
-                          <FaPlus className="h-3 w-3" />
+                          {isAnimated ? (
+                            <FaCheck className="h-3 w-3" />
+                          ) : (
+                            <FaShoppingCart className="h-3 w-3" />
+                          )}
+                          {isAnimated
+                            ? t("productTable.addedToCart")
+                            : t("productTable.addToCart")}
                         </button>
                       </div>
 
                       {product.palletPcs > 0 ? (
-                        <div className="flex items-center gap-1.5 rounded-md border border-my-red/25 bg-my-red/5 px-1.5 py-1">
+                        <div className="flex h-7 items-center overflow-hidden rounded-md border border-my-red/25 bg-my-red/5">
                           <button
                             type="button"
                             disabled={
@@ -233,69 +276,29 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                               MIN_ORDER_QTY
                             }
                             onClick={() => removePallet(product.itemNo)}
-                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-my-red/40 bg-white text-my-red transition hover:bg-my-red/10 disabled:cursor-not-allowed disabled:opacity-40"
+                            className="inline-flex h-full w-7 shrink-0 items-center justify-center border-r border-my-red/25 bg-white text-my-red transition hover:bg-my-red/10 disabled:cursor-not-allowed disabled:opacity-40"
                             aria-label={t("productTable.removePalletAria")}
                           >
-                            <FaMinus className="h-3 w-3" />
+                            <FaMinus className="h-2.5 w-2.5" />
                           </button>
-                          <div className="min-w-0 flex-1 text-center leading-tight">
-                            <span className="block truncate text-[10px] font-semibold uppercase tracking-wide text-my-red">
+                          <span className="min-w-0 flex-1 truncate px-1 text-center text-[11px] leading-none">
+                            <span className="font-semibold uppercase tracking-wide text-my-red">
                               {t("productTable.fullPalletLabel")}
+                            </span>{" "}
+                            <span className="font-semibold tabular-nums text-gray-800">
+                              · {product.palletPcs} {t("productDemo.pcsAbbr")}
                             </span>
-                            <span className="block text-xs font-semibold tabular-nums text-gray-800">
-                              {product.palletPcs} {t("productDemo.pcsAbbr")}
-                            </span>
-                          </div>
+                          </span>
                           <button
                             type="button"
                             onClick={() => addPallet(product.itemNo)}
-                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded bg-my-red text-white transition hover:brightness-95"
+                            className="inline-flex h-full w-7 shrink-0 items-center justify-center bg-my-red text-white transition hover:brightness-95"
                             aria-label={t("productTable.addPalletAria")}
                           >
-                            <FaPlus className="h-3 w-3" />
+                            <FaPlus className="h-2.5 w-2.5" />
                           </button>
                         </div>
                       ) : null}
-
-                      <button
-                        type="button"
-                        disabled={!canAddToCart}
-                        onClick={() => {
-                          if (!canAddToCart) return;
-                          addCartItem({
-                            itemNo: product.itemNo,
-                            name: product.name,
-                            imageUrl: product.imageUrl,
-                            unitPrice: basePrice,
-                            quantity: qtyToAdd,
-                          });
-                          notify({
-                            type: "success",
-                            message: t("productTable.addedNotification").replace(
-                              "{{qty}}",
-                              String(qtyToAdd),
-                            ),
-                          });
-                          triggerAddToCartAnimation(product.itemNo);
-                          resetAmountQty(product.itemNo);
-                        }}
-                        className={`inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-md px-2.5 text-xs font-bold transition-all duration-300 ${
-                          canAddToCart
-                            ? isAnimated
-                              ? "bg-green-600 text-white scale-[1.02]"
-                              : "bg-my-yellow text-black hover:brightness-95"
-                            : "cursor-not-allowed bg-gray-200 text-gray-500"
-                        }`}
-                      >
-                        {isAnimated ? (
-                          <FaCheck className="h-3 w-3" />
-                        ) : (
-                          <FaShoppingCart className="h-3 w-3" />
-                        )}
-                        {isAnimated
-                          ? t("productTable.addedToCart")
-                          : t("productTable.addToCart")}
-                      </button>
                     </div>
                   </td>
                 </>
@@ -332,7 +335,7 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
           <th colSpan={3} className="px-3 py-2 text-center">
             {t("productTable.price")}
           </th>
-          <th rowSpan={2} className="min-w-[220px] px-3 py-2 text-center">
+          <th rowSpan={2} className="min-w-[270px] px-3 py-2 text-center">
             {t("productTable.orderColumn")}
           </th>
         </tr>
