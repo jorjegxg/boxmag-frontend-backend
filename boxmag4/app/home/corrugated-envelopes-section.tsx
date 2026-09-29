@@ -15,7 +15,7 @@ export default function CorrugatedEnvelopesSection({
     <section className="bg-white w-full py-16 px-6 lg:px-20">
       <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
         <div className="relative flex justify-center lg:justify-start order-2 lg:order-1">
-          <div className="bg-my-yellow rounded-3xl p-8 lg:p-10 w-full max-w-md aspect-4/5 flex items-center justify-center overflow-hidden">
+          <div className="bg-my-yellow rounded-3xl p-8 lg:p-10 w-full max-w-md aspect-square flex items-center justify-center overflow-hidden">
             <Image
               src="/b2b/boxes/envelope.png"
               alt="Corrugated cardboard envelopes with box form capabilities"

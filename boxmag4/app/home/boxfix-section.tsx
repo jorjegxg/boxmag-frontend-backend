@@ -39,11 +39,11 @@ export default function BoxfixSection({ onSeeNow }: { onSeeNow: () => void }) {
         </div>
 
         <div className="flex justify-center lg:justify-end">
-          <div className="bg-my-yellow rounded-3xl p-10 w-full max-w-md ">
+          <div className="bg-my-yellow rounded-3xl p-8 lg:p-10 w-full max-w-md aspect-square flex items-center justify-center overflow-hidden">
             <img
               src="/placeholders/box4.png"
               alt="Boxfix packaging"
-              className="w-full object-contain h-100"
+              className="w-full h-full object-contain"
             />
           </div>
         </div>
