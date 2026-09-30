@@ -34,6 +34,19 @@ export function classifyVatLookup(payload: VatLookupPayload): VatLookupOutcome {
   };
 }
 
+/**
+ * VAT lookup only autofills the company name: it may write when the field is
+ * empty or still holds the previous autofilled value, never over user input.
+ */
+export function shouldAutofillCompany(
+  current: string,
+  lastAutofilled: string | null,
+): boolean {
+  const value = current.trim();
+  if (!value) return true;
+  return lastAutofilled != null && value === lastAutofilled.trim();
+}
+
 const VAT_COMPANY_CACHE_KEY = "boxmag.vatCompanyCache.v1";
 
 export function normalizeVatNumber(value: string): string {

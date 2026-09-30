@@ -29,6 +29,7 @@ import {
   fetchVatLookup,
   getCachedVatCompany,
   rememberVatCompany,
+  shouldAutofillCompany,
 } from "../../lib/vat-company";
 import { getBackendBaseUrl } from "../../lib/backend-url";
 
@@ -275,7 +276,7 @@ function MyAccountTab({
   const [vatNumber, setVatNumber] = useState(profile.vatNumber);
   const [isLookingUpVat, setIsLookingUpVat] = useState(false);
   const [vatLookupError, setVatLookupError] = useState<string | null>(null);
-  const [vatManualNameRequired, setVatManualNameRequired] = useState(false);
+  const autofilledCompanyRef = useRef<string | null>(null);
   const [vatLookupInfo, setVatLookupInfo] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
@@ -299,19 +300,26 @@ function MyAccountTab({
 
   useEffect(() => {
     const normalizedVat = normalizeVatNumber(vatNumber);
+    const autofillCompanyName = (name: string | null | undefined) => {
+      const value = name?.trim() ?? "";
+      if (!value) return;
+      setCompanyName((prev) => {
+        if (!shouldAutofillCompany(prev, autofilledCompanyRef.current)) return prev;
+        autofilledCompanyRef.current = value;
+        return value;
+      });
+    };
+
     if (!VAT_NUMBER_REGEX.test(normalizedVat)) {
-      setCompanyName("");
       setVatLookupError(null);
-      setVatManualNameRequired(false);
       setVatLookupInfo(null);
       return;
     }
 
     const cachedCompany = getCachedVatCompany(normalizedVat);
     if (cachedCompany) {
-      setCompanyName(cachedCompany);
+      autofillCompanyName(cachedCompany);
       setVatLookupError(null);
-      setVatManualNameRequired(false);
       setVatLookupInfo(null);
       setIsLookingUpVat(false);
       return;
@@ -331,8 +339,6 @@ function MyAccountTab({
 
         const outcome = classifyVatLookup(payload);
         if (outcome.kind === "error") {
-          setCompanyName("");
-          setVatManualNameRequired(false);
           setVatLookupError(
             outcome.message ?? t("contact.vatLookupFailed"),
           );
@@ -340,8 +346,6 @@ function MyAccountTab({
         }
 
         if (outcome.kind === "manual_name") {
-          setCompanyName("");
-          setVatManualNameRequired(true);
           setVatLookupInfo(
             outcome.payload.lookupUnavailable
               ? t("contact.vatLookupUnavailableManualName")
@@ -354,8 +358,7 @@ function MyAccountTab({
           return;
         }
 
-        setVatManualNameRequired(false);
-        setCompanyName(outcome.payload.companyName ?? "");
+        autofillCompanyName(outcome.payload.companyName);
         setVatLookupError(null);
       } catch (error) {
         if (
@@ -364,8 +367,6 @@ function MyAccountTab({
         ) {
           return;
         }
-        setCompanyName("");
-        setVatManualNameRequired(false);
         setVatLookupError(t("contact.vatLookupFailed"));
       } finally {
         if (!isCancelled) {
@@ -524,20 +525,13 @@ function MyAccountTab({
             id="acc-company"
             type="text"
             value={companyName}
-            readOnly={!vatManualNameRequired}
-            onChange={
-              vatManualNameRequired
-                ? (e) => setCompanyName(e.target.value)
-                : undefined
-            }
+            onChange={(e) => setCompanyName(e.target.value)}
             placeholder={
               isLookingUpVat
                 ? t("contact.vatLookupLoading")
-                : vatManualNameRequired
-                  ? t("contact.companyNameManualPlaceholder")
-                  : t("contact.companyNameAuto")
+                : t("contact.companyNameManualPlaceholder")
             }
-            className={vatManualNameRequired ? inputClass : lockedInputClass}
+            className={inputClass}
             aria-busy={isLookingUpVat}
           />
           {!isLookingUpVat && vatLookupInfo ? (

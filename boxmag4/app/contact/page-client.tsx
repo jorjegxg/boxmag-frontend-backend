@@ -21,6 +21,7 @@ import {
   classifyVatLookup,
   fetchVatLookup,
   getCachedVatCompany,
+  shouldAutofillCompany,
 } from "../../lib/vat-company";
 import {
   normalizeContactCountry,
@@ -30,8 +31,6 @@ import { getBackendBaseUrl } from "../../lib/backend-url";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
-const lockedInputClass =
-  "w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-3 text-gray-600 cursor-not-allowed focus:outline-none";
 const VAT_NUMBER_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
 
 function normalizeVatNumber(value: string): string {
@@ -151,7 +150,6 @@ export default function ContactUsPage() {
   );
   const [isLookingUpVat, setIsLookingUpVat] = useState(false);
   const [vatLookupError, setVatLookupError] = useState<string | null>(null);
-  const [vatManualNameRequired, setVatManualNameRequired] = useState(false);
   const [vatLookupInfo, setVatLookupInfo] = useState<string | null>(null);
   const [email, setEmail] = useState(getDefaultContactEmail);
   const [phone, setPhone] = useState(
@@ -167,6 +165,15 @@ export default function ContactUsPage() {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const autofilledCompanyRef = useRef<string | null>(null);
+
+  const autofillCompanyName = (name: string) => {
+    setCompanyName((prev) => {
+      if (!shouldAutofillCompany(prev, autofilledCompanyRef.current)) return prev;
+      autofilledCompanyRef.current = name;
+      return name;
+    });
+  };
 
   const applyLoggedInContactDefaults = (defaults: LoggedInContactDefaults) => {
     setFirstName(defaults.firstName);
@@ -175,7 +182,8 @@ export default function ContactUsPage() {
     setPhone(defaults.phone);
     if (defaults.vatNumber) {
       setVatNumber(defaults.vatNumber);
-    } else {
+    }
+    if (defaults.companyName) {
       setCompanyName(defaults.companyName);
     }
     if (defaults.country) {
@@ -232,18 +240,15 @@ export default function ContactUsPage() {
   useEffect(() => {
     const normalizedVat = normalizeVatNumber(vatNumber);
     if (!VAT_NUMBER_REGEX.test(normalizedVat)) {
-      setCompanyName("");
       setVatLookupError(null);
-      setVatManualNameRequired(false);
       setVatLookupInfo(null);
       return;
     }
 
     const cachedCompany = getCachedVatCompany(normalizedVat);
     if (cachedCompany) {
-      setCompanyName(cachedCompany);
+      autofillCompanyName(cachedCompany);
       setVatLookupError(null);
-      setVatManualNameRequired(false);
       setVatLookupInfo(null);
       setIsLookingUpVat(false);
       return;
@@ -263,15 +268,11 @@ export default function ContactUsPage() {
 
         const outcome = classifyVatLookup(payload);
         if (outcome.kind === "error") {
-          setCompanyName("");
-          setVatManualNameRequired(false);
           setVatLookupError(outcome.message ?? t("contact.vatLookupFailed"));
           return;
         }
 
         if (outcome.kind === "manual_name") {
-          setCompanyName("");
-          setVatManualNameRequired(true);
           setVatLookupInfo(
             outcome.payload.lookupUnavailable
               ? t("contact.vatLookupUnavailableManualName")
@@ -284,15 +285,12 @@ export default function ContactUsPage() {
           return;
         }
 
-        setVatManualNameRequired(false);
-        setCompanyName(outcome.payload.companyName ?? "");
+        autofillCompanyName(outcome.payload.companyName ?? "");
         setVatLookupError(null);
       } catch (error) {
         if (isCancelled || (error instanceof DOMException && error.name === "AbortError")) {
           return;
         }
-        setCompanyName("");
-        setVatManualNameRequired(false);
         setVatLookupError(t("contact.vatLookupFailed"));
       } finally {
         if (!isCancelled) {
@@ -557,21 +555,14 @@ export default function ContactUsPage() {
                   id="companyName"
                   type="text"
                   required
-                  readOnly={!vatManualNameRequired}
                   value={companyName}
-                  onChange={
-                    vatManualNameRequired
-                      ? (e) => setCompanyName(e.target.value)
-                      : undefined
-                  }
+                  onChange={(e) => setCompanyName(e.target.value)}
                   placeholder={
                     isLookingUpVat
                       ? t("contact.vatLookupLoading")
-                      : vatManualNameRequired
-                        ? t("contact.companyNameManualPlaceholder")
-                        : t("contact.companyNameAuto")
+                      : t("contact.companyNameManualPlaceholder")
                   }
-                  className={vatManualNameRequired ? inputClass : lockedInputClass}
+                  className={inputClass}
                   aria-busy={isLookingUpVat}
                 />
                 {!isLookingUpVat && vatLookupInfo ? (

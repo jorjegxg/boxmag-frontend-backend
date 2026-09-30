@@ -68,8 +68,9 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 | `INV-NEWSLETTER-UNSUB` | Fiecare email de newsletter are link de dezabonare semnat (HMAC pe email, `USER_SESSION_SECRET`) către `/newsletter/unsubscribe?email=&token=` + header `List-Unsubscribe` one-click (RFC 8058). Pagina cere confirmare explicită (nu dezabonează la încărcare). `POST /api/newsletter/unsubscribe` → `consent = 0` + `unsubscribed_at`; răspunde `ok` și pentru email necunoscut; token greșit → 400. Re-abonarea golește `unsubscribed_at`. | `newsletter.route.ts`, `services/newsletter-token.ts`, `app/newsletter/unsubscribe/page.tsx`, `db/migrations/015_add_newsletter_unsubscribe.sql` |
 | `INV-CHECKOUT-TERMS` | Checkout B2C: bifa „Regulament + Politica de confidențialitate” e nebifată implicit și obligatorie; backendul respinge `acceptedTerms !== true` cu 400 `TERMS_NOT_ACCEPTED`. Consimțământul de marketing (`consentEmail` / `consentPhone`) e opțional și nebifat implicit — la checkout și la comanda B2B (`/order-summary`). Nimic nu se trimite automat `true`. | `checkout/page.tsx`, `order-summary/page.tsx`, `payments.route.ts` |
 | `INV-ADMIN-MESSAGES` | Inbox mesaje contact = admin only (`requireAdmin`) pe `GET /api/contact`, `GET /api/contact/:id`, `GET /api/contact/reply-senders`, `POST /api/contact/:id/reply`. Reply acceptă `fromKey` ∈ `info` / `b2b` / `orders`; la succes setează `status = 'replied'` + `replied_at` + `replied_from`. Fără SMTP → 503. Status: `new` → `read` (la deschidere detaliu, doar din `new`) → `replied`. | `contact.route.ts`, `admin/messages/page.tsx` |
-| `INV-VAT-MANUAL-NAME` | VIES `valid=true` fără nume (ex. DE/ES) → `/api/vat-lookup` răspunde `ok` + `companyNameUnavailable`; UI afișează mesaj info și `companyName` editabil manual; submit cere nume completat. | `vat-lookup/route.ts`, `vat-company.ts`, checkout/contact/registration/order-summary/account |
+| `INV-VAT-MANUAL-NAME` | VIES `valid=true` fără nume (ex. DE/ES) → `/api/vat-lookup` răspunde `ok` + `companyNameUnavailable`; UI afișează mesaj info (user completează numele manual); submit cere nume completat. | `vat-lookup/route.ts`, `vat-company.ts`, checkout/contact/registration/order-summary/account |
 | `INV-VAT-LOOKUP-FALLBACK` | VIES indisponibil: pentru RO încearcă ANAF ca sursă primară; dacă tot nu merge (sau non-RO) → `ok` + `companyNameUnavailable` + `lookupUnavailable` (nu 502); UI cere nume manual. VIES `valid=false` rămâne 404 (fără override ANAF). | `vat-lookup/route.ts`, `vat-company.ts`, checkout/contact/registration/order-summary/account |
+| `INV-VAT-COMPANY-EDITABLE` | Lookup-ul TVA doar **autocompletează** `companyName`: câmpul e mereu editabil. Autofill scrie doar dacă câmpul e gol sau conține încă valoarea autocompletată anterior (`shouldAutofillCompany`) — nu suprascrie numele tastat de user / din profil / din query. TVA invalid/incomplet sau eroare lookup **nu** golește numele. | `vat-company.ts`, checkout/contact/registration/order-summary/account |
 
 ### Ops (nu e2e produs)
 
@@ -167,6 +168,7 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-CONTACT-NEXT` | OK `contact.route` (admin inbox) | OK `contact-route` | OK `contact` | — |
 | `INV-VAT-MANUAL-NAME` | — | OK `vat-lookup`, `vat-company` | OK `contact` | — |
 | `INV-VAT-LOOKUP-FALLBACK` | — | OK `vat-lookup`, `vat-company` | — | — |
+| `INV-VAT-COMPANY-EDITABLE` | — | OK `vat-company` (`shouldAutofillCompany`) | TODO | — |
 | `INV-NO-PROD-WIPE` | OK `env.production`, `prod-wipe-guard` | — | — | — |
 
 ---
