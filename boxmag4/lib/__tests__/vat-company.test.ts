@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyVatLookup } from "../vat-company";
+import { classifyVatLookup, shouldAutofillCompany } from "../vat-company";
 
 describe("classifyVatLookup", () => {
   it("returns filled when company name is present", () => {
@@ -46,5 +46,21 @@ describe("classifyVatLookup", () => {
     if (outcome.kind === "error") {
       expect(outcome.message).toContain("not found");
     }
+  });
+});
+
+describe("shouldAutofillCompany", () => {
+  it("fills an empty field", () => {
+    expect(shouldAutofillCompany("", null)).toBe(true);
+    expect(shouldAutofillCompany("   ", "Old SRL")).toBe(true);
+  });
+
+  it("replaces a value that is still the previous autofill", () => {
+    expect(shouldAutofillCompany("Old SRL", "Old SRL")).toBe(true);
+  });
+
+  it("never overwrites a name the user typed or edited", () => {
+    expect(shouldAutofillCompany("My Company", null)).toBe(false);
+    expect(shouldAutofillCompany("Old SRL Edited", "Old SRL")).toBe(false);
   });
 });

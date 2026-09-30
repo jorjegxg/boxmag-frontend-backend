@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useEffect, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { B2b } from "../global/components/b2b";
@@ -13,7 +13,12 @@ import { isDevelopmentAppEnv } from "../../lib/app-env";
 import { siteEmails } from "../../lib/site-emails";
 import { clearB2bOrderSuccessPayload } from "../../lib/b2b-order-success";
 import { checkVAT, countries } from "jsvat";
-import { classifyVatLookup, fetchVatLookup, getCachedVatCompany } from "../../lib/vat-company";
+import {
+  classifyVatLookup,
+  fetchVatLookup,
+  getCachedVatCompany,
+  shouldAutofillCompany,
+} from "../../lib/vat-company";
 import { getBackendBaseUrl } from "../../lib/backend-url";
 import { useLanguage } from "../i18n/language-context";
 
@@ -48,7 +53,7 @@ function RegistrationPageContent() {
   );
   const [isLookingUpVat, setIsLookingUpVat] = useState(false);
   const [vatLookupError, setVatLookupError] = useState<string | null>(null);
-  const [vatManualNameRequired, setVatManualNameRequired] = useState(false);
+  const autofilledCompanyRef = useRef<string | null>(null);
   const [vatLookupInfo, setVatLookupInfo] = useState<string | null>(null);
   const [password, setPassword] = useState(isDevelopment && !hasQueryPrefill ? "dummy123" : "");
   const [confirmPassword, setConfirmPassword] = useState(
@@ -105,10 +110,18 @@ function RegistrationPageContent() {
 
   useEffect(() => {
     const normalizedVat = normalizeVatNumber(vatNumber);
+    const autofillCompanyName = (name: string | null | undefined) => {
+      const value = name?.trim() ?? "";
+      if (!value) return;
+      setCompanyName((prev) => {
+        if (!shouldAutofillCompany(prev, autofilledCompanyRef.current)) return prev;
+        autofilledCompanyRef.current = value;
+        return value;
+      });
+    };
+
     if (!VAT_NUMBER_REGEX.test(normalizedVat)) {
-      setCompanyName("");
       setVatLookupError(null);
-      setVatManualNameRequired(false);
       setVatLookupInfo(null);
       setIsLookingUpVat(false);
       return;
@@ -116,9 +129,8 @@ function RegistrationPageContent() {
 
     const cachedCompany = getCachedVatCompany(normalizedVat);
     if (cachedCompany) {
-      setCompanyName(cachedCompany);
+      autofillCompanyName(cachedCompany);
       setVatLookupError(null);
-      setVatManualNameRequired(false);
       setVatLookupInfo(null);
       setIsLookingUpVat(false);
       return;
@@ -137,15 +149,11 @@ function RegistrationPageContent() {
 
         const outcome = classifyVatLookup(payload);
         if (outcome.kind === "error") {
-          setCompanyName("");
-          setVatManualNameRequired(false);
           setVatLookupError(outcome.message ?? t("contact.vatLookupFailed"));
           return;
         }
 
         if (outcome.kind === "manual_name") {
-          setCompanyName("");
-          setVatManualNameRequired(true);
           setVatLookupInfo(
             outcome.payload.lookupUnavailable
               ? t("contact.vatLookupUnavailableManualName")
@@ -158,8 +166,7 @@ function RegistrationPageContent() {
           return;
         }
 
-        setVatManualNameRequired(false);
-        setCompanyName(outcome.payload.companyName ?? "");
+        autofillCompanyName(outcome.payload.companyName);
         setVatLookupError(null);
       } catch (error) {
         if (
@@ -168,8 +175,6 @@ function RegistrationPageContent() {
         ) {
           return;
         }
-        setCompanyName("");
-        setVatManualNameRequired(false);
         setVatLookupError(t("contact.vatLookupFailed"));
       } finally {
         if (!isCancelled) {
@@ -404,20 +409,13 @@ function RegistrationPageContent() {
                   id="reg-company"
                   type="text"
                   value={companyName}
-                  readOnly={!vatManualNameRequired}
-                  onChange={
-                    vatManualNameRequired
-                      ? (e) => setCompanyName(e.target.value)
-                      : undefined
-                  }
+                  onChange={(e) => setCompanyName(e.target.value)}
                   placeholder={
                     isLookingUpVat
                       ? t("registration.lookingUpVat")
-                      : vatManualNameRequired
-                        ? t("contact.companyNameManualPlaceholder")
-                        : t("registration.autoFilledFromVat")
+                      : t("contact.companyNameManualPlaceholder")
                   }
-                  className={vatManualNameRequired ? inputClass : lockedInputClass}
+                  className={inputClass}
                   aria-busy={isLookingUpVat}
                   required
                 />

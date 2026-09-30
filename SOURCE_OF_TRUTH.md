@@ -58,8 +58,9 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 | `INV-I18N-COOKIE` | Limba = cookie `boxmag.language`. Prefix `/ro/*`, `/de/*` → path fără prefix + set cookie. | `middleware.ts` |
 | `INV-CONTACT-NEXT` | Formularul de contact trimite **doar** către Next.js `POST /api/contact`, care trimite emailul (Nodemailer). Aceeași rută forwardează payload-ul server-to-server către `POST /api/contact` din backend pentru persistare în `contact_messages` — **best-effort**: dacă backendul pică, emailul tot pleacă și submit-ul rămâne `ok`. Browserul nu apelează niciodată backendul direct pentru contact. | `boxmag4/app/api/contact/route.ts`, `contact.route.ts` |
 | `INV-ADMIN-MESSAGES` | Inbox mesaje contact = admin only (`requireAdmin`) pe `GET /api/contact`, `GET /api/contact/:id`, `GET /api/contact/reply-senders`, `POST /api/contact/:id/reply`. Reply acceptă `fromKey` ∈ `info` / `b2b` / `orders`; la succes setează `status = 'replied'` + `replied_at` + `replied_from`. Fără SMTP → 503. Status: `new` → `read` (la deschidere detaliu, doar din `new`) → `replied`. | `contact.route.ts`, `admin/messages/page.tsx` |
-| `INV-VAT-MANUAL-NAME` | VIES `valid=true` fără nume (ex. DE/ES) → `/api/vat-lookup` răspunde `ok` + `companyNameUnavailable`; UI afișează mesaj info și `companyName` editabil manual; submit cere nume completat. | `vat-lookup/route.ts`, `vat-company.ts`, checkout/contact/registration/order-summary/account |
+| `INV-VAT-MANUAL-NAME` | VIES `valid=true` fără nume (ex. DE/ES) → `/api/vat-lookup` răspunde `ok` + `companyNameUnavailable`; UI afișează mesaj info (user completează numele manual); submit cere nume completat. | `vat-lookup/route.ts`, `vat-company.ts`, checkout/contact/registration/order-summary/account |
 | `INV-VAT-LOOKUP-FALLBACK` | VIES indisponibil: pentru RO încearcă ANAF ca sursă primară; dacă tot nu merge (sau non-RO) → `ok` + `companyNameUnavailable` + `lookupUnavailable` (nu 502); UI cere nume manual. VIES `valid=false` rămâne 404 (fără override ANAF). | `vat-lookup/route.ts`, `vat-company.ts`, checkout/contact/registration/order-summary/account |
+| `INV-VAT-COMPANY-EDITABLE` | Lookup-ul TVA doar **autocompletează** `companyName`: câmpul e mereu editabil. Autofill scrie doar dacă câmpul e gol sau conține încă valoarea autocompletată anterior (`shouldAutofillCompany`) — nu suprascrie numele tastat de user / din profil / din query. TVA invalid/incomplet sau eroare lookup **nu** golește numele. | `vat-company.ts`, checkout/contact/registration/order-summary/account |
 
 ### Ops (nu e2e produs)
 
@@ -147,6 +148,7 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-CONTACT-NEXT` | OK `contact.route` (admin inbox) | OK `contact-route` | OK `contact` | — |
 | `INV-VAT-MANUAL-NAME` | — | OK `vat-lookup`, `vat-company` | OK `contact` | — |
 | `INV-VAT-LOOKUP-FALLBACK` | — | OK `vat-lookup`, `vat-company` | — | — |
+| `INV-VAT-COMPANY-EDITABLE` | — | OK `vat-company` (`shouldAutofillCompany`) | TODO | — |
 | `INV-NO-PROD-WIPE` | OK `env.production`, `prod-wipe-guard` | — | — | — |
 
 ---

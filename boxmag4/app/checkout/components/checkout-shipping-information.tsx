@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useLanguage } from "../../i18n/language-context";
 import {
   CheckoutAddressMap,
@@ -14,6 +14,7 @@ import {
   classifyVatLookup,
   fetchVatLookup,
   getCachedVatCompany,
+  shouldAutofillCompany,
   vatPayloadToAddressFields,
 } from "../../../lib/vat-company";
 
@@ -22,9 +23,6 @@ const VAT_NUMBER_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
 function normalizeVatNumber(value: string): string {
   return value.trim().toUpperCase().replace(/\s+/g, "");
 }
-
-const lockedInputClass =
-  "w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600 cursor-not-allowed focus:outline-none";
 
 const editableInputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -101,7 +99,6 @@ export function CheckoutShippingInformation({
   const { t } = useLanguage();
   const [isLookingUpVat, setIsLookingUpVat] = useState(false);
   const [vatLookupError, setVatLookupError] = useState<string | null>(null);
-  const [vatManualNameRequired, setVatManualNameRequired] = useState(false);
   const [vatLookupInfo, setVatLookupInfo] = useState<string | null>(null);
   const hasSavedAddresses = addresses.length > 0;
   const useManualAddressForm = !hasSavedAddresses || addressType === "another";
@@ -109,6 +106,20 @@ export function CheckoutShippingInformation({
     manualAddress.companyName.trim() ||
     selectedAddress?.companyName.trim() ||
     "";
+
+  const autofilledCompanyRef = useRef<string | null>(null);
+
+  const autofillCompanyName = (
+    prev: CheckoutManualAddress,
+    name: string | null | undefined,
+  ): CheckoutManualAddress => {
+    const value = name?.trim() ?? "";
+    if (!value || !shouldAutofillCompany(prev.companyName, autofilledCompanyRef.current)) {
+      return prev;
+    }
+    autofilledCompanyRef.current = value;
+    return { ...prev, companyName: value };
+  };
 
   const updateIsLookingUpVat = (value: boolean) => {
     setIsLookingUpVat(value);
@@ -118,18 +129,15 @@ export function CheckoutShippingInformation({
   useEffect(() => {
     const normalizedVat = normalizeVatNumber(vatNumber);
     if (!VAT_NUMBER_REGEX.test(normalizedVat)) {
-      setManualAddress((prev) => ({ ...prev, companyName: "" }));
       setVatLookupError(null);
-      setVatManualNameRequired(false);
       setVatLookupInfo(null);
       return;
     }
 
     const cachedCompany = getCachedVatCompany(normalizedVat);
     if (cachedCompany) {
-      setManualAddress((prev) => ({ ...prev, companyName: cachedCompany }));
+      setManualAddress((prev) => autofillCompanyName(prev, cachedCompany));
       setVatLookupError(null);
-      setVatManualNameRequired(false);
       setVatLookupInfo(null);
       updateIsLookingUpVat(false);
       return;
@@ -149,8 +157,6 @@ export function CheckoutShippingInformation({
 
         const outcome = classifyVatLookup(payload);
         if (outcome.kind === "error") {
-          setManualAddress((prev) => ({ ...prev, companyName: "" }));
-          setVatManualNameRequired(false);
           setVatLookupError(outcome.message ?? t("contact.vatLookupFailed"));
           return;
         }
@@ -161,7 +167,7 @@ export function CheckoutShippingInformation({
         if (outcome.kind === "manual_name") {
           setManualAddress((prev) =>
             mergeVatLookupFields(
-              { ...prev, companyName: "" },
+              prev,
               lookupFields,
               {
                 addressLine1: "addressLine1",
@@ -173,7 +179,6 @@ export function CheckoutShippingInformation({
               },
             ),
           );
-          setVatManualNameRequired(true);
           setVatLookupInfo(
             outcome.payload.lookupUnavailable
               ? t("contact.vatLookupUnavailableManualName")
@@ -186,10 +191,8 @@ export function CheckoutShippingInformation({
           return;
         }
 
-        setVatManualNameRequired(false);
         setManualAddress((prev) =>
-          mergeVatLookupFields(prev, lookupFields, {
-            companyName: "companyName",
+          mergeVatLookupFields(autofillCompanyName(prev, lookupFields.companyName), lookupFields, {
             addressLine1: "addressLine1",
             addressLine2: "addressLine2",
             city: "city",
@@ -203,8 +206,6 @@ export function CheckoutShippingInformation({
         if (isCancelled || (error instanceof DOMException && error.name === "AbortError")) {
           return;
         }
-        setManualAddress((prev) => ({ ...prev, companyName: "" }));
-        setVatManualNameRequired(false);
         setVatLookupError(t("contact.vatLookupFailed"));
       } finally {
         if (!isCancelled) {
@@ -391,27 +392,21 @@ export function CheckoutShippingInformation({
           <input
             id="checkout-companyName"
             type="text"
-            readOnly={!vatManualNameRequired}
             value={manualAddress.companyName}
-            onChange={
-              vatManualNameRequired
-                ? (e) =>
-                    setManualAddress((prev) => ({
-                      ...prev,
-                      companyName: e.target.value,
-                    }))
-                : undefined
+            onChange={(e) =>
+              setManualAddress((prev) => ({
+                ...prev,
+                companyName: e.target.value,
+              }))
             }
             placeholder={
               isLookingUpVat
                 ? t("contact.vatLookupLoading")
-                : vatManualNameRequired
-                  ? t("contact.companyNameManualPlaceholder")
-                  : t("contact.companyNameAuto")
+                : t("contact.companyNameManualPlaceholder")
             }
-            className={vatManualNameRequired ? editableInputClass : lockedInputClass}
+            className={editableInputClass}
             aria-busy={isLookingUpVat}
-            required={vatManualNameRequired}
+            required
           />
           {!isLookingUpVat && vatLookupInfo ? (
             <p className="mt-1 text-sm text-blue-700">{vatLookupInfo}</p>
