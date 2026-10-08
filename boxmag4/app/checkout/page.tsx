@@ -21,6 +21,7 @@ import {
 import { rememberVatCompany } from "../../lib/vat-company";
 import { CheckoutShippingInformation } from "./components/checkout-shipping-information";
 import { getBackendBaseUrl } from "../../lib/backend-url";
+import { localizeApiError } from "../../lib/api-error-i18n";
 
 type UserAddress = {
   id: number;
@@ -504,7 +505,7 @@ export default function CheckoutPage() {
       };
       if (!response.ok || payload.ok !== true || !payload.data?.url) {
         throw new Error(
-          payload.message ?? `Failed with status ${response.status}`,
+          localizeApiError(payload.message, t, "checkout.error.startCheckout"),
         );
       }
 

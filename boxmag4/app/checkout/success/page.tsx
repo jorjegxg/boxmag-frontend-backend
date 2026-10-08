@@ -14,6 +14,7 @@ import { buildRegistrationUrlFromCheckout } from "../../../lib/checkout-order-su
 import { AUTH_STORAGE_KEY } from "../../../lib/customer-auth";
 import { useLanguage } from "../../i18n/language-context";
 import { getBackendBaseUrl } from "../../../lib/backend-url";
+import { apiErrorKey } from "../../../lib/api-error-i18n";
 
 type OrderInfo = {
   id: number;
@@ -50,7 +51,8 @@ function CheckoutSuccessPageContent() {
   const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  /** Translation key of the verification error, translated at render. */
+  const [errorKey, setErrorKey] = useState<string | null>(null);
   const [data, setData] = useState<SessionResponse["data"] | null>(null);
   const [isGuest, setIsGuest] = useState(true);
 
@@ -64,7 +66,7 @@ function CheckoutSuccessPageContent() {
 
   useEffect(() => {
     if (!sessionId) {
-      setError("Missing payment session id.");
+      setErrorKey("apiError.missingPaymentSession");
       setIsLoading(false);
       return;
     }
@@ -78,9 +80,7 @@ function CheckoutSuccessPageContent() {
         );
         const payload = (await response.json()) as SessionResponse;
         if (!response.ok || payload.ok !== true || !payload.data) {
-          throw new Error(
-            payload.message ?? `Failed with status ${response.status}`,
-          );
+          throw new Error(payload.message ?? "");
         }
         setData(payload.data);
         if (
@@ -96,10 +96,9 @@ function CheckoutSuccessPageContent() {
         }
       } catch (fetchError) {
         if (controller.signal.aborted) return;
-        setError(
-          fetchError instanceof Error
-            ? fetchError.message
-            : "Failed to verify payment.",
+        setErrorKey(
+          (fetchError instanceof Error && apiErrorKey(fetchError.message)) ||
+            "checkoutSuccess.verifyFailed",
         );
       } finally {
         if (!controller.signal.aborted) {
@@ -154,12 +153,12 @@ function CheckoutSuccessPageContent() {
                   {t("checkoutSuccess.verifyingSubtitle")}
                 </p>
               </>
-            ) : error ? (
+            ) : errorKey ? (
               <>
                 <h1 className="text-2xl font-bold text-my-red">
                   {t("checkoutSuccess.errorTitle")}
                 </h1>
-                <p className="mt-3 text-sm text-gray-700">{error}</p>
+                <p className="mt-3 text-sm text-gray-700">{t(errorKey)}</p>
                 <p className="mt-4 text-sm text-gray-600">
                   {t("checkoutSuccess.errorHint")}{" "}
                   <span className="font-mono text-xs">{sessionId}</span>

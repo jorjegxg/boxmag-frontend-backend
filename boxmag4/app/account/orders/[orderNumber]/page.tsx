@@ -13,6 +13,7 @@ import { useNotification } from "../../../global/components/notification-center"
 import { OrderAttachmentActions } from "../../../global/components/order-attachment-actions";
 import { useLanguage } from "../../../i18n/language-context";
 import { getBackendBaseUrl } from "../../../../lib/backend-url";
+import { localizeApiError } from "../../../../lib/api-error-i18n";
 const AUTH_EMAIL_STORAGE_KEY = "boxmag.auth.email";
 const FALLBACK_PRODUCT_IMAGE = "/b2b/boxes/box.png";
 
@@ -169,7 +170,7 @@ export default function AccountOrderDetailsPage() {
           data?: OrderDetails;
         };
         if (!response.ok || payload.ok !== true || !payload.data) {
-          throw new Error(payload.message ?? t("accountOrder.loadFailed"));
+          throw new Error(localizeApiError(payload.message, t, "accountOrder.loadFailed"));
         }
         setOrder(payload.data);
       } catch (error) {

@@ -258,7 +258,7 @@ function ShopPageContent() {
             {isLoading ? (
               <p className="text-sm text-gray-500">{t("shop.loading")}</p>
             ) : loadError ? (
-              <p className="text-sm text-red-600">{loadError}</p>
+              <p className="text-sm text-red-600">{t("productTable.loadError")}</p>
             ) : products.length === 0 ? (
               <p className="text-sm text-gray-500">{t("shop.emptyFilter")}</p>
             ) : (

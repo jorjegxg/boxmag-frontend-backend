@@ -131,7 +131,7 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
         {!isLoading && loadError ? (
           <tr>
             <td className="px-3 py-6 text-left text-red-600" colSpan={TABLE_COLUMN_COUNT}>
-              {t("productTable.loadError")}: {loadError}
+              {t("productTable.loadError")}
             </td>
           </tr>
         ) : null}

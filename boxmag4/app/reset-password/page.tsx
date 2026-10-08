@@ -15,6 +15,7 @@ import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { getBackendBaseUrl } from "../../lib/backend-url";
 import { useLanguage } from "../i18n/language-context";
+import { localizeApiError } from "../../lib/api-error-i18n";
 
 type ResetState = "form" | "success" | "error";
 
@@ -64,7 +65,7 @@ function ResetPasswordPageContent() {
       };
       if (!response.ok || payload.ok !== true) {
         setState("error");
-        setMessage(payload.message ?? t("resetPassword.expired"));
+        setMessage(localizeApiError(payload.message, t, "resetPassword.expired"));
         return;
       }
       setState("success");

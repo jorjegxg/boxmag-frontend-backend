@@ -157,7 +157,7 @@ export function CheckoutShippingInformation({
 
         const outcome = classifyVatLookup(payload);
         if (outcome.kind === "error") {
-          setVatLookupError(outcome.message ?? t("contact.vatLookupFailed"));
+          setVatLookupError(t(outcome.messageKey));
           return;
         }
 

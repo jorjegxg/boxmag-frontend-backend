@@ -13,13 +13,29 @@ export type VatLookupPayload = {
   postcode?: string | null;
   country?: string | null;
   phone?: string | null;
+  /** Machine-readable error from /api/vat-lookup; `message` is English-only. */
+  code?: VatLookupErrorCode;
   message?: string;
+};
+
+export type VatLookupErrorCode =
+  | "invalid_format"
+  | "unsupported_country"
+  | "not_found"
+  | "lookup_failed";
+
+/** Translation key shown when a lookup fails (any page, any language). */
+export const VAT_LOOKUP_ERROR_KEYS: Record<VatLookupErrorCode, string> = {
+  invalid_format: "contact.vatInvalidFormat",
+  unsupported_country: "contact.vatUnsupportedCountry",
+  not_found: "contact.vatNotFound",
+  lookup_failed: "contact.vatLookupFailed",
 };
 
 export type VatLookupOutcome =
   | { kind: "filled"; payload: VatLookupPayload }
   | { kind: "manual_name"; payload: VatLookupPayload }
-  | { kind: "error"; message: string };
+  | { kind: "error"; messageKey: string };
 
 export function classifyVatLookup(payload: VatLookupPayload): VatLookupOutcome {
   if (payload.ok === true && payload.companyNameUnavailable === true) {
@@ -30,7 +46,9 @@ export function classifyVatLookup(payload: VatLookupPayload): VatLookupOutcome {
   }
   return {
     kind: "error",
-    message: payload.message ?? "VAT lookup failed",
+    messageKey:
+      (payload.code && VAT_LOOKUP_ERROR_KEYS[payload.code]) ??
+      VAT_LOOKUP_ERROR_KEYS.lookup_failed,
   };
 }
 

@@ -65,7 +65,6 @@ function ProductByKeyPageContent() {
   const [loadState, setLoadState] = useState<
     "idle" | "loading" | "error" | "notFound" | "ready"
   >("idle");
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [allProducts, setAllProducts] = useState<BoxTypeProductApi[]>([]);
   const [productName, setProductName] = useState("");
   const [itemNo, setItemNo] = useState("");
@@ -119,7 +118,6 @@ function ProductByKeyPageContent() {
 
     const load = async () => {
       setLoadState("loading");
-      setLoadError(null);
 
       try {
         const boxTypesResponse = await fetch(`${backendBaseUrl}/api/box-types`, {
@@ -194,9 +192,8 @@ function ProductByKeyPageContent() {
         setAllProducts(products);
         applyProductSelection(product, gallery);
         setLoadState("ready");
-      } catch (error) {
+      } catch {
         if (cancelled || controller.signal.aborted) return;
-        setLoadError(error instanceof Error ? error.message : "Failed to load product");
         setLoadState("error");
       }
     };
@@ -346,7 +343,7 @@ function ProductByKeyPageContent() {
       <div>
         <B2b />
         <main className="w-full bg-[#f8f8f8] px-4 py-8 lg:px-12">
-          <p className="mx-auto max-w-7xl text-sm text-red-600">{loadError}</p>
+          <p className="mx-auto max-w-7xl text-sm text-red-600">{t("productTable.loadError")}</p>
         </main>
         <NewsletterSubscribe />
       </div>

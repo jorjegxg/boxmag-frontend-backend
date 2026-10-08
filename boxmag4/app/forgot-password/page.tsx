@@ -9,6 +9,7 @@ import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
 import { getBackendBaseUrl } from "../../lib/backend-url";
 import { useLanguage } from "../i18n/language-context";
+import { localizeApiError } from "../../lib/api-error-i18n";
 
 type ForgotState = "form" | "exists" | "missing" | "error";
 
@@ -50,7 +51,7 @@ export default function ForgotPasswordPage() {
         message?: string;
       };
       if (!response.ok || payload.ok !== true) {
-        setError(payload.message ?? t("forgotPassword.invalidEmail"));
+        setError(localizeApiError(payload.message, t, "forgotPassword.error"));
         return;
       }
       if (payload.exists) {

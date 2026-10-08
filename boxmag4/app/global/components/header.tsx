@@ -269,7 +269,7 @@ export function Header() {
               {isLoading ? (
                 <p className="text-sm text-gray-500">{t("header.loading")}</p>
               ) : loadError ? (
-                <p className="text-sm text-red-600">{loadError}</p>
+                <p className="text-sm text-red-600">{t("header.searchFailed")}</p>
               ) : defaultBoxTypes.length === 0 ? (
                 <p className="text-sm text-gray-500">{t("header.noBoxTypes")}</p>
               ) : (
@@ -338,7 +338,7 @@ export function Header() {
                 {isLoading ? (
                   <p className="text-sm text-gray-500">{t("header.searching")}</p>
                 ) : loadError ? (
-                  <p className="text-sm text-red-600">{loadError}</p>
+                  <p className="text-sm text-red-600">{t("header.searchFailed")}</p>
                 ) : query.trim().length < 2 ? (
                   defaultBoxTypes.length === 0 ? (
                     <p className="text-sm text-gray-500">{t("header.noBoxTypes")}</p>

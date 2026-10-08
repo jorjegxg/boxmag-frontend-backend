@@ -28,6 +28,7 @@ import {
   VAT_SUPPORTED_COUNTRIES,
 } from "../../lib/vat-countries";
 import { getBackendBaseUrl } from "../../lib/backend-url";
+import { localizeApiError } from "../../lib/api-error-i18n";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -268,7 +269,7 @@ export default function ContactUsPage() {
 
         const outcome = classifyVatLookup(payload);
         if (outcome.kind === "error") {
-          setVatLookupError(outcome.message ?? t("contact.vatLookupFailed"));
+          setVatLookupError(t(outcome.messageKey));
           return;
         }
 
@@ -439,14 +440,14 @@ export default function ContactUsPage() {
       if (!response.ok) {
         notify({
           type: "error",
-          message: data.message ?? t("contact.error.sendFailed"),
+          message: localizeApiError(data.message, t, "contact.error.sendFailed"),
         });
         return;
       }
 
       notify({
         type: "success",
-        message: data.message ?? t("contact.success.sent"),
+        message: t("contact.success.sent"),
       });
       setMessage("");
       setAcceptTerms(false);

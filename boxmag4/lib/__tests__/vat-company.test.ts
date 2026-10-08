@@ -37,15 +37,21 @@ describe("classifyVatLookup", () => {
     }
   });
 
-  it("returns error when lookup failed", () => {
+  it("maps the API error code to a translation key", () => {
     const outcome = classifyVatLookup({
       ok: false,
+      code: "not_found",
       message: "VAT number not found or invalid",
     });
-    expect(outcome.kind).toBe("error");
-    if (outcome.kind === "error") {
-      expect(outcome.message).toContain("not found");
-    }
+    expect(outcome).toEqual({ kind: "error", messageKey: "contact.vatNotFound" });
+  });
+
+  it("falls back to the generic lookup key without a code", () => {
+    const outcome = classifyVatLookup({ ok: false, message: "Boom" });
+    expect(outcome).toEqual({
+      kind: "error",
+      messageKey: "contact.vatLookupFailed",
+    });
   });
 });
 

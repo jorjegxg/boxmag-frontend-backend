@@ -35,6 +35,7 @@ import {
   AUTH_STORAGE_KEY,
   clearCustomerAuthLocalState,
 } from "../../lib/customer-auth";
+import { localizeApiError } from "../../lib/api-error-i18n";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -386,7 +387,7 @@ export default function OrderSummaryPage() {
 
         const outcome = classifyVatLookup(payload);
         if (outcome.kind === "error") {
-          setVatLookupError(outcome.message ?? t("contact.vatLookupFailed"));
+          setVatLookupError(t(outcome.messageKey));
           return;
         }
 
@@ -689,12 +690,14 @@ export default function OrderSummaryPage() {
         throw new Error(`Server error (${response.status}). Please try again.`);
       }
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? `Failed with status ${response.status}`);
+        throw new Error(
+          localizeApiError(payload.message, t, "orderSummary.errors.sendFailed"),
+        );
       }
 
       const orderId = payload.data?.id;
       if (typeof orderId !== "number" || orderId <= 0) {
-        throw new Error("Order was created but no order id was returned.");
+        throw new Error(t("orderSummary.errors.sendFailed"));
       }
 
       writeB2bOrderSuccessPayload({
@@ -813,7 +816,7 @@ export default function OrderSummaryPage() {
                   <p className="mt-1 text-sm text-gray-500">{t("contact.vatLookupLoading")}</p>
                 ) : null}
                 {requiredFieldErrors.vatNumber ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.vatNumberRequired")}</p> : null}
-                {!requiredFieldErrors.vatNumber && vatFormatError ? <p className="mt-1 text-sm text-red-600">Format invalid. Exemple: RO12345678, RO 12345678, DE123456789</p> : null}
+                {!requiredFieldErrors.vatNumber && vatFormatError ? <p className="mt-1 text-sm text-red-600">{t("orderSummary.errors.vatFormat")}</p> : null}
                 {!requiredFieldErrors.vatNumber && !vatFormatError && !isLookingUpVat && vatLookupError ? (
                   <p className="mt-1 text-sm text-red-600">{vatLookupError}</p>
                 ) : null}
