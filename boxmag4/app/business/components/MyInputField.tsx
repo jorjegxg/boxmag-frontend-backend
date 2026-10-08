@@ -16,6 +16,7 @@ export function MyInputField({
   min,
   step,
   allowDecimal = false,
+  hideLabel = false,
 }: {
   text: string;
   id: string;
@@ -28,6 +29,7 @@ export function MyInputField({
   min?: number;
   step?: number | string;
   allowDecimal?: boolean;
+  hideLabel?: boolean;
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const isPasswordField = type === "password";
@@ -36,7 +38,7 @@ export function MyInputField({
 
   return (
     <Field>
-      <FieldLabel htmlFor={id} className="font-bold text-lg">
+      <FieldLabel htmlFor={id} className={hideLabel ? "sr-only" : "font-bold text-lg"}>
         {text}
       </FieldLabel>
       <div className="relative">

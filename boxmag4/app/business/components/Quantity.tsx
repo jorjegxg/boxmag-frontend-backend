@@ -18,6 +18,7 @@ const Quantity = ({ quantity, onQuantityChange, quantityError }: QuantityProps) 
           <MyInputField
             text={t("business.quantity")}
             id="boxes-quantity"
+            hideLabel
             type={"number"}
             min={1}
             placeholder={t("business.quantity")}
