@@ -272,14 +272,18 @@ export async function GET(request: NextRequest) {
 
   if (!parsed) {
     return NextResponse.json(
-      { ok: false, message: "Invalid VAT format" },
+      { ok: false, code: "invalid_format", message: "Invalid VAT format" },
       { status: 400 },
     );
   }
 
   if (!isVatLookupSupportedCountry(parsed.countryCode)) {
     return NextResponse.json(
-      { ok: false, message: "VAT lookup is not supported for this country" },
+      {
+        ok: false,
+        code: "unsupported_country",
+        message: "VAT lookup is not supported for this country",
+      },
       { status: 400 },
     );
   }
@@ -310,7 +314,7 @@ export async function GET(request: NextRequest) {
 
     if (!viesResult.valid) {
       return NextResponse.json(
-        { ok: false, message: "VAT number not found or invalid" },
+        { ok: false, code: "not_found", message: "VAT number not found or invalid" },
         { status: 404 },
       );
     }
@@ -354,7 +358,7 @@ export async function GET(request: NextRequest) {
     );
   } catch {
     return NextResponse.json(
-      { ok: false, message: "VAT lookup failed" },
+      { ok: false, code: "lookup_failed", message: "VAT lookup failed" },
       { status: 500 },
     );
   }

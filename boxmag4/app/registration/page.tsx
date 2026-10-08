@@ -21,6 +21,7 @@ import {
 } from "../../lib/vat-company";
 import { getBackendBaseUrl } from "../../lib/backend-url";
 import { useLanguage } from "../i18n/language-context";
+import { localizeApiError } from "../../lib/api-error-i18n";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red";
@@ -149,7 +150,7 @@ function RegistrationPageContent() {
 
         const outcome = classifyVatLookup(payload);
         if (outcome.kind === "error") {
-          setVatLookupError(outcome.message ?? t("contact.vatLookupFailed"));
+          setVatLookupError(t(outcome.messageKey));
           return;
         }
 
@@ -271,7 +272,9 @@ function RegistrationPageContent() {
       };
 
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? t("registration.failedFallback"));
+        throw new Error(
+          localizeApiError(payload.message, t, "registration.error.failed"),
+        );
       }
 
       if (fromSource === "b2b-order") {

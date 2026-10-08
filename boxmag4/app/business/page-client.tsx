@@ -225,7 +225,7 @@ const BussinessPage = () => {
         <div id="section-box-type-cards">
           {boxesError ? (
             <p className="text-sm text-red-600">
-              Failed to load box types: {boxesError}
+              {t("business.errors.loadBoxes")}
             </p>
           ) : null}
           <GridOfBoxes />

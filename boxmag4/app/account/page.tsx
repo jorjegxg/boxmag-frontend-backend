@@ -32,6 +32,7 @@ import {
   shouldAutofillCompany,
 } from "../../lib/vat-company";
 import { getBackendBaseUrl } from "../../lib/backend-url";
+import { localizeApiError } from "../../lib/api-error-i18n";
 
 type Tab = "account" | "address" | "orders";
 
@@ -140,7 +141,9 @@ function LoginRequiredView({
         message?: string;
       };
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? t("account.error.invalidCredentials"));
+        throw new Error(
+          localizeApiError(payload.message, t, "account.error.invalidCredentials"),
+        );
       }
 
       localStorage.setItem(AUTH_STORAGE_KEY, "true");
@@ -340,7 +343,7 @@ function MyAccountTab({
         const outcome = classifyVatLookup(payload);
         if (outcome.kind === "error") {
           setVatLookupError(
-            outcome.message ?? t("contact.vatLookupFailed"),
+            t(outcome.messageKey),
           );
           return;
         }
@@ -1433,7 +1436,7 @@ export default function AccountPage() {
       };
     };
     if (!response.ok || json.ok !== true || !json.data) {
-      throw new Error(json.message ?? t("account.error.saveProfile"));
+      throw new Error(localizeApiError(json.message, t, "account.error.saveProfile"));
     }
 
     setAccountProfile({
@@ -1482,7 +1485,7 @@ export default function AccountPage() {
     }
     const json = (await response.json()) as { ok?: boolean; message?: string };
     if (!response.ok || json.ok !== true) {
-      throw new Error(json.message ?? t("account.error.saveAddress"));
+      throw new Error(localizeApiError(json.message, t, "account.error.saveAddress"));
     }
 
     const reload = await fetch(`${backendBaseUrl}/api/addresses`, {
@@ -1539,7 +1542,7 @@ export default function AccountPage() {
     }
     const json = (await response.json()) as { ok?: boolean; message?: string };
     if (!response.ok || json.ok !== true) {
-      throw new Error(json.message ?? t("account.error.updateAddress"));
+      throw new Error(localizeApiError(json.message, t, "account.error.updateAddress"));
     }
 
     const reload = await fetch(`${backendBaseUrl}/api/addresses`, {
@@ -1570,7 +1573,7 @@ export default function AccountPage() {
     }
     const json = (await response.json()) as { ok?: boolean; message?: string };
     if (!response.ok || json.ok !== true) {
-      throw new Error(json.message ?? t("account.error.deleteAddress"));
+      throw new Error(localizeApiError(json.message, t, "account.error.deleteAddress"));
     }
 
     const reload = await fetch(`${backendBaseUrl}/api/addresses`, {

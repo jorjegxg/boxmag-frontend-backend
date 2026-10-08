@@ -22,8 +22,9 @@ describe("GET /api/vat-lookup", () => {
   it("rejects invalid VAT format", async () => {
     const response = await getVat("NOT-A-VAT");
     expect(response.status).toBe(400);
-    const payload = (await response.json()) as { message?: string };
+    const payload = (await response.json()) as { code?: string; message?: string };
     expect(payload.message).toContain("Invalid VAT format");
+    expect(payload.code).toBe("invalid_format");
   });
 
   it("rejects empty VAT", async () => {
@@ -40,8 +41,9 @@ describe("GET /api/vat-lookup", () => {
     );
     const response = await getVat("RO12345678");
     expect(response.status).toBe(404);
-    const payload = (await response.json()) as { message?: string };
+    const payload = (await response.json()) as { code?: string; message?: string };
     expect(payload.message).toContain("not found or invalid");
+    expect(payload.code).toBe("not_found");
   });
 
   it("returns 200 with companyNameUnavailable when VIES valid but no name", async () => {

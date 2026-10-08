@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useLanguage } from "../../i18n/language-context";
 import { getBackendBaseUrl } from "../../../lib/backend-url";
+import { localizeApiError } from "../../../lib/api-error-i18n";
 
 export function NewsletterSubscribe() {
   const [email, setEmail] = useState("");
@@ -65,7 +66,9 @@ export function NewsletterSubscribe() {
       };
 
       if (!response.ok || payload.ok !== true) {
-        throw new Error(payload.message ?? "Failed to subscribe");
+        throw new Error(
+          localizeApiError(payload.message, t, "newsletter.errorSubmit"),
+        );
       }
 
       setEmail("");
