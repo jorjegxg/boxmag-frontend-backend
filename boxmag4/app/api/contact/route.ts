@@ -3,6 +3,11 @@ import fs from "fs";
 import path from "path";
 import { checkVAT, countries } from "jsvat";
 import { getBackendBaseUrl } from "../../../lib/backend-url";
+import { ADMIN_COOKIE_NAME, createAdminSessionToken } from "../../../lib/admin-auth";
+import { consumeRateLimit, getClientIp } from "../../../lib/rate-limit";
+
+/** Each submission sends an email (plus attachments) — throttle per client IP. */
+const CONTACT_RATE_LIMIT = { windowMs: 15 * 60 * 1000, max: 10 };
 
 type ContactPayload = {
   firstName: string;
@@ -62,11 +67,29 @@ function getSiteBaseUrl(): string {
  * Persist the submission so it shows up in the admin panel. Best-effort.
  * Returns the created message id when the backend reports one.
  */
+/**
+ * Server-to-server credentials so the backend's per-IP public form limiter
+ * does not lump every visitor (all coming from this server's IP) together.
+ */
+async function backendInternalAuthHeaders(): Promise<Record<string, string>> {
+  const apiToken = envValue("ADMIN_API_TOKEN");
+  if (apiToken) return { "x-admin-token": apiToken };
+  const adminPassword = envValue("ADMIN_PASSWORD");
+  if (adminPassword) {
+    const token = await createAdminSessionToken(adminPassword);
+    return { Cookie: `${ADMIN_COOKIE_NAME}=${token}` };
+  }
+  return {};
+}
+
 async function persistContactMessage(body: ContactPayload): Promise<number | null> {
   try {
     const response = await fetch(`${getBackendBaseUrl()}/api/contact`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(await backendInternalAuthHeaders()),
+      },
       body: JSON.stringify({
         firstName: body.firstName,
         surname: body.surname,
@@ -121,6 +144,14 @@ function escapeHtml(value: string): string {
 }
 
 export async function POST(req: Request): Promise<Response> {
+  const rate = consumeRateLimit(`contact:${getClientIp(req)}`, CONTACT_RATE_LIMIT);
+  if (!rate.allowed) {
+    return Response.json(
+      { message: "Too many requests. Try again later." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } },
+    );
+  }
+
   try {
     const contentType = req.headers.get("content-type") ?? "";
     let body: ContactPayload;

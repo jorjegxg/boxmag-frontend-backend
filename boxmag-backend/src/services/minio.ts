@@ -1,6 +1,7 @@
 import { Client as MinioClient } from "minio";
 import { env } from "../config/env";
 import { Readable } from "stream";
+import { normalizeAttachmentMimeType } from "../utils/attachment-content-type";
 
 const minioClient = new MinioClient({
   endPoint: env.minioEndpoint,
@@ -151,11 +152,12 @@ export async function uploadOrderAttachmentToMinio(args: {
     objectName,
     args.fileBuffer,
     args.fileBuffer.length,
-    args.mimeType
-      ? {
-          "Content-Type": args.mimeType,
-        }
-      : undefined,
+    {
+      "Content-Type": normalizeAttachmentMimeType(
+        args.mimeType,
+        args.originalFileName,
+      ),
+    },
   );
 
   return { objectName };

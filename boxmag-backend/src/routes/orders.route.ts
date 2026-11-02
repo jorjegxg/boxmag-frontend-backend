@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { PoolConnection } from "mysql2/promise";
 import { mysqlPool } from "../db/mysql";
@@ -6,6 +6,8 @@ import {
   requireAdmin,
 } from "../middleware/require-admin";
 import { requireAdminOrUserEmail } from "../middleware/require-admin-or-user-email";
+import { getRequestUserSession } from "../middleware/require-user";
+import { orderCreateRateLimiter } from "../middleware/rate-limit";
 import {
   getOrderAttachmentFromMinio,
   parseOrderAttachmentObjectNameFromUrl,
@@ -24,6 +26,7 @@ import {
   MAX_ORDER_ATTACHMENT_BYTES,
   MAX_ORDER_ATTACHMENT_MB,
 } from "../config/uploads";
+import { resolveAttachmentServing } from "../utils/attachment-content-type";
 import { parseCartItemsJson } from "../utils/cart-items";
 import { toPositiveInt } from "../utils/numbers";
 
@@ -96,20 +99,22 @@ function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
+/**
+ * Link only when the signed session email matches the order email
+ * (INV-GUEST-LINK). The client-supplied `accountEmail` is never trusted.
+ */
 async function resolveUserIdForAccount(
-  accountEmailRaw: unknown,
+  req: Request,
   orderEmail: string,
 ): Promise<number | null> {
-  const accountEmail = toOptionalString(accountEmailRaw);
-  if (!accountEmail) return null;
-
-  if (normalizeEmail(accountEmail) !== normalizeEmail(orderEmail)) {
+  const session = getRequestUserSession(req);
+  if (!session || session.email !== normalizeEmail(orderEmail)) {
     return null;
   }
 
   const [rows] = await mysqlPool.execute<UserIdRow[]>(
-    `SELECT id FROM users WHERE LOWER(email) = ? AND is_active = 1 LIMIT 1`,
-    [normalizeEmail(accountEmail)],
+    `SELECT id FROM users WHERE id = ? AND is_active = 1 LIMIT 1`,
+    [session.userId],
   );
 
   const userId = rows[0]?.id;
@@ -244,27 +249,6 @@ function orderHasStoredAttachment(row: {
   return Boolean(
     row.attachment_object_name?.trim() || row.attachment_url?.trim(),
   );
-}
-
-function guessAttachmentMimeType(fileName: string): string {
-  const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
-  const mimeByExtension: Record<string, string> = {
-    pdf: "application/pdf",
-    png: "image/png",
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    gif: "image/gif",
-    webp: "image/webp",
-    svg: "image/svg+xml",
-    zip: "application/zip",
-    doc: "application/msword",
-    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    xls: "application/vnd.ms-excel",
-    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    txt: "text/plain",
-    csv: "text/csv",
-  };
-  return mimeByExtension[extension] ?? "application/octet-stream";
 }
 
 function buildAttachmentContentDisposition(
@@ -649,14 +633,22 @@ ordersRouter.get("/:orderId/attachment", requireAdminOrUserEmail, async (req, re
       return;
     }
 
-    res.setHeader(
-      "Content-Type",
-      contentType?.trim() || guessAttachmentMimeType(fileName),
-    );
+    const serving = resolveAttachmentServing({
+      fileName,
+      storedContentType: contentType,
+      forceDownload,
+    });
+    res.setHeader("Content-Type", serving.contentType);
     res.setHeader(
       "Content-Disposition",
-      buildAttachmentContentDisposition(fileName, !forceDownload),
+      buildAttachmentContentDisposition(fileName, serving.inline),
     );
+    // User-uploaded content on the API origin: never let it run scripts.
+    // (Chrome refuses to render PDFs in a sandboxed document, and its viewer
+    // does not run in our origin anyway.)
+    if (serving.contentType !== "application/pdf") {
+      res.setHeader("Content-Security-Policy", "sandbox; default-src 'none'");
+    }
     res.send(buffer);
   } catch (error) {
     console.error("Failed to load order attachment", error);
@@ -781,7 +773,7 @@ ordersRouter.get("/:orderId", requireAdminOrUserEmail, async (req, res) => {
   }
 });
 
-ordersRouter.post("/", async (req, res) => {
+ordersRouter.post("/", orderCreateRateLimiter, async (req, res) => {
   const payload = (req.body ?? {}) as CreateOrderPayload;
 
   const boxTypeName = toRequiredString(payload.boxTypeName);
@@ -893,7 +885,7 @@ ordersRouter.post("/", async (req, res) => {
   const createAccount = payload.createAccount === true;
   const consentPhone = payload.consentPhone === true;
   const consentEmail = payload.consentEmail === true;
-  const userId = await resolveUserIdForAccount(payload.accountEmail, email);
+  const userId = await resolveUserIdForAccount(req, email);
 
   let connection: PoolConnection | undefined;
   try {

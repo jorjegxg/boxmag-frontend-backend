@@ -636,6 +636,8 @@ export default function OrderSummaryPage() {
 
       const response = await fetch(`${backendBaseUrl}/api/orders`, {
         method: "POST",
+        // Session cookie lets the backend link the order to the signed-in account.
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },

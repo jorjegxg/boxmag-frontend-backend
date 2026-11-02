@@ -277,7 +277,9 @@ describe("orders routes", () => {
     expect(Buffer.from(response.body).toString()).toBe("sample attachment");
   });
 
-  it("links business order to user when accountEmail matches order email", async () => {
+  it("links business order to user when the session email matches the order email (INV-GUEST-LINK)", async () => {
+    const token = createUserSessionToken(7, "customer@example.com");
+    if (!token) throw new Error("Failed to create user session token");
     executeMock
       .mockResolvedValueOnce([[{ id: 7 }]])
       .mockResolvedValueOnce([{ insertId: 42, affectedRows: 1 }])
@@ -318,7 +320,10 @@ describe("orders routes", () => {
       accountEmail: "customer@example.com",
     };
 
-    const response = await request(app).post("/api/orders").send(payload);
+    const response = await request(app)
+      .post("/api/orders")
+      .set("Cookie", `${USER_COOKIE_NAME}=${token}`)
+      .send(payload);
 
     expect(response.status).toBe(201);
     expect(response.body.ok).toBe(true);
@@ -330,6 +335,105 @@ describe("orders routes", () => {
     expect(connectionExecute).toHaveBeenCalled();
     const insertArgs = connectionExecute.mock.calls[0]?.[1] as unknown[];
     expect(insertArgs?.[0]).toBe(7);
+  });
+
+  it("ignores client accountEmail without a matching session (INV-GUEST-LINK)", async () => {
+    const connectionExecute = vi
+      .fn()
+      .mockResolvedValueOnce([{ insertId: 43, affectedRows: 1 }])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+    getConnectionMock.mockResolvedValueOnce({
+      beginTransaction: vi.fn(async () => undefined),
+      execute: connectionExecute,
+      commit: vi.fn(async () => undefined),
+      rollback: vi.fn(async () => undefined),
+      release: vi.fn(),
+    });
+
+    const response = await request(app)
+      .post("/api/orders")
+      .send({
+        ...validCreateOrderPayload(),
+        email: "victim@example.com",
+        accountEmail: "victim@example.com",
+      });
+
+    expect(response.status).toBe(201);
+    const insertArgs = connectionExecute.mock.calls[0]?.[1] as unknown[];
+    expect(insertArgs?.[0]).toBeNull();
+    expect(executeMock).not.toHaveBeenCalled();
+  });
+
+  it("serves an HTML attachment as a sandboxed download, never inline", async () => {
+    getOrderAttachmentFromMinioMock.mockResolvedValueOnce({
+      buffer: Buffer.from("<script>alert(1)</script>"),
+      contentType: "text/html",
+      size: 25,
+    });
+    queryMock.mockResolvedValueOnce([
+      [
+        {
+          id: 12,
+          attachment_name: "invoice.pdf",
+          attachment_object_name: "orders/attachments/invoice.pdf",
+          attachment_url: null,
+        },
+      ],
+    ]);
+
+    const response = await request(app)
+      .get("/api/orders/12/attachment")
+      .set("Cookie", await adminCookieHeader());
+
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toContain("application/octet-stream");
+    expect(response.headers["content-disposition"]).toMatch(/^attachment;/);
+    expect(response.headers["content-security-policy"]).toContain("sandbox");
+  });
+
+  it("serves SVG attachments as downloads", async () => {
+    getOrderAttachmentFromMinioMock.mockResolvedValueOnce({
+      buffer: Buffer.from("<svg onload=alert(1)>"),
+      contentType: "image/svg+xml",
+      size: 21,
+    });
+    queryMock.mockResolvedValueOnce([
+      [
+        {
+          id: 12,
+          attachment_name: "logo.svg",
+          attachment_object_name: "orders/attachments/logo.svg",
+          attachment_url: null,
+        },
+      ],
+    ]);
+
+    const response = await request(app)
+      .get("/api/orders/12/attachment")
+      .set("Cookie", await adminCookieHeader());
+
+    expect(response.headers["content-type"]).toContain("application/octet-stream");
+    expect(response.headers["content-disposition"]).toMatch(/^attachment;/);
+  });
+
+  it("keeps PDF attachments viewable inline", async () => {
+    queryMock.mockResolvedValueOnce([
+      [
+        {
+          id: 12,
+          attachment_name: "specs.pdf",
+          attachment_object_name: "orders/attachments/specs.pdf",
+          attachment_url: null,
+        },
+      ],
+    ]);
+
+    const response = await request(app)
+      .get("/api/orders/12/attachment")
+      .set("Cookie", await adminCookieHeader());
+
+    expect(response.headers["content-type"]).toContain("application/pdf");
+    expect(response.headers["content-disposition"]).toMatch(/^inline;/);
   });
 
   it("returns guest B2B order for authenticated user after account creation", async () => {

@@ -6,22 +6,14 @@ import {
   getAdminPassword,
   safeEqualStrings,
 } from "../../../../lib/admin-auth";
-import { consumeRateLimit } from "../../../../lib/rate-limit";
+import { consumeRateLimit, getClientIp } from "../../../../lib/rate-limit";
 
 type AuthBody = {
   password?: string;
 };
 
-function clientKey(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0]?.trim() || "unknown";
-  }
-  return request.headers.get("x-real-ip")?.trim() || "unknown";
-}
-
 export async function POST(request: Request) {
-  const rate = consumeRateLimit(`admin-auth:${clientKey(request)}`);
+  const rate = consumeRateLimit(`admin-auth:${getClientIp(request)}`);
   if (!rate.allowed) {
     return NextResponse.json(
       { ok: false, message: "Prea multe încercări. Încearcă din nou mai târziu." },

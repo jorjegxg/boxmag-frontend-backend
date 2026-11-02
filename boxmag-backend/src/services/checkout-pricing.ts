@@ -41,7 +41,8 @@ function toMoney(value: string | number): number {
 
 /**
  * Overwrite client unit prices/names with catalog values from DB.
- * Uses the "300" tier without-tax price for each item_no.
+ * Uses the "300" tier without-tax price for each item_no. Products of hidden
+ * (inactive) box types are rejected, even if they linger in an old cart.
  */
 export async function resolveCheckoutCartItems(
   items: Array<{
@@ -61,6 +62,7 @@ export async function resolveCheckoutCartItems(
   const [rows] = await mysqlPool.query<ProductPriceRow[]>(
     `SELECT btp.item_no, btp.product_name, p.price_name, p.price_without_tax
      FROM box_type_products btp
+     INNER JOIN box_types bt ON bt.id = btp.box_type_id AND bt.is_active = 1
      INNER JOIN box_type_product_prices p ON p.box_type_product_id = btp.id
      WHERE btp.item_no IN (${placeholders})`,
     itemNos,
