@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { PoolConnection } from "mysql2/promise";
 import { mysqlPool } from "../db/mysql";
@@ -6,6 +6,7 @@ import {
   requireAdmin,
 } from "../middleware/require-admin";
 import { requireAdminOrUserEmail } from "../middleware/require-admin-or-user-email";
+import { getRequestUserSession } from "../middleware/require-user";
 import {
   getOrderAttachmentFromMinio,
   parseOrderAttachmentObjectNameFromUrl,
@@ -100,20 +101,22 @@ function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
+/**
+ * Link only when the signed session email matches the order email
+ * (INV-GUEST-LINK). The client-supplied `accountEmail` is never trusted.
+ */
 async function resolveUserIdForAccount(
-  accountEmailRaw: unknown,
+  req: Request,
   orderEmail: string,
 ): Promise<number | null> {
-  const accountEmail = toOptionalString(accountEmailRaw);
-  if (!accountEmail) return null;
-
-  if (normalizeEmail(accountEmail) !== normalizeEmail(orderEmail)) {
+  const session = await getRequestUserSession(req);
+  if (!session || session.email !== normalizeEmail(orderEmail)) {
     return null;
   }
 
   const [rows] = await mysqlPool.execute<UserIdRow[]>(
-    `SELECT id FROM users WHERE LOWER(email) = ? AND is_active = 1 LIMIT 1`,
-    [normalizeEmail(accountEmail)],
+    `SELECT id FROM users WHERE id = ? AND is_active = 1 LIMIT 1`,
+    [session.userId],
   );
 
   const userId = rows[0]?.id;
@@ -996,7 +999,7 @@ ordersRouter.post("/", async (req, res) => {
   const createAccount = payload.createAccount === true;
   const consentPhone = payload.consentPhone === true;
   const consentEmail = payload.consentEmail === true;
-  const userId = await resolveUserIdForAccount(payload.accountEmail, email);
+  const userId = await resolveUserIdForAccount(req, email);
 
   let connection: PoolConnection | undefined;
   try {

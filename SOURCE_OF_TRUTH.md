@@ -21,7 +21,7 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 | `INV-QTY-100` | Cantitate minimă pe linie e-commerce = **100**. UI clampează; API checkout/admin respinge sub 100. | `boxmag-backend/src/constants/order.ts`, `boxmag4/app/constants/order.ts` |
 | `INV-TIERS` | Tier-uri afișate în shop: **300**, **500**, **Pallet**. Legacy `100` / `<100` / `under100` filtrate. | `boxmag-backend/src/constants/price-tiers.ts` |
 | `INV-TAX-SERVER` | Taxa la checkout = `TAX_PERCENT` din env (default 21%). **Nu** se încredere în `vatPercent` de la client. | `payments.route.ts` |
-| `INV-CHECKOUT-TIER-300` | Prețul de checkout e recalculat server-side din catalog, tier **`"300"`** (ex-tax) + shipping din DB. Client prices overwrite = ignorat. | `services/checkout-pricing.ts`, `payments.route.ts` |
+| `INV-CHECKOUT-TIER-300` | Prețul de checkout e recalculat server-side din catalog, tier **`"300"`** (ex-tax) + shipping din DB. Client prices overwrite = ignorat. Produsele din tipuri de cutii inactive sunt respinse. | `services/checkout-pricing.ts`, `payments.route.ts` |
 
 ### Plăți Stripe
 
@@ -39,7 +39,7 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 | ID | Regulă | Cod |
 |----|--------|-----|
 | `INV-ORDER-STATUS` | Valori permise: `new`, `in progress`, `completed`. | `orders.route.ts` |
-| `INV-GUEST-LINK` | La verify-email / login reușit, comenzile guest cu același email se leagă de user. B2C checkout setează `user_id` doar dacă cookie sesiune + email match (nu pe existența email-ului în DB). | `auth.route.ts`, `link-guest-orders.ts`, `payments.route.ts` |
+| `INV-GUEST-LINK` | La verify-email / login reușit, comenzile guest cu același email se leagă de user. B2C checkout **și** B2B `POST /api/orders` setează `user_id` doar dacă cookie sesiune + email match (nu pe existența email-ului în DB; `accountEmail` din body e ignorat). | `auth.route.ts`, `link-guest-orders.ts`, `payments.route.ts`, `orders.route.ts` |
 
 ### Auth
 
@@ -50,7 +50,7 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 | `INV-SESSION-RESET` | Semnătura cookie-ului `boxmag-user-session` acoperă și un „credential stamp” = sha256(`users.password_hash`). La fiecare request autentificat se citește stamp-ul curent; după resetarea parolei (sau cont dezactivat/șters) toate sesiunile emise anterior → 401. Eroare DB la lookup = fail closed. | `user-auth.ts`, `services/user-credential-stamp.ts`, `require-user.ts` |
 | `INV-ADMIN-PASSWORD` | În producție `ADMIN_PASSWORD` are minimum **12** caractere (backend-ul refuză să pornească altfel). Login admin: 10 încercări / 15 min per IP. | `config/env.ts`, `boxmag4/app/api/admin/auth/route.ts` |
 | `INV-CLIENT-IP` | Limitele de rată din Next folosesc `X-Real-IP` (setat de nginx) sau **ultima** intrare din `X-Forwarded-For`. Prima intrare e controlată de client și nu se folosește niciodată drept cheie. | `boxmag4/lib/rate-limit.ts` |
-| `INV-RATE-LIMITS` | Per IP / 15 min: `POST /api/orders` 10 (aplicat **înainte** de parserul JSON de 25 MB); backend `POST /api/contact` 30 doar pentru apeluri neautentificate; Next `/api/contact` 8, `/api/geocode` 120, `/api/vat-lookup` 60. Depășire → 429. | `middleware/rate-limit.ts`, `app.ts`, `boxmag4/lib/rate-limit.ts` |
+| `INV-RATE-LIMITS` | Per IP / 15 min: `POST /api/orders` 10 (aplicat **înainte** de parserul JSON de 25 MB); backend `POST /api/contact` 30 doar pentru apeluri neautentificate; Next `/api/contact` 8, `/api/geocode` 120, `/api/vat-lookup` 60. Depășire → 429. Limita de auth nu se aplică pe `/profile` și `/logout`; pe newsletter citirile și cererile autentificate ca admin nu se numără. | `middleware/rate-limit.ts`, `app.ts`, `boxmag4/lib/rate-limit.ts` |
 | `INV-ATTACHMENT-SAFE` | Atașamente comenzi (B2B + checkout): extensie din allowlist (`config/uploads.ts`; fără html/svg/js) altfel 400. La servire, `Content-Type` vine **doar** din extensie (niciodată din tipul trimis de client / stocat); inline doar PDF + imagini raster, restul și tipurile necunoscute/legacy = `attachment` + `application/octet-stream`; mereu `nosniff`, CSP `sandbox` (mai puțin PDF). | `config/uploads.ts`, `orders.route.ts`, `payments.route.ts`, `services/minio.ts` |
 | `INV-AUTH-EMAIL-SCOPE` | `GET /api/orders` fără `?email=` = admin only. Cu `?email=` = admin sau user cu email potrivit. | `require-admin-or-user-email.ts` |
 | `INV-PASSWORD-RESET` | `POST /api/auth/forgot-password` stochează **doar** sha256 al token-ului (`users.password_reset_token_hash`) + expirare `RESET_PASSWORD_EXPIRES_MINUTES`; token-ul brut există doar în link-ul emailat. `POST /api/auth/reset-password` cere parolă ≥ 6 caractere, respinge token expirat/inexistent și golește hash + expirare la succes (single-use). Cont inexistent sau inactiv → `200 { ok: true, exists: false }` (enumerare acceptată intenționat, ca UI-ul să ofere înregistrare). Fără SMTP → 500. | `auth.route.ts`, `db/migrations/011_add_password_reset_tokens.sql` |
@@ -148,7 +148,7 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-STRIPE-LOCK` | OK `orders` | — | OK `admin-orders` | — |
 | `INV-PAY-STATUS` | OK `orders` | — | — | — |
 | `INV-ORDER-STATUS` | OK `orders` | — | OK `admin-orders` | — |
-| `INV-GUEST-LINK` | OK `auth`, `link-guest-orders`, `payments` | — | OK `checkout-guest-create-account`, `b2b-order-success` | — |
+| `INV-GUEST-LINK` | OK `auth`, `link-guest-orders`, `payments`, `orders` | — | OK `checkout-guest-create-account`, `b2b-order-success` | — |
 | `INV-AUTH-ADMIN` | OK `require-admin` (`x-admin-token`, 503), `session-tokens` | OK `admin-auth` | OK `admin-login` | — |
 | `INV-AUTH-USER` | OK `auth` login/logout/profile, `session-tokens` | — | OK `login`, `account` | — |
 | `INV-AUTH-VERIFY-PROFILE` | OK `auth` verify existing-user update | — | — | — |
@@ -160,17 +160,17 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-SESSION-RESET` | OK `user-session-invalidation` | — | — | — |
 | `INV-ADMIN-PASSWORD` | OK `env.production` | — | — | — |
 | `INV-CLIENT-IP` | — | OK `rate-limit` | — | — |
-| `INV-RATE-LIMITS` | OK `security-hardening` | OK `rate-limit` | — | — |
+| `INV-RATE-LIMITS` | OK `security-hardening`, `rate-limit` | OK `rate-limit` | — | — |
 | `INV-ATTACHMENT-SAFE` | OK `security-hardening`, `orders` | — | — | — |
 | `INV-B2B-GUARDS` | — | OK `b2b-order-success` | OK `order-summary-guard`, `b2b-order-success` | — |
 | `INV-B2B-SAVED-ADDRESS` | — | — | OK `order-summary-saved-address` | — |
 | `INV-ACCOUNT-ADDRESS-IDENTITY` | — | — | OK `account-logged-in`, `account-address-cart` | — |
 | `INV-I18N-COOKIE` | — | — | OK `language-i18n`, `smoke` | OK `smoke` |
-| `INV-I18N-ERRORS` | — | OK `api-error-i18n` (acoperire en/ro/de), `vat-company`, `vat-lookup` | — | — |
+| `INV-I18N-ERRORS` | — | OK `api-error-i18n` (acoperire en/ro/de), `vat-company`, `vat-lookup` | OK `contact`, `checkout-payment-result`, `account-logged-in` | — |
 | `INV-CONTACT-NEXT` | OK `contact.route` (admin inbox) | OK `contact-route` | OK `contact` | — |
 | `INV-VAT-MANUAL-NAME` | — | OK `vat-lookup`, `vat-company` | OK `contact` | — |
 | `INV-VAT-LOOKUP-FALLBACK` | — | OK `vat-lookup`, `vat-company` | — | — |
-| `INV-VAT-COMPANY-EDITABLE` | — | OK `vat-company` (`shouldAutofillCompany`) | TODO | — |
+| `INV-VAT-COMPANY-EDITABLE` | — | OK `vat-company` (`shouldAutofillCompany`) | OK `registration-verify`, `checkout-guest-create-account`, `checkout-payment-result`, `contact` | — |
 | `INV-NO-PROD-WIPE` | OK `env.production`, `prod-wipe-guard` | — | — | — |
 
 ---
