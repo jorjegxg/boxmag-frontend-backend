@@ -72,4 +72,57 @@ describe("exchange-rate.service", () => {
     expect(rate.rate).toBe(4.95);
     expect(rate.source).toBe("frankfurter");
   });
+
+  it("falls back to Frankfurter when BNR throws a network error", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("bnr.ro")) {
+          throw new TypeError("fetch failed");
+        }
+        return new Response(JSON.stringify({ rates: { RON: 4.97 } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    const rate = await getEurRonRate();
+    expect(rate.rate).toBe(4.97);
+    expect(rate.source).toBe("frankfurter");
+  });
+
+  it("serves the stale cached rate when every source throws", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response('<Rate currency="EUR">4.9100</Rate>', { status: 200 })),
+    );
+    await getEurRonRate();
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("fetch failed");
+      }),
+    );
+    const rate = await getEurRonRate({ forceRefresh: true });
+    expect(rate.rate).toBe(4.91);
+    expect(rate.source).toBe("bnr");
+  });
+
+  it("throws when no source works and nothing is cached", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("fetch failed");
+      }),
+    );
+
+    await expect(getEurRonRate()).rejects.toThrow(
+      "Failed to fetch EUR/RON exchange rate",
+    );
+  });
 });
