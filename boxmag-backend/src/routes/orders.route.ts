@@ -11,6 +11,7 @@ import { orderCreateRateLimiter } from "../middleware/rate-limit";
 import {
   getOrderAttachmentFromMinio,
   parseOrderAttachmentObjectNameFromUrl,
+  removeOrderAttachmentFromMinio,
   uploadOrderAttachmentToMinio,
 } from "../services/minio";
 import {
@@ -348,11 +349,99 @@ function buildPriceBreakdown(row: OrderListRow) {
   };
 }
 
+const MAX_ORDERS_PAGE_SIZE = 100;
+
+/**
+ * Card checkouts that never completed (expired / Stripe error). They have a
+ * row so the webhook can match the session, but are not real orders.
+ * B2B orders (no items_json, no Stripe session) are never "abandoned".
+ */
+const ABANDONED_CHECKOUT_SQL = `(o.payment_status = 'failed'
+  AND (o.stripe_session_id IS NOT NULL OR o.items_json IS NOT NULL))`;
+
+function readQueryString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
+type OrderListFilters = { whereSql: string; params: unknown[] };
+
+/**
+ * Optional filters: `email` (scope), `q` (order number / name / company /
+ * email), `status`, `paymentStatus`, `includeAbandoned=true`.
+ */
+function buildOrderListFilters(
+  query: Record<string, unknown>,
+  emailFilter: string | null,
+): OrderListFilters {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+
+  if (emailFilter) {
+    clauses.push(`(LOWER(c.email) = ?
+              OR o.user_id = (SELECT id FROM users WHERE LOWER(email) = ? AND is_active = 1 LIMIT 1))`);
+    params.push(emailFilter, emailFilter);
+  }
+
+  if (readQueryString(query.includeAbandoned) !== "true") {
+    clauses.push(`NOT ${ABANDONED_CHECKOUT_SQL}`);
+  }
+
+  const status = readQueryString(query.status);
+  if (status && ALLOWED_ORDER_STATUSES.has(status)) {
+    clauses.push("o.status = ?");
+    params.push(status);
+  }
+
+  const paymentStatus = readQueryString(query.paymentStatus);
+  if (paymentStatus && ALLOWED_PAYMENT_STATUSES.has(paymentStatus)) {
+    clauses.push("o.payment_status = ?");
+    params.push(paymentStatus);
+  }
+
+  const search = readQueryString(query.q).slice(0, 100);
+  if (search) {
+    const orderNumberMatch = /^(?:ord-?)?0*(\d+)$/i.exec(search);
+    const like = `%${escapeLikePattern(search.toLowerCase())}%`;
+    clauses.push(`(${orderNumberMatch ? "o.id = ? OR " : ""}LOWER(c.email) LIKE ?
+              OR LOWER(c.company_name) LIKE ?
+              OR LOWER(CONCAT_WS(' ', c.first_name, c.surname)) LIKE ?)`);
+    if (orderNumberMatch) params.push(Number(orderNumberMatch[1]));
+    params.push(like, like, like);
+  }
+
+  return {
+    whereSql: clauses.length > 0 ? `WHERE ${clauses.join("\n         AND ")}` : "",
+    params,
+  };
+}
+
+/** `page` / `pageSize` are opt-in so existing callers keep the full list. */
+function readPagination(
+  query: Record<string, unknown>,
+): { page: number; pageSize: number } | null {
+  const pageRaw = readQueryString(query.page);
+  const pageSizeRaw = readQueryString(query.pageSize);
+  if (!pageRaw && !pageSizeRaw) return null;
+  const page = Math.max(1, toPositiveInt(pageRaw) ?? 1);
+  const pageSize = Math.min(
+    MAX_ORDERS_PAGE_SIZE,
+    Math.max(1, toPositiveInt(pageSizeRaw) ?? 25),
+  );
+  return { page, pageSize };
+}
+
 ordersRouter.get("/", requireAdminOrUserEmail, async (req, res) => {
   const emailFilter =
     typeof req.query.email === "string" && req.query.email.trim().length > 0
       ? req.query.email.trim().toLowerCase()
       : null;
+  const query = req.query as Record<string, unknown>;
+  const { whereSql, params } = buildOrderListFilters(query, emailFilter);
+  const pagination = readPagination(query);
 
   try {
     const sql = `SELECT o.id, o.box_type_name, o.cardboard_type, o.cardboard_colour, o.box_print,
@@ -365,19 +454,35 @@ ordersRouter.get("/", requireAdminOrUserEmail, async (req, res) => {
               c.first_name, c.surname, c.company_name, c.email, c.phone, c.city, c.country
        FROM orders o
        LEFT JOIN contacts c ON c.order_id = o.id
-       ${
-         emailFilter
-           ? `WHERE LOWER(c.email) = ?
-              OR o.user_id = (SELECT id FROM users WHERE LOWER(email) = ? AND is_active = 1 LIMIT 1)`
-           : ""
-       }
-       ORDER BY o.created_at DESC, o.id DESC`;
-    const [rows] = emailFilter
-      ? await mysqlPool.query<OrderListRow[]>(sql, [emailFilter, emailFilter])
-      : await mysqlPool.query<OrderListRow[]>(sql);
+       ${whereSql}
+       ORDER BY o.created_at DESC, o.id DESC
+       ${pagination ? "LIMIT ? OFFSET ?" : ""}`;
+    const [rows] = await mysqlPool.query<OrderListRow[]>(
+      sql,
+      pagination
+        ? [...params, pagination.pageSize, (pagination.page - 1) * pagination.pageSize]
+        : params,
+    );
+
+    let total = rows.length;
+    if (pagination) {
+      const [countRows] = await mysqlPool.query<Array<RowDataPacket & { total: number }>>(
+        `SELECT COUNT(*) AS total
+         FROM orders o
+         LEFT JOIN contacts c ON c.order_id = o.id
+         ${whereSql}`,
+        params,
+      );
+      total = Number(countRows[0]?.total ?? 0);
+    }
 
     res.json({
       ok: true,
+      meta: {
+        total,
+        page: pagination?.page ?? 1,
+        pageSize: pagination?.pageSize ?? total,
+      },
       data: rows.map((row) => ({
         id: row.id,
         orderNumber: `ORD-${String(row.id).padStart(4, "0")}`,
@@ -998,6 +1103,12 @@ ordersRouter.post("/", orderCreateRateLimiter, async (req, res) => {
       await connection.rollback();
     }
     console.error("Failed to create order", error);
+    if (attachmentObjectName) {
+      // The order row is gone, so nothing would ever reference this upload.
+      await removeOrderAttachmentFromMinio(attachmentObjectName).catch((cleanupError) =>
+        console.error("Failed to remove orphaned order attachment", cleanupError),
+      );
+    }
     res.status(500).json({
       ok: false,
       message: "Failed to create order",

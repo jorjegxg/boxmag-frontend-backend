@@ -163,6 +163,12 @@ export async function uploadOrderAttachmentToMinio(args: {
   return { objectName };
 }
 
+/** Remove an attachment whose order was never saved (best-effort cleanup). */
+export async function removeOrderAttachmentFromMinio(objectName: string): Promise<void> {
+  if (!objectName.startsWith("orders/attachments/")) return;
+  await minioClient.removeObject(env.minioBucketName, objectName);
+}
+
 export async function getObjectBufferFromMinio(
   objectName: string,
 ): Promise<Buffer> {

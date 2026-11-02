@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   ORDER_STATUS_LABELS,
   ORDER_STATUS_OPTIONS,
+  PAYMENT_STATUS_OPTIONS,
   formatOfferStatus,
   formatPaymentStatus,
   offerBadgeClass,
@@ -20,6 +21,7 @@ import {
 import { AdminBreadcrumb, SectionTitle } from "../components/admin-ui";
 
 const ORDERS_PAGE_SIZE = 10;
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function AdminOrdersPage() {
   const router = useRouter();
@@ -28,20 +30,49 @@ export default function AdminOrdersPage() {
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
   const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersTotal, setOrdersTotal] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("");
+  const [includeAbandoned, setIncludeAbandoned] = useState(false);
 
   const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
 
   useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      const nextSearch = searchInput.trim();
+      setSearch((current) => {
+        if (current !== nextSearch) setOrdersPage(1);
+        return nextSearch;
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timeout);
+  }, [searchInput]);
+
+  useEffect(() => {
+    const controller = new AbortController();
     const loadOrders = async () => {
       setIsLoadingOrders(true);
       setOrdersError(null);
       try {
-        const response = await fetch(`${backendBaseUrl}/api/orders`, {
+        const params = new URLSearchParams({
+          page: String(ordersPage),
+          pageSize: String(ORDERS_PAGE_SIZE),
+        });
+        if (search) params.set("q", search);
+        if (statusFilter) params.set("status", statusFilter);
+        if (paymentFilter) params.set("paymentStatus", paymentFilter);
+        if (includeAbandoned) params.set("includeAbandoned", "true");
+
+        const response = await fetch(`${backendBaseUrl}/api/orders?${params}`, {
           credentials: "include",
+          signal: controller.signal,
         });
         const payload = (await response.json()) as {
           ok?: boolean;
           data?: AdminOrder[];
+          meta?: { total?: number };
           message?: string;
         };
         if (
@@ -54,20 +85,22 @@ export default function AdminOrdersPage() {
           );
         }
         setOrders(payload.data);
-        setOrdersPage(1);
+        setOrdersTotal(payload.meta?.total ?? payload.data.length);
       } catch (error) {
+        if (controller.signal.aborted) return;
         setOrdersError(
           error instanceof Error
             ? error.message
             : "Nu s-au putut încărca comenzile",
         );
       } finally {
-        setIsLoadingOrders(false);
+        if (!controller.signal.aborted) setIsLoadingOrders(false);
       }
     };
 
     void loadOrders();
-  }, [backendBaseUrl]);
+    return () => controller.abort();
+  }, [backendBaseUrl, ordersPage, search, statusFilter, paymentFilter, includeAbandoned]);
 
   const handleOrderStatusChange = async (
     orderId: number,
@@ -114,13 +147,10 @@ export default function AdminOrdersPage() {
 
   const totalOrdersPages = Math.max(
     1,
-    Math.ceil(orders.length / ORDERS_PAGE_SIZE),
+    Math.ceil(ordersTotal / ORDERS_PAGE_SIZE),
   );
   const safeOrdersPage = Math.min(ordersPage, totalOrdersPages);
-  const paginatedOrders = orders.slice(
-    (safeOrdersPage - 1) * ORDERS_PAGE_SIZE,
-    safeOrdersPage * ORDERS_PAGE_SIZE,
-  );
+  const hasFilters = Boolean(search || statusFilter || paymentFilter);
 
   return (
     <div>
@@ -134,6 +164,66 @@ export default function AdminOrdersPage() {
           />
 
           <div className="p-6 lg:p-8 space-y-6">
+            <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+              <label className="flex-1 text-sm text-gray-700">
+                <span className="block mb-1 font-semibold">Caută</span>
+                <input
+                  type="search"
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder="ORD-0012, nume, companie sau email"
+                  className="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-my-red focus:border-my-red"
+                />
+              </label>
+              <label className="text-sm text-gray-700">
+                <span className="block mb-1 font-semibold">Status</span>
+                <select
+                  value={statusFilter}
+                  onChange={(event) => {
+                    setStatusFilter(event.target.value);
+                    setOrdersPage(1);
+                  }}
+                  className="h-9 rounded-md border border-gray-300 bg-white px-2 text-sm"
+                >
+                  <option value="">Toate</option>
+                  {ORDER_STATUS_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {ORDER_STATUS_LABELS[option]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm text-gray-700">
+                <span className="block mb-1 font-semibold">Plată</span>
+                <select
+                  value={paymentFilter}
+                  onChange={(event) => {
+                    setPaymentFilter(event.target.value);
+                    setOrdersPage(1);
+                  }}
+                  className="h-9 rounded-md border border-gray-300 bg-white px-2 text-sm"
+                >
+                  <option value="">Toate</option>
+                  {PAYMENT_STATUS_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {formatPaymentStatus(option)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex h-9 items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={includeAbandoned}
+                  onChange={(event) => {
+                    setIncludeAbandoned(event.target.checked);
+                    setOrdersPage(1);
+                  }}
+                />
+                Arată plățile abandonate
+              </label>
+            </div>
+
             <div className="rounded-xl border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
@@ -183,12 +273,14 @@ export default function AdminOrdersPage() {
                     {!isLoadingOrders && !ordersError && orders.length === 0 ? (
                       <tr className="border-t border-gray-200">
                         <td className="px-4 py-3 text-gray-500" colSpan={8}>
-                          Nu există comenzi.
+                          {hasFilters
+                            ? "Nicio comandă nu corespunde filtrelor."
+                            : "Nu există comenzi."}
                         </td>
                       </tr>
                     ) : null}
                     {!isLoadingOrders && !ordersError
-                      ? paginatedOrders.map((order) => (
+                      ? orders.map((order) => (
                           <tr
                             key={order.id}
                             className="border-t border-gray-200 cursor-pointer transition-colors hover:bg-gray-50"
@@ -249,7 +341,7 @@ export default function AdminOrdersPage() {
                 </table>
               </div>
             </div>
-            {!isLoadingOrders && !ordersError && orders.length > 0 ? (
+            {!ordersError && ordersTotal > 0 ? (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <span className="text-sm text-gray-600">
                   Afișare{" "}
@@ -258,9 +350,9 @@ export default function AdminOrdersPage() {
                   </span>
                   {"–"}
                   <span className="font-semibold">
-                    {Math.min(safeOrdersPage * ORDERS_PAGE_SIZE, orders.length)}
+                    {Math.min(safeOrdersPage * ORDERS_PAGE_SIZE, ordersTotal)}
                   </span>{" "}
-                  din <span className="font-semibold">{orders.length}</span>{" "}
+                  din <span className="font-semibold">{ordersTotal}</span>{" "}
                   comenzi
                 </span>
                 <div className="flex items-center gap-2">
@@ -269,7 +361,7 @@ export default function AdminOrdersPage() {
                     onClick={() =>
                       setOrdersPage((prev) => Math.max(1, prev - 1))
                     }
-                    disabled={safeOrdersPage <= 1}
+                    disabled={safeOrdersPage <= 1 || isLoadingOrders}
                     className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Înapoi
@@ -286,7 +378,7 @@ export default function AdminOrdersPage() {
                         Math.min(totalOrdersPages, prev + 1),
                       )
                     }
-                    disabled={safeOrdersPage >= totalOrdersPages}
+                    disabled={safeOrdersPage >= totalOrdersPages || isLoadingOrders}
                     className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Înainte

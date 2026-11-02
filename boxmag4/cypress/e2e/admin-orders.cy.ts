@@ -102,7 +102,7 @@ describe("Admin orders", () => {
   });
 
   it("loads orders table from API", () => {
-    cy.intercept("GET", "**/api/orders", {
+    cy.intercept({ method: "GET", pathname: "/api/orders" }, {
       statusCode: 200,
       body: { ok: true, data: orders },
     }).as("getOrders");
@@ -117,7 +117,7 @@ describe("Admin orders", () => {
   });
 
   it("opens order detail via order number link", () => {
-    cy.intercept("GET", "**/api/orders", {
+    cy.intercept({ method: "GET", pathname: "/api/orders" }, {
       statusCode: 200,
       body: { ok: true, data: orders },
     }).as("getOrders");
@@ -138,7 +138,7 @@ describe("Admin orders", () => {
   });
 
   it("updates order status from orders table", () => {
-    cy.intercept("GET", "**/api/orders", {
+    cy.intercept({ method: "GET", pathname: "/api/orders" }, {
       statusCode: 200,
       body: { ok: true, data: orders },
     }).as("getOrders");
@@ -160,7 +160,7 @@ describe("Admin orders", () => {
   });
 
   it("opens admin order details and updates status", () => {
-    cy.intercept("GET", "**/api/orders", {
+    cy.intercept({ method: "GET", pathname: "/api/orders" }, {
       statusCode: 200,
       body: { ok: true, data: orders },
     }).as("getOrders");

@@ -11,7 +11,9 @@ const {
   sendOrderCreationEmailsMock,
   sendOrderOfferEmailToCustomerMock,
   getOrderAttachmentFromMinioMock,
+  removeOrderAttachmentFromMinioMock,
 } = vi.hoisted(() => ({
+  removeOrderAttachmentFromMinioMock: vi.fn(async () => undefined),
   queryMock: vi.fn(),
   executeMock: vi.fn(),
   getConnectionMock: vi.fn(),
@@ -52,6 +54,7 @@ vi.mock("../services/minio", () => ({
     objectName: "orders/attachments/test.pdf",
   })),
   getOrderAttachmentFromMinio: getOrderAttachmentFromMinioMock,
+  removeOrderAttachmentFromMinio: removeOrderAttachmentFromMinioMock,
   parseOrderAttachmentObjectNameFromUrl: vi.fn(
     (attachmentUrl: string) => {
       const marker = "/orders/attachments/";
@@ -499,6 +502,8 @@ describe("orders routes", () => {
       expect.stringContaining("LOWER(c.email) = ?"),
       [userEmail, userEmail],
     );
+    // Abandoned card checkouts are hidden from the customer's order list.
+    expect(String(queryMock.mock.calls[0]?.[0])).toContain("NOT (o.payment_status = 'failed'");
   });
 
   it("returns 401 for order listing without admin auth or email filter", async () => {
@@ -712,7 +717,97 @@ describe("orders routes", () => {
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
     expect(response.body.data).toHaveLength(1);
-    expect(queryMock).toHaveBeenCalledWith(expect.stringContaining("FROM orders o"));
+    expect(queryMock).toHaveBeenCalledWith(expect.stringContaining("FROM orders o"), []);
+  });
+
+  it("filters admin order list by status, payment status and search", async () => {
+    const response = await request(app)
+      .get("/api/orders")
+      .query({ status: "new", paymentStatus: "paid", q: "ORD-0012" })
+      .set("Cookie", await adminCookieHeader());
+
+    expect(response.status).toBe(200);
+    const [sql, params] = queryMock.mock.calls[0] ?? [];
+    expect(String(sql)).toContain("o.status = ?");
+    expect(String(sql)).toContain("o.payment_status = ?");
+    expect(String(sql)).toContain("o.id = ? OR LOWER(c.email) LIKE ?");
+    expect(params).toEqual(["new", "paid", 12, "%ord-0012%", "%ord-0012%", "%ord-0012%"]);
+  });
+
+  it("ignores unknown status filters and escapes LIKE wildcards", async () => {
+    await request(app)
+      .get("/api/orders")
+      .query({ status: "deleted", q: "50%_off" })
+      .set("Cookie", await adminCookieHeader());
+
+    const [sql, params] = queryMock.mock.calls[0] ?? [];
+    expect(String(sql)).not.toContain("o.status = ?");
+    const escaped = String.raw`%50\%\_off%`;
+    expect(params).toEqual([escaped, escaped, escaped]);
+  });
+
+  it("shows abandoned checkouts only with includeAbandoned=true", async () => {
+    await request(app)
+      .get("/api/orders")
+      .query({ includeAbandoned: "true" })
+      .set("Cookie", await adminCookieHeader());
+
+    expect(String(queryMock.mock.calls[0]?.[0])).not.toContain("NOT (o.payment_status");
+  });
+
+  it("paginates with LIMIT/OFFSET and reports the total", async () => {
+    queryMock
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ total: 57 }]]);
+
+    const response = await request(app)
+      .get("/api/orders")
+      .query({ page: "3", pageSize: "25" })
+      .set("Cookie", await adminCookieHeader());
+
+    expect(response.status).toBe(200);
+    expect(response.body.meta).toEqual({ total: 57, page: 3, pageSize: 25 });
+    const [sql, params] = queryMock.mock.calls[0] ?? [];
+    expect(String(sql)).toContain("LIMIT ? OFFSET ?");
+    expect(params).toEqual([25, 50]);
+    expect(String(queryMock.mock.calls[1]?.[0])).toContain("COUNT(*) AS total");
+  });
+
+  it("caps pageSize at 100", async () => {
+    queryMock.mockResolvedValueOnce([[]]).mockResolvedValueOnce([[{ total: 0 }]]);
+
+    const response = await request(app)
+      .get("/api/orders")
+      .query({ page: "1", pageSize: "5000" })
+      .set("Cookie", await adminCookieHeader());
+
+    expect(response.body.meta.pageSize).toBe(100);
+  });
+
+  it("removes the uploaded attachment when the order insert fails", async () => {
+    getConnectionMock.mockResolvedValueOnce({
+      beginTransaction: vi.fn(async () => undefined),
+      execute: vi.fn(async () => {
+        throw new Error("db down");
+      }),
+      commit: vi.fn(async () => undefined),
+      rollback: vi.fn(async () => undefined),
+      release: vi.fn(),
+    });
+
+    const response = await request(app)
+      .post("/api/orders")
+      .send({
+        ...validCreateOrderPayload(),
+        attachmentName: "specs.pdf",
+        attachmentBase64: Buffer.from("pdf").toString("base64"),
+        attachmentMimeType: "application/pdf",
+      });
+
+    expect(response.status).toBe(500);
+    expect(removeOrderAttachmentFromMinioMock).toHaveBeenCalledWith(
+      "orders/attachments/test.pdf",
+    );
   });
 
   it("returns configured offer senders for admin", async () => {
