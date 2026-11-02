@@ -48,6 +48,7 @@ export default function AdminCustomersPage() {
             <label className="block text-sm text-gray-700">
               <span className="block mb-1 font-semibold">Caută</span>
               <input
+                id="customers-search"
                 type="search"
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}

@@ -91,3 +91,8 @@ export function enforceRateLimit(
     { status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } },
   );
 }
+
+/** Forget a key's attempts, e.g. after a successful login. */
+export function clearRateLimit(key: string): void {
+  buckets.delete(key);
+}

@@ -6,7 +6,7 @@ import {
   getAdminPassword,
   safeEqualStrings,
 } from "../../../../lib/admin-auth";
-import { consumeRateLimit, getClientIp } from "../../../../lib/rate-limit";
+import { clearRateLimit, consumeRateLimit, getClientIp } from "../../../../lib/rate-limit";
 
 type AuthBody = {
   password?: string;
@@ -28,10 +28,10 @@ function adminCookieOptions() {
 
 export async function POST(request: Request) {
   // Keyed by the proxy-verified client IP (not the spoofable first
-  // X-Forwarded-For entry), 10 attempts / 15 min.
-  const rate = consumeRateLimit(`admin-auth:${getClientIp(request)}`, {
-    max: 10,
-  });
+  // X-Forwarded-For entry), 10 attempts / 15 min. Every attempt counts; a
+  // correct password clears the counter, so only repeated failures throttle.
+  const rateKey = `admin-auth:${getClientIp(request)}`;
+  const rate = consumeRateLimit(rateKey, { max: 10 });
   if (!rate.allowed) {
     return NextResponse.json(
       { ok: false, message: "Prea multe încercări. Încearcă din nou mai târziu." },
@@ -68,6 +68,7 @@ export async function POST(request: Request) {
     );
   }
 
+  clearRateLimit(rateKey);
   const token = await createAdminSessionToken(configuredPassword);
   const response = NextResponse.json({ ok: true });
   response.cookies.set(ADMIN_COOKIE_NAME, token, {
