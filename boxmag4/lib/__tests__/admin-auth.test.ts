@@ -112,4 +112,23 @@ describe("POST /api/admin/auth (INV-AUTH-ADMIN)", () => {
     expect(setCookie).toContain(`${ADMIN_COOKIE_NAME}=;`);
     expect(setCookie.toLowerCase()).toMatch(/max-age=0|expires=thu, 01 jan 1970/);
   });
+
+  it("throttles repeated failures but never a correct password", async () => {
+    const { POST } = await import("../../app/api/admin/auth/route");
+    const attempt = (password: string) =>
+      POST(
+        new Request("http://localhost/api/admin/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-real-ip": "10.0.0.9" },
+          body: JSON.stringify({ password }),
+        }),
+      );
+    for (let i = 0; i < 25; i += 1) {
+      expect((await attempt("test-admin-password")).status).toBe(200);
+    }
+    for (let i = 0; i < 20; i += 1) {
+      expect((await attempt("wrong")).status).toBe(401);
+    }
+    expect((await attempt("wrong")).status).toBe(429);
+  });
 });

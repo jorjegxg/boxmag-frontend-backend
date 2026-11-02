@@ -27,7 +27,7 @@ describe("Admin login", () => {
 
   it("logs in via form and reaches admin area", () => {
     cy.loginAdmin();
-    cy.intercept("GET", "**/api/orders", {
+    cy.intercept({ method: "GET", pathname: "/api/orders" }, {
       statusCode: 200,
       body: { ok: true, data: [] },
     }).as("getOrders");
@@ -35,5 +35,23 @@ describe("Admin login", () => {
     cy.location("pathname").should("eq", "/admin/orders");
     cy.wait("@getOrders");
     cy.contains("Comenzi").should("exist");
+  });
+
+  it("logs out and loses access to the admin area", () => {
+    cy.loginAdmin();
+    cy.intercept({ method: "GET", pathname: "/api/orders" }, {
+      statusCode: 200,
+      body: { ok: true, data: [] },
+    });
+    cy.intercept("DELETE", "/api/admin/auth").as("logout");
+    cy.visit("/admin/orders");
+    cy.waitForHydration();
+    cy.contains("button", "Deconectare").click();
+    cy.wait("@logout").its("response.statusCode").should("eq", 200);
+    cy.location("pathname").should("eq", "/admin/login");
+    cy.getCookie("boxmag-admin-session").should("not.exist");
+
+    cy.visit("/admin/orders");
+    cy.location("pathname").should("eq", "/admin/login");
   });
 });

@@ -129,7 +129,7 @@ describe("checkout-guest-create-account", () => {
       cy.contains(PRODUCT_NAME).should("exist");
 
       cy.loginAdmin();
-      cy.intercept("GET", "**/api/orders").as("getAdminOrders");
+      cy.intercept({ method: "GET", pathname: "/api/orders" }).as("getAdminOrders");
       cy.visit("/admin/orders");
       cy.wait("@getAdminOrders");
 

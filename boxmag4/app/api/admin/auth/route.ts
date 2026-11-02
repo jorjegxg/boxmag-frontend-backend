@@ -6,7 +6,7 @@ import {
   getAdminPassword,
   safeEqualStrings,
 } from "../../../../lib/admin-auth";
-import { consumeRateLimit, getClientIp } from "../../../../lib/rate-limit";
+import { clearRateLimit, consumeRateLimit, getClientIp } from "../../../../lib/rate-limit";
 
 type AuthBody = {
   password?: string;
@@ -27,7 +27,10 @@ function adminCookieOptions() {
 }
 
 export async function POST(request: Request) {
-  const rate = consumeRateLimit(`admin-auth:${getClientIp(request)}`);
+  // Every attempt counts; a correct password clears the counter, so only
+  // repeated failures (brute force) end up throttled.
+  const rateKey = `admin-auth:${getClientIp(request)}`;
+  const rate = consumeRateLimit(rateKey);
   if (!rate.allowed) {
     return NextResponse.json(
       { ok: false, message: "Prea multe încercări. Încearcă din nou mai târziu." },
@@ -64,6 +67,7 @@ export async function POST(request: Request) {
     );
   }
 
+  clearRateLimit(rateKey);
   const token = await createAdminSessionToken(configuredPassword);
   const response = NextResponse.json({ ok: true });
   response.cookies.set(ADMIN_COOKIE_NAME, token, {

@@ -80,6 +80,7 @@ export default function AdminMessagesPage() {
               <label className="flex-1 text-sm text-gray-700">
                 <span className="block mb-1 font-semibold">Caută</span>
                 <input
+                  id="messages-search"
                   type="search"
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
@@ -90,6 +91,7 @@ export default function AdminMessagesPage() {
               <label className="text-sm text-gray-700">
                 <span className="block mb-1 font-semibold">Status</span>
                 <select
+                  id="messages-status-filter"
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
                   className={adminSelectClass}

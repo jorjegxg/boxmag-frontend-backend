@@ -64,3 +64,8 @@ export function consumeRateLimit(
   existing.count += 1;
   return { allowed: true, retryAfterSec: 0 };
 }
+
+/** Forget a key's attempts, e.g. after a successful login. */
+export function clearRateLimit(key: string): void {
+  buckets.delete(key);
+}

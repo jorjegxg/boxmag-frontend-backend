@@ -77,6 +77,7 @@ export default function AdminNewsletterPage() {
               <label className="flex-1 text-sm text-gray-700">
                 <span className="block mb-1 font-semibold">Caută</span>
                 <input
+                  id="newsletter-search"
                   type="search"
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
@@ -87,6 +88,7 @@ export default function AdminNewsletterPage() {
               <label className="text-sm text-gray-700">
                 <span className="block mb-1 font-semibold">Stare</span>
                 <select
+                  id="newsletter-status-filter"
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
                   className={adminSelectClass}

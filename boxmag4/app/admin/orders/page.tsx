@@ -168,6 +168,7 @@ export default function AdminOrdersPage() {
               <label className="flex-1 text-sm text-gray-700">
                 <span className="block mb-1 font-semibold">Caută</span>
                 <input
+                  id="orders-search"
                   type="search"
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
@@ -178,6 +179,7 @@ export default function AdminOrdersPage() {
               <label className="text-sm text-gray-700">
                 <span className="block mb-1 font-semibold">Status</span>
                 <select
+                  id="orders-status-filter"
                   value={statusFilter}
                   onChange={(event) => {
                     setStatusFilter(event.target.value);
@@ -196,6 +198,7 @@ export default function AdminOrdersPage() {
               <label className="text-sm text-gray-700">
                 <span className="block mb-1 font-semibold">Plată</span>
                 <select
+                  id="orders-payment-filter"
                   value={paymentFilter}
                   onChange={(event) => {
                     setPaymentFilter(event.target.value);

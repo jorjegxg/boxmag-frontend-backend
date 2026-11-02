@@ -977,5 +977,6 @@
   "errorPage.title": "A apărut o eroare",
   "errorPage.text": "S-a produs o eroare neașteptată. Încearcă din nou; dacă problema persistă, contactează-ne.",
   "errorPage.retry": "Încearcă din nou",
-  "errorPage.backHome": "Înapoi la pagina principală"
+  "errorPage.backHome": "Înapoi la pagina principală",
+  "forgotPassword.errorTitle": "A apărut o eroare"
 }

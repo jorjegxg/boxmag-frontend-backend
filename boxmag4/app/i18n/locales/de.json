@@ -968,5 +968,6 @@
   "errorPage.title": "Etwas ist schiefgelaufen",
   "errorPage.text": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut; wenn das Problem bleibt, kontaktieren Sie uns.",
   "errorPage.retry": "Erneut versuchen",
-  "errorPage.backHome": "Zur Startseite"
+  "errorPage.backHome": "Zur Startseite",
+  "forgotPassword.errorTitle": "Etwas ist schiefgelaufen"
 }

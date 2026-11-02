@@ -968,5 +968,6 @@
   "errorPage.title": "Something went wrong",
   "errorPage.text": "An unexpected error occurred. Please try again; if it keeps happening, contact us.",
   "errorPage.retry": "Try again",
-  "errorPage.backHome": "Back to home"
+  "errorPage.backHome": "Back to home",
+  "forgotPassword.errorTitle": "Something went wrong"
 }

@@ -119,7 +119,7 @@ describe("b2b-guest-create-account", () => {
         assertCustomerOrderDetail(orderNumber, orderPayload);
 
         cy.loginAdmin();
-        cy.intercept("GET", "**/api/orders").as("getAdminOrders");
+        cy.intercept({ method: "GET", pathname: "/api/orders" }).as("getAdminOrders");
         cy.visit("/admin/orders");
         cy.wait("@getAdminOrders");
 
