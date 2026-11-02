@@ -27,7 +27,7 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 
 | ID | Regulă | Cod |
 |----|--------|-----|
-| `INV-WEBHOOK-PAID` | Doar webhook Stripe marchează comanda `paid`. `GET /api/payments/sessions/:id` e read-only (status + order id/number + email; fără PII contact). | `payments.route.ts`, `app.ts` (raw body) |
+| `INV-WEBHOOK-PAID` | Doar webhook Stripe marchează comanda `paid`. `GET /api/payments/sessions/:id` e read-only (status + order id/number + email; fără PII contact). `checkout.session.completed` marchează `paid` doar dacă `session.payment_status = 'paid'`; `expired` / `async_payment_failed` nu retrogradează niciodată o comandă `paid`. | `payments.route.ts`, `app.ts` (raw body) |
 | `INV-STRIPE-LOCK` | Admin **nu** poate schimba manual `payment_status` dacă există `stripe_session_id`. | `orders.route.ts` |
 | `INV-PAY-STATUS` | Valori permise: `pending`, `paid`, `failed`. | `orders.route.ts` |
 | `INV-CHECKOUT-TOTALS` | Sumele comenzii B2C se calculează în unități minore din exact ce taxează Stripe (preț unitar rotunjit × cantitate): `subtotal_cents + vat_cents + shipping_cents = total_amount_cents` = suma liniilor Stripe, în EUR și în RON. | `payments.route.ts` |
@@ -45,7 +45,7 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 
 | ID | Regulă | Cod |
 |----|--------|-----|
-| `INV-AUTH-ADMIN` | Admin: cookie `boxmag-admin-session` **sau** `Authorization: Bearer` / `x-admin-token`. Fără config → 503 pe rute protejate. | `require-admin.ts` |
+| `INV-AUTH-ADMIN` | Admin: cookie `boxmag-admin-session` **sau** `Authorization: Bearer` / `x-admin-token`. Fără config → 503 pe rute protejate. Token cookie `v3.{exp}.{HMAC-SHA256(parolă, salt:v3.exp)}`, TTL 7 zile, identic în Next și backend (vector de test comun). Logout = `DELETE /api/admin/auth` (expiră cookie-ul) + buton „Deconectare” în nav. | `require-admin.ts`, `config/admin-auth.ts`, `boxmag4/lib/admin-auth.ts`, `app/api/admin/auth/route.ts` |
 | `INV-AUTH-USER` | Customer: cookie `boxmag-user-session` (HMAC, TTL 14 zile) + `localStorage` pe FE (`boxmag.auth.*`). | `require-user.ts`, `user-auth.ts` |
 | `INV-SESSION-RESET` | Semnătura cookie-ului `boxmag-user-session` acoperă și un „credential stamp” = sha256(`users.password_hash`). La fiecare request autentificat se citește stamp-ul curent; după resetarea parolei (sau cont dezactivat/șters) toate sesiunile emise anterior → 401. Eroare DB la lookup = fail closed. | `user-auth.ts`, `services/user-credential-stamp.ts`, `require-user.ts` |
 | `INV-ADMIN-PASSWORD` | În producție `ADMIN_PASSWORD` are minimum **12** caractere (backend-ul refuză să pornească altfel). Login admin: 10 încercări / 15 min per IP. | `config/env.ts`, `boxmag4/app/api/admin/auth/route.ts` |
@@ -69,6 +69,7 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 | `INV-NEWSLETTER-UNSUB` | Fiecare email de newsletter are link de dezabonare semnat (HMAC pe email, `USER_SESSION_SECRET`) către `/newsletter/unsubscribe?email=&token=` + header `List-Unsubscribe` one-click (RFC 8058). Pagina cere confirmare explicită (nu dezabonează la încărcare). `POST /api/newsletter/unsubscribe` → `consent = 0` + `unsubscribed_at`; răspunde `ok` și pentru email necunoscut; token greșit → 400. Re-abonarea golește `unsubscribed_at`. | `newsletter.route.ts`, `services/newsletter-token.ts`, `app/newsletter/unsubscribe/page.tsx`, `db/migrations/015_add_newsletter_unsubscribe.sql` |
 | `INV-CHECKOUT-TERMS` | Checkout B2C: bifa „Regulament + Politica de confidențialitate” e nebifată implicit și obligatorie; backendul respinge `acceptedTerms !== true` cu 400 `TERMS_NOT_ACCEPTED`. Consimțământul de marketing (`consentEmail` / `consentPhone`) e opțional și nebifat implicit — la checkout și la comanda B2B (`/order-summary`). Nimic nu se trimite automat `true`. | `checkout/page.tsx`, `order-summary/page.tsx`, `payments.route.ts` |
 | `INV-ADMIN-MESSAGES` | Inbox mesaje contact = admin only (`requireAdmin`) pe `GET /api/contact`, `GET /api/contact/:id`, `GET /api/contact/reply-senders`, `POST /api/contact/:id/reply`. Reply acceptă `fromKey` ∈ `info` / `b2b` / `orders`; la succes setează `status = 'replied'` + `replied_at` + `replied_from`. Fără SMTP → 503. Status: `new` → `read` (la deschidere detaliu, doar din `new`) → `replied`. | `contact.route.ts`, `admin/messages/page.tsx` |
+| `INV-ADMIN-LISTS` | Listele admin (`GET /api/orders`, `/api/contact`, `/api/customers`, `/api/newsletter/subscribers`) au paginare **opt-in** (`page` / `pageSize`, max 100, `meta.total`); fără parametri întorc lista completă. Căutarea `q` e `LIKE` cu `%`/`_`/`\` escapate. `GET /api/orders` ascunde implicit checkout-urile card abandonate (`payment_status = 'failed'` + sesiune Stripe / `items_json`), atât pentru admin cât și pentru client; admin le vede cu `includeAbandoned=true`. `/api/customers` nu selectează coloane de parolă/token. CSV abonați: BOM, quoting RFC 4180, injecție de formule neutralizată. | `utils/list-query.ts`, `orders.route.ts`, `customers.route.ts`, `newsletter.route.ts`, `admin/components/admin-list.tsx` |
 | `INV-VAT-MANUAL-NAME` | VIES `valid=true` fără nume (ex. DE/ES) → `/api/vat-lookup` răspunde `ok` + `companyNameUnavailable`; UI afișează mesaj info (user completează numele manual); submit cere nume completat. | `vat-lookup/route.ts`, `vat-company.ts`, checkout/contact/registration/order-summary/account |
 | `INV-VAT-LOOKUP-FALLBACK` | VIES indisponibil: pentru RO încearcă ANAF ca sursă primară; dacă tot nu merge (sau non-RO) → `ok` + `companyNameUnavailable` + `lookupUnavailable` (nu 502); UI cere nume manual. VIES `valid=false` rămâne 404 (fără override ANAF). | `vat-lookup/route.ts`, `vat-company.ts`, checkout/contact/registration/order-summary/account |
 | `INV-VAT-COMPANY-EDITABLE` | Lookup-ul TVA doar **autocompletează** `companyName`: câmpul e mereu editabil. Autofill scrie doar dacă câmpul e gol sau conține încă valoarea autocompletată anterior (`shouldAutofillCompany`) — nu suprascrie numele tastat de user / din profil / din query. TVA invalid/incomplet sau eroare lookup **nu** golește numele. | `vat-company.ts`, checkout/contact/registration/order-summary/account |
@@ -144,18 +145,19 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-CHECKOUT-TOTALS` | OK `payments` (RON) | — | — | — |
 | `INV-PRICE-CHANGED` | OK `payments` | OK `cart_store` | — | — |
 | `INV-PENDING-REUSE` | OK `payments` | — | — | — |
-| `INV-WEBHOOK-PAID` | OK `payments` | — | OK success poll (mock) | — |
+| `INV-WEBHOOK-PAID` | OK `payments` (unpaid completed, no downgrade) | — | OK success poll (mock) | — |
 | `INV-STRIPE-LOCK` | OK `orders` | — | OK `admin-orders` | — |
 | `INV-PAY-STATUS` | OK `orders` | — | — | — |
 | `INV-ORDER-STATUS` | OK `orders` | — | OK `admin-orders` | — |
 | `INV-GUEST-LINK` | OK `auth`, `link-guest-orders`, `payments`, `orders` | — | OK `checkout-guest-create-account`, `b2b-order-success` | — |
-| `INV-AUTH-ADMIN` | OK `require-admin` (`x-admin-token`, 503), `session-tokens` | OK `admin-auth` | OK `admin-login` | — |
+| `INV-AUTH-ADMIN` | OK `require-admin` (`x-admin-token`, 503), `session-tokens` | OK `admin-auth` (HMAC vector, logout) | OK `admin-login` (+ logout) | — |
 | `INV-AUTH-USER` | OK `auth` login/logout/profile, `session-tokens` | — | OK `login`, `account` | — |
 | `INV-AUTH-VERIFY-PROFILE` | OK `auth` verify existing-user update | — | — | — |
-| `INV-PASSWORD-RESET` | OK `auth` forgot/reset-password | TODO | TODO | — |
-| `INV-NEWSLETTER-UNSUB` | OK `newsletter.route` | — | — | — |
+| `INV-PASSWORD-RESET` | OK `auth` forgot/reset-password | — | OK `password-reset` | — |
+| `INV-NEWSLETTER-UNSUB` | OK `newsletter.route` | — | OK `newsletter-unsubscribe` | — |
 | `INV-CHECKOUT-TERMS` | OK `payments` | — | OK `checkout`, `order-summary-edges` | — |
-| `INV-ADMIN-MESSAGES` | OK `contact.route` (admin list/detail/reply, 503, read bump) | — | TODO `admin-messages` | — |
+| `INV-ADMIN-MESSAGES` | OK `contact.route` (admin list/detail/reply, 503, read bump) | — | OK `admin-messages` | — |
+| `INV-ADMIN-LISTS` | OK `orders` (filters, pagination, abandoned), `admin-lists` | — | OK `admin-orders`, `admin-messages`, `admin-customers-newsletter` | — |
 | `INV-AUTH-EMAIL-SCOPE` | OK `require-admin`, `orders` GET `/:id` | — | — | — |
 | `INV-SESSION-RESET` | OK `user-session-invalidation` | — | — | — |
 | `INV-ADMIN-PASSWORD` | OK `env.production` | — | — | — |
@@ -166,7 +168,7 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-B2B-SAVED-ADDRESS` | — | — | OK `order-summary-saved-address` | — |
 | `INV-ACCOUNT-ADDRESS-IDENTITY` | — | — | OK `account-logged-in`, `account-address-cart` | — |
 | `INV-I18N-COOKIE` | — | — | OK `language-i18n`, `smoke` | OK `smoke` |
-| `INV-I18N-ERRORS` | — | OK `api-error-i18n` (acoperire en/ro/de), `vat-company`, `vat-lookup` | OK `contact`, `checkout-payment-result`, `account-logged-in` | — |
+| `INV-I18N-ERRORS` | — | OK `api-error-i18n` (acoperire en/ro/de), `i18n-keys` (orice `t("…")` există în en/ro/de), `vat-company`, `vat-lookup` | OK `contact`, `checkout-payment-result`, `account-logged-in` | — |
 | `INV-CONTACT-NEXT` | OK `contact.route` (admin inbox) | OK `contact-route` | OK `contact` | — |
 | `INV-VAT-MANUAL-NAME` | — | OK `vat-lookup`, `vat-company` | OK `contact` | — |
 | `INV-VAT-LOOKUP-FALLBACK` | — | OK `vat-lookup`, `vat-company` | — | — |
