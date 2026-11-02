@@ -17,6 +17,7 @@ import {
 } from "./routes/payments.route";
 import { exchangeRateRouter } from "./routes/exchange-rate.route";
 import { contactRouter } from "./routes/contact.route";
+import { customersRouter } from "./routes/customers.route";
 import {
   authRateLimiter,
   orderCreateRateLimiter,
@@ -89,4 +90,5 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/exchange-rate", exchangeRateRouter);
 // Rate limit lives on the public POST inside the router (admin inbox is exempt).
 app.use("/api/contact", contactRouter);
+app.use("/api/customers", customersRouter);
 
