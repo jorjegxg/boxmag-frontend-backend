@@ -1,7 +1,8 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import { ResultSetHeader } from "mysql2";
 import { mysqlPool } from "../db/mysql";
 import { sendNewsletterWelcomeEmail } from "../services/email";
+import { isNewsletterUnsubscribeTokenValid } from "../services/newsletter-token";
 
 type SubscribeNewsletterPayload = {
   email?: unknown;
@@ -54,6 +55,7 @@ newsletterRouter.post("/subscribe", async (req, res) => {
        VALUES (?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          consent = VALUES(consent),
+         unsubscribed_at = NULL,
          locale = VALUES(locale),
          source = VALUES(source),
          updated_at = CURRENT_TIMESTAMP`,
@@ -80,6 +82,48 @@ newsletterRouter.post("/subscribe", async (req, res) => {
     res.status(500).json({
       ok: false,
       message: "Failed to subscribe newsletter",
+    });
+  }
+});
+
+function readParam(req: Request, key: "email" | "token"): string | null {
+  const fromQuery = req.query[key];
+  if (typeof fromQuery === "string" && fromQuery.trim()) return fromQuery.trim();
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  return toOptionalString(body[key]);
+}
+
+/**
+ * Unsubscribe via the signed link from our emails. Accepts JSON body (frontend
+ * page) or query params (RFC 8058 one-click `List-Unsubscribe-Post`). Answers
+ * `ok` for unknown emails too, so the endpoint does not reveal subscribers.
+ */
+newsletterRouter.post("/unsubscribe", async (req, res) => {
+  const email = readParam(req, "email")?.toLowerCase() ?? null;
+  const token = readParam(req, "token");
+
+  if (!email || !token || !isNewsletterUnsubscribeTokenValid(email, token)) {
+    res.status(400).json({
+      ok: false,
+      message: "Invalid unsubscribe link",
+    });
+    return;
+  }
+
+  try {
+    await mysqlPool.execute<ResultSetHeader>(
+      `UPDATE newsletter_subscribers
+       SET consent = 0,
+           unsubscribed_at = COALESCE(unsubscribed_at, CURRENT_TIMESTAMP)
+       WHERE email = ?`,
+      [email],
+    );
+    res.json({ ok: true, data: { email } });
+  } catch (error) {
+    console.error("Failed to unsubscribe newsletter", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to unsubscribe newsletter",
     });
   }
 });

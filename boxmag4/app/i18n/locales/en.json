@@ -949,5 +949,16 @@
   "checkoutSuccess.verifyFailed": "Failed to verify payment.",
   "orderSummary.errors.vatFormat": "Invalid format. Examples: RO12345678, RO 12345678, DE123456789",
   "business.errors.loadBoxes": "Failed to load box types. Please refresh the page.",
-  "header.searchFailed": "Search failed. Please try again."
+  "header.searchFailed": "Search failed. Please try again.",
+  "newsletterUnsubscribe.breadcrumb": "Newsletter",
+  "newsletterUnsubscribe.title": "Unsubscribe from the newsletter",
+  "newsletterUnsubscribe.confirmText": "Stop sending Boxmag newsletter emails to {{email}}?",
+  "newsletterUnsubscribe.confirmButton": "Unsubscribe",
+  "newsletterUnsubscribe.submitting": "Unsubscribing...",
+  "newsletterUnsubscribe.successTitle": "You are unsubscribed",
+  "newsletterUnsubscribe.successText": "{{email}} will no longer receive the Boxmag newsletter. You can subscribe again at any time from the website footer.",
+  "newsletterUnsubscribe.errorTitle": "Unsubscribe failed",
+  "newsletterUnsubscribe.invalidLink": "This unsubscribe link is invalid. Use the link from the latest newsletter email or contact us.",
+  "newsletterUnsubscribe.tryAgain": "We could not process the request right now. Please try again.",
+  "newsletterUnsubscribe.backHome": "Back to home"
 }

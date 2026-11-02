@@ -17,9 +17,12 @@ vi.mock("../services/email", () => ({
 }));
 
 import { app } from "../app";
+import { createNewsletterUnsubscribeToken } from "../services/newsletter-token";
+import { ensureTestAuthEnv } from "./test-helpers";
 
 describe("newsletter routes", () => {
   beforeEach(() => {
+    ensureTestAuthEnv();
     executeMock.mockReset();
     sendNewsletterWelcomeEmailMock.mockReset();
   });
@@ -94,5 +97,67 @@ describe("newsletter routes", () => {
 
     expect(response.status).toBe(500);
     expect(response.body.ok).toBe(false);
+  });
+
+  it("re-subscribing clears unsubscribed_at", async () => {
+    executeMock.mockResolvedValueOnce([{ affectedRows: 2 }]);
+
+    await request(app)
+      .post("/api/newsletter/subscribe")
+      .send({ email: "buyer@example.com", consent: true });
+
+    expect(String(executeMock.mock.calls[0]?.[0])).toContain("unsubscribed_at = NULL");
+  });
+
+  it("unsubscribes with a valid signed token (JSON body)", async () => {
+    executeMock.mockResolvedValueOnce([{ affectedRows: 1 }]);
+    const token = createNewsletterUnsubscribeToken("buyer@example.com");
+
+    const response = await request(app)
+      .post("/api/newsletter/unsubscribe")
+      .send({ email: "Buyer@Example.com", token });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    const [sql, args] = executeMock.mock.calls[0] ?? [];
+    expect(String(sql)).toContain("consent = 0");
+    expect(args).toEqual(["buyer@example.com"]);
+  });
+
+  it("supports RFC 8058 one-click unsubscribe via query params", async () => {
+    executeMock.mockResolvedValueOnce([{ affectedRows: 1 }]);
+    const token = createNewsletterUnsubscribeToken("buyer@example.com") ?? "";
+
+    const response = await request(app)
+      .post(
+        `/api/newsletter/unsubscribe?email=buyer%40example.com&token=${token}`,
+      )
+      .type("form")
+      .send("List-Unsubscribe=One-Click");
+
+    expect(response.status).toBe(200);
+    expect(executeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a token signed for another email", async () => {
+    const token = createNewsletterUnsubscribeToken("other@example.com");
+
+    const response = await request(app)
+      .post("/api/newsletter/unsubscribe")
+      .send({ email: "buyer@example.com", token });
+
+    expect(response.status).toBe(400);
+    expect(executeMock).not.toHaveBeenCalled();
+  });
+
+  it("answers ok for an unknown email (no subscriber enumeration)", async () => {
+    executeMock.mockResolvedValueOnce([{ affectedRows: 0 }]);
+    const token = createNewsletterUnsubscribeToken("nobody@example.com");
+
+    const response = await request(app)
+      .post("/api/newsletter/unsubscribe")
+      .send({ email: "nobody@example.com", token });
+
+    expect(response.status).toBe(200);
   });
 });

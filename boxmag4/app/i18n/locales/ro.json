@@ -958,5 +958,16 @@
   "checkoutSuccess.verifyFailed": "Verificarea plății a eșuat.",
   "orderSummary.errors.vatFormat": "Format invalid. Exemple: RO12345678, RO 12345678, DE123456789",
   "business.errors.loadBoxes": "Nu am putut încărca tipurile de cutii. Te rugăm să reîncarci pagina.",
-  "header.searchFailed": "Căutarea a eșuat. Te rugăm să încerci din nou."
+  "header.searchFailed": "Căutarea a eșuat. Te rugăm să încerci din nou.",
+  "newsletterUnsubscribe.breadcrumb": "Newsletter",
+  "newsletterUnsubscribe.title": "Dezabonare de la newsletter",
+  "newsletterUnsubscribe.confirmText": "Oprim trimiterea newsletter-ului Boxmag către {{email}}?",
+  "newsletterUnsubscribe.confirmButton": "Dezabonează-mă",
+  "newsletterUnsubscribe.submitting": "Se procesează...",
+  "newsletterUnsubscribe.successTitle": "Te-ai dezabonat",
+  "newsletterUnsubscribe.successText": "{{email}} nu va mai primi newsletter-ul Boxmag. Te poți abona din nou oricând din subsolul site-ului.",
+  "newsletterUnsubscribe.errorTitle": "Dezabonarea a eșuat",
+  "newsletterUnsubscribe.invalidLink": "Linkul de dezabonare nu este valid. Folosește linkul din cel mai recent email sau contactează-ne.",
+  "newsletterUnsubscribe.tryAgain": "Nu am putut procesa cererea acum. Încearcă din nou.",
+  "newsletterUnsubscribe.backHome": "Înapoi la pagina principală"
 }

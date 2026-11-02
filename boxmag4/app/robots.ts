@@ -15,6 +15,7 @@ export default function robots(): MetadataRoute.Robots {
         "/order-summary",
         "/registration",
         "/verify-email",
+        "/newsletter/",
         "/mobile-app-svg",
       ],
     },
