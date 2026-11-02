@@ -198,10 +198,13 @@ export default function CheckoutPage() {
           Array.isArray(parsed.data) &&
           parsed.data.length > 0
         ) {
-          setShippingMethods(parsed.data);
-          if (!parsed.data.some((method) => method.key === shippingMethod)) {
-            setShippingMethod(parsed.data[0]!.key);
-          }
+          const cachedMethods = parsed.data;
+          setShippingMethods(cachedMethods);
+          setShippingMethod((current) =>
+            cachedMethods.some((method) => method.key === current)
+              ? current
+              : cachedMethods[0]!.key,
+          );
         }
       }
     } catch (_error) {
@@ -229,9 +232,11 @@ export default function CheckoutPage() {
         if (isCancelled || nextMethods.length === 0) return;
 
         setShippingMethods(nextMethods);
-        if (!nextMethods.some((method) => method.key === shippingMethod)) {
-          setShippingMethod(nextMethods[0]!.key);
-        }
+        setShippingMethod((current) =>
+          nextMethods.some((method) => method.key === current)
+            ? current
+            : nextMethods[0]!.key,
+        );
         localStorage.setItem(
           SHIPPING_METHODS_CACHE_KEY,
           JSON.stringify({
@@ -248,7 +253,7 @@ export default function CheckoutPage() {
     return () => {
       isCancelled = true;
     };
-  }, [backendBaseUrl, shippingMethod]);
+  }, [backendBaseUrl]);
 
   useEffect(() => {
     setAccountEmail((localStorage.getItem(AUTH_EMAIL_STORAGE_KEY) ?? "").trim());
