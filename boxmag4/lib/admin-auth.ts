@@ -16,16 +16,27 @@ export function isAdminPublicRoute(pathname: string): boolean {
   return pathname === "/admin/login";
 }
 
-async function sha256Hex(value: string): Promise<string> {
-  const data = new TextEncoder().encode(value);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuffer))
+async function hmacSha256Hex(key: string, message: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(key),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, encoder.encode(message));
+  return Array.from(new Uint8Array(signature))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
 }
 
+function signAdminPayload(password: string, payload: string): Promise<string> {
+  return hmacSha256Hex(password, `${ADMIN_COOKIE_SALT}:${payload}`);
+}
+
 /**
- * Opaque expiring admin session: `v2.{exp}.{sha256(salt:password:v2.exp)}`.
+ * Opaque expiring admin session: `v3.{exp}.{hmac(password, salt:v3.exp)}`.
  * Must match the Node implementation in boxmag-backend.
  */
 export async function createAdminSessionToken(
@@ -33,10 +44,8 @@ export async function createAdminSessionToken(
   nowSeconds: number = Math.floor(Date.now() / 1000),
 ): Promise<string> {
   const exp = nowSeconds + ADMIN_SESSION_TTL_SECONDS;
-  const payload = `v2.${exp}`;
-  const signature = await sha256Hex(
-    `${ADMIN_COOKIE_SALT}:${password}:${payload}`,
-  );
+  const payload = `v3.${exp}`;
+  const signature = await signAdminPayload(password, payload);
   return `${payload}.${signature}`;
 }
 
@@ -56,7 +65,7 @@ export async function isAdminSessionValid(
   if (!token || !password) return false;
 
   const parts = token.split(".");
-  if (parts.length !== 3 || parts[0] !== "v2") return false;
+  if (parts.length !== 3 || parts[0] !== "v3") return false;
 
   const exp = Number(parts[1]);
   const signature = parts[2] ?? "";
@@ -64,9 +73,7 @@ export async function isAdminSessionValid(
     return false;
   }
 
-  const payload = `v2.${exp}`;
-  const expected = await sha256Hex(
-    `${ADMIN_COOKIE_SALT}:${password}:${payload}`,
-  );
+  const payload = `v3.${exp}`;
+  const expected = await signAdminPayload(password, payload);
   return safeEqualStrings(signature, expected);
 }

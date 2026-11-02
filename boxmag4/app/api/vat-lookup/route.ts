@@ -265,7 +265,13 @@ function successFromLookup(
 export async function GET(request: NextRequest) {
   // Each call proxies to VIES / ANAF; keep one client from burning our quota.
   const limited = enforceRateLimit(request, "vat-lookup", { max: 60 });
-  if (limited) return limited;
+  if (limited) {
+    // `code` lets the forms show the localized "lookup failed" message.
+    return NextResponse.json(
+      { ok: false, code: "lookup_failed", message: "Too many requests. Try again later." },
+      { status: 429, headers: limited.headers },
+    );
+  }
 
   const vat = request.nextUrl.searchParams.get("vat")?.trim() ?? "";
   const parsed = parseVatNumber(vat);

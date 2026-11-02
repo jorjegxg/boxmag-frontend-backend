@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/admin/orders", label: "Comenzi", match: "/admin/orders" },
@@ -24,6 +25,18 @@ const NAV_ITEMS = [
 
 export default function AdminNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await fetch("/api/admin/auth", { method: "DELETE" });
+    } finally {
+      router.replace("/admin/login");
+      router.refresh();
+    }
+  };
 
   return (
     <nav className="w-full bg-white px-6 lg:px-20 pt-4">
@@ -45,6 +58,14 @@ export default function AdminNav() {
             </Link>
           );
         })}
+        <button
+          type="button"
+          onClick={() => void handleLogout()}
+          disabled={isLoggingOut}
+          className="ml-auto rounded-md px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-60"
+        >
+          {isLoggingOut ? "Se deconectează..." : "Deconectare"}
+        </button>
       </div>
     </nav>
   );

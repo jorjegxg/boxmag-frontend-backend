@@ -27,14 +27,21 @@ describe("admin-auth helpers (INV-AUTH-ADMIN)", () => {
     expect(safeEqualStrings("ab", "abc")).toBe(false);
   });
 
-  it("creates and validates v2 session tokens", async () => {
+  it("creates and validates v3 (HMAC) session tokens", async () => {
     const token = await createAdminSessionToken("secret-admin");
-    expect(token.startsWith("v2.")).toBe(true);
+    expect(token.startsWith("v3.")).toBe(true);
     expect(await isAdminSessionValid(token, "secret-admin")).toBe(true);
     expect(await isAdminSessionValid(token, "wrong")).toBe(false);
   });
 
-  it("exports cookie name used by middleware", () => {
+  it("matches the backend token format (shared test vector)", async () => {
+    // Same vector in boxmag-backend/src/__tests__/session-tokens.test.ts.
+    expect(await createAdminSessionToken("secret-admin", 1_700_000_000)).toBe(
+      "v3.1700604800.eb6758f38a588151f9bb760d4e08f8b25edfb4aa211ee27fec08e0e05e55597c",
+    );
+  });
+
+  it("exports cookie name used by proxy", () => {
     expect(ADMIN_COOKIE_NAME).toBe("boxmag-admin-session");
   });
 });
@@ -95,5 +102,14 @@ describe("POST /api/admin/auth (INV-AUTH-ADMIN)", () => {
     expect(body.ok).toBe(true);
     const setCookie = response.headers.get("set-cookie") ?? "";
     expect(setCookie).toContain(ADMIN_COOKIE_NAME);
+  });
+
+  it("DELETE clears the admin cookie (logout)", async () => {
+    const { DELETE } = await import("../../app/api/admin/auth/route");
+    const response = await DELETE();
+    expect(response.status).toBe(200);
+    const setCookie = response.headers.get("set-cookie") ?? "";
+    expect(setCookie).toContain(`${ADMIN_COOKIE_NAME}=;`);
+    expect(setCookie.toLowerCase()).toMatch(/max-age=0|expires=thu, 01 jan 1970/);
   });
 });
