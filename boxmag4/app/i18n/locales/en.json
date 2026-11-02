@@ -958,5 +958,16 @@
   "errorPage.title": "Something went wrong",
   "errorPage.text": "An unexpected error occurred. Please try again; if it keeps happening, contact us.",
   "errorPage.retry": "Try again",
-  "errorPage.backHome": "Back to home"
+  "errorPage.backHome": "Back to home",
+  "newsletterUnsubscribe.breadcrumb": "Newsletter",
+  "newsletterUnsubscribe.title": "Unsubscribe from the newsletter",
+  "newsletterUnsubscribe.confirmText": "Stop sending Boxmag newsletter emails to {{email}}?",
+  "newsletterUnsubscribe.confirmButton": "Unsubscribe",
+  "newsletterUnsubscribe.submitting": "Unsubscribing...",
+  "newsletterUnsubscribe.successTitle": "You are unsubscribed",
+  "newsletterUnsubscribe.successText": "{{email}} will no longer receive the Boxmag newsletter. You can subscribe again at any time from the website footer.",
+  "newsletterUnsubscribe.errorTitle": "Unsubscribe failed",
+  "newsletterUnsubscribe.invalidLink": "This unsubscribe link is invalid. Use the link from the latest newsletter email or contact us.",
+  "newsletterUnsubscribe.tryAgain": "We could not process the request right now. Please try again.",
+  "newsletterUnsubscribe.backHome": "Back to home"
 }

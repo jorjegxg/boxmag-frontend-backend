@@ -4,6 +4,10 @@ import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { env } from "../config/env";
 import type { CartLineItem } from "../utils/cart-items";
 import { getObjectBufferFromMinio } from "./minio";
+import {
+  buildNewsletterOneClickUnsubscribeUrl,
+  buildNewsletterUnsubscribeUrl,
+} from "./newsletter-token";
 
 type MailTransporter = Mail<SMTPTransport.SentMessageInfo>;
 
@@ -489,6 +493,7 @@ const newsletterWelcomeCopy: Record<
     ctaLabel: string;
     footer: string;
     team: string;
+    unsubscribe: string;
   }
 > = {
   ro: {
@@ -502,6 +507,7 @@ const newsletterWelcomeCopy: Record<
     footer:
       "Daca nu ai solicitat aceasta abonare, ignora acest email sau contacteaza-ne.",
     team: "Echipa Boxmag",
+    unsubscribe: "Dezabonare",
   },
   en: {
     subject: "Welcome to the Boxmag newsletter",
@@ -514,6 +520,7 @@ const newsletterWelcomeCopy: Record<
     footer:
       "If you did not request this subscription, you can ignore this email or contact us.",
     team: "The Boxmag Team",
+    unsubscribe: "Unsubscribe",
   },
   de: {
     subject: "Willkommen beim Boxmag Newsletter",
@@ -526,6 +533,7 @@ const newsletterWelcomeCopy: Record<
     footer:
       "Wenn Sie dieses Abonnement nicht angefordert haben, ignorieren Sie diese E-Mail oder kontaktieren Sie uns.",
     team: "Ihr Boxmag Team",
+    unsubscribe: "Abmelden",
   },
 };
 
@@ -542,11 +550,21 @@ export async function sendNewsletterWelcomeEmail(params: {
   const copy = newsletterWelcomeCopy[locale];
   const shopUrl = env.frontendBaseUrl.replace(/\/$/, "");
   const privacyUrl = `${shopUrl}/privacy-policy`;
+  const unsubscribeUrl = buildNewsletterUnsubscribeUrl(params.to);
+  const oneClickUrl = buildNewsletterOneClickUnsubscribeUrl(params.to);
 
   await transporter.sendMail({
     from: `"Boxmag Newsletter" <${from}>`,
     to: params.to,
     subject: copy.subject,
+    ...(oneClickUrl
+      ? {
+          headers: {
+            "List-Unsubscribe": `<${oneClickUrl}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
+        }
+      : {}),
     text: [
       copy.greeting,
       "",
@@ -559,6 +577,7 @@ export async function sendNewsletterWelcomeEmail(params: {
       copy.footer,
       "",
       copy.team,
+      ...(unsubscribeUrl ? ["", `${copy.unsubscribe}: ${unsubscribeUrl}`] : []),
     ].join("\n"),
     html: `
       <div style="margin:0;background:#f5f7fb;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#111827;">
@@ -604,6 +623,11 @@ export async function sendNewsletterWelcomeEmail(params: {
               </p>
               <p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#9ca3af;">
                 <a href="${privacyUrl}" style="color:#ef6b56;text-decoration:underline;">Privacy policy</a>
+                ${
+                  unsubscribeUrl
+                    ? ` · <a href="${escapeHtml(unsubscribeUrl)}" style="color:#ef6b56;text-decoration:underline;">${escapeHtml(copy.unsubscribe)}</a>`
+                    : ""
+                }
               </p>
             </td>
           </tr>
