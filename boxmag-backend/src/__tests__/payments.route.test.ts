@@ -735,6 +735,49 @@ describe("payments routes", () => {
     expect(constructEventMock).not.toHaveBeenCalled();
   });
 
+  it("webhook completed with unpaid (delayed) payment does not mark paid", async () => {
+    constructEventMock.mockReturnValue({
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_delayed_1",
+          payment_intent: "pi_delayed_1",
+          amount_total: 1000,
+          currency: "eur",
+          payment_status: "unpaid",
+        },
+      },
+    });
+
+    const response = await request(app)
+      .post("/api/payments/webhook")
+      .set("stripe-signature", "t=1,v1=test")
+      .set("Content-Type", "application/json")
+      .send(Buffer.from(JSON.stringify({ id: "evt_delayed" })));
+
+    expect(response.status).toBe(200);
+    expect(executeMock).not.toHaveBeenCalled();
+    expect(sendNewOrderNotificationEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("webhook failure events never downgrade a paid order", async () => {
+    constructEventMock.mockReturnValue({
+      type: "checkout.session.expired",
+      data: { object: { id: "cs_paid_then_expired" } },
+    });
+
+    await request(app)
+      .post("/api/payments/webhook")
+      .set("stripe-signature", "t=1,v1=test")
+      .set("Content-Type", "application/json")
+      .send(Buffer.from(JSON.stringify({ id: "evt_late_expired" })));
+
+    expect(executeMock).toHaveBeenCalledWith(
+      expect.stringContaining("payment_status <> 'paid'"),
+      ["cs_paid_then_expired"],
+    );
+  });
+
   it("webhook marks order failed on checkout.session.async_payment_failed", async () => {
     constructEventMock.mockReturnValue({
       type: "checkout.session.async_payment_failed",

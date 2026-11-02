@@ -8,8 +8,9 @@ import "./env";
  * The backend validates the very same cookie so that direct API calls are
  * subject to the same admin gate as the UI.
  *
- * Token format: `v2.{expUnix}.{sha256Hex}` where the digest is over
- * `boxmag-admin-v1:password:v2.{exp}` (must match boxmag4/lib/admin-auth.ts).
+ * Token format: `v3.{expUnix}.{hmacHex}` where the HMAC-SHA256 is keyed by the
+ * admin password over `boxmag-admin-v1:v3.{exp}` (must match
+ * boxmag4/lib/admin-auth.ts).
  */
 export const ADMIN_COOKIE_NAME = "boxmag-admin-session";
 const ADMIN_COOKIE_SALT = "boxmag-admin-v1";
@@ -32,8 +33,8 @@ export function getAdminApiToken(): string | undefined {
 
 function signAdminPayload(password: string, payload: string): string {
   return crypto
-    .createHash("sha256")
-    .update(`${ADMIN_COOKIE_SALT}:${password}:${payload}`)
+    .createHmac("sha256", password)
+    .update(`${ADMIN_COOKIE_SALT}:${payload}`)
     .digest("hex");
 }
 
@@ -50,7 +51,7 @@ export function createAdminSessionToken(
   nowSeconds: number = Math.floor(Date.now() / 1000),
 ): string {
   const exp = nowSeconds + ADMIN_SESSION_TTL_SECONDS;
-  const payload = `v2.${exp}`;
+  const payload = `v3.${exp}`;
   return `${payload}.${signAdminPayload(password, payload)}`;
 }
 
@@ -61,7 +62,7 @@ export function isAdminSessionValid(
   if (!token || !password) return false;
 
   const parts = token.split(".");
-  if (parts.length !== 3 || parts[0] !== "v2") return false;
+  if (parts.length !== 3 || parts[0] !== "v3") return false;
 
   const exp = Number(parts[1]);
   const signature = parts[2] ?? "";
@@ -69,7 +70,7 @@ export function isAdminSessionValid(
     return false;
   }
 
-  const payload = `v2.${exp}`;
+  const payload = `v3.${exp}`;
   const expected = signAdminPayload(password, payload);
   return safeEqualStrings(signature, expected);
 }

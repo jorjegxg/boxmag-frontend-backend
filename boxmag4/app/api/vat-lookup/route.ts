@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { consumeRateLimit, getClientIp } from "@/lib/rate-limit";
 import { parseViesAddress, type VatLookupAddressFields } from "@/lib/parse-vat-address";
 import {
   isVatLookupSupportedCountry,
@@ -261,7 +262,21 @@ function successFromLookup(
   });
 }
 
+/**
+ * Public proxy to VIES / ANAF. Lookups fire while the user types (debounced),
+ * so the per-IP budget is generous; it only stops scripted abuse.
+ */
+const VAT_LOOKUP_RATE_LIMIT = { windowMs: 15 * 60 * 1000, max: 120 };
+
 export async function GET(request: NextRequest) {
+  const rate = consumeRateLimit(`vat-lookup:${getClientIp(request)}`, VAT_LOOKUP_RATE_LIMIT);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { ok: false, code: "lookup_failed", message: "Too many requests. Try again later." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } },
+    );
+  }
+
   const vat = request.nextUrl.searchParams.get("vat")?.trim() ?? "";
   const parsed = parseVatNumber(vat);
 

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { NextRequest } from "next/server";
+import { describe, expect, it, vi } from "vitest";
 import { consumeRateLimit, getClientIp } from "../rate-limit";
 
 function requestWithHeaders(headers: Record<string, string>): Request {
@@ -48,5 +49,40 @@ describe("consumeRateLimit", () => {
         )}`,
     );
     expect(new Set(keys).size).toBe(1);
+  });
+});
+
+describe("public lookup routes (INV-RATE-LIMIT)", () => {
+  it("throttles /api/vat-lookup per client IP", async () => {
+    vi.resetModules();
+    const { GET } = await import("../../app/api/vat-lookup/route");
+    const call = (ip: string) =>
+      GET(
+        new NextRequest("http://localhost/api/vat-lookup?vat=NOT-A-VAT", {
+          headers: { "x-real-ip": ip },
+        }),
+      );
+    for (let i = 0; i < 120; i += 1) {
+      expect((await call("203.0.113.20")).status).toBe(400);
+    }
+    const blocked = await call("203.0.113.20");
+    expect(blocked.status).toBe(429);
+    expect(((await blocked.json()) as { code?: string }).code).toBe("lookup_failed");
+    expect((await call("203.0.113.21")).status).toBe(400);
+  });
+
+  it("throttles /api/geocode per client IP", async () => {
+    vi.resetModules();
+    const { GET } = await import("../../app/api/geocode/route");
+    const call = () =>
+      GET(
+        new NextRequest("http://localhost/api/geocode?q=ab", {
+          headers: { "x-real-ip": "203.0.113.30" },
+        }),
+      );
+    for (let i = 0; i < 60; i += 1) {
+      expect((await call()).status).toBe(400);
+    }
+    expect((await call()).status).toBe(429);
   });
 });

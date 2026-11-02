@@ -883,14 +883,20 @@ export async function stripeWebhookHandler(
       case "checkout.session.completed":
       case "checkout.session.async_payment_succeeded": {
         const session = event.data.object as Stripe.Checkout.Session;
-        await markOrderPaidBySession(session);
+        // `completed` also fires for delayed methods (SEPA, bank transfer) with
+        // payment_status "unpaid"; those get async_payment_succeeded later.
+        if (session.payment_status === "paid") {
+          await markOrderPaidBySession(session);
+        }
         break;
       }
       case "checkout.session.async_payment_failed":
       case "checkout.session.expired": {
         const session = event.data.object as Stripe.Checkout.Session;
+        // Never downgrade an order that is already paid (out-of-order events).
         await mysqlPool.execute(
-          `UPDATE orders SET payment_status = 'failed' WHERE stripe_session_id = ?`,
+          `UPDATE orders SET payment_status = 'failed'
+           WHERE stripe_session_id = ? AND payment_status <> 'paid'`,
           [session.id],
         );
         break;

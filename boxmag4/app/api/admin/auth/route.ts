@@ -12,6 +12,20 @@ type AuthBody = {
   password?: string;
 };
 
+function adminCookieOptions() {
+  // In production the admin panel (boxmag.eu) and the API (api.boxmag.eu) live
+  // on different subdomains. Setting ADMIN_COOKIE_DOMAIN=boxmag.eu makes the
+  // session cookie visible to the backend so it can enforce admin auth too.
+  const cookieDomain = process.env.ADMIN_COOKIE_DOMAIN?.trim() || undefined;
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
+  };
+}
+
 export async function POST(request: Request) {
   const rate = consumeRateLimit(`admin-auth:${getClientIp(request)}`);
   if (!rate.allowed) {
@@ -52,17 +66,19 @@ export async function POST(request: Request) {
 
   const token = await createAdminSessionToken(configuredPassword);
   const response = NextResponse.json({ ok: true });
-  // In production the admin panel (boxmag.eu) and the API (api.boxmag.eu) live
-  // on different subdomains. Setting ADMIN_COOKIE_DOMAIN=boxmag.eu makes the
-  // session cookie visible to the backend so it can enforce admin auth too.
-  const cookieDomain = process.env.ADMIN_COOKIE_DOMAIN?.trim() || undefined;
   response.cookies.set(ADMIN_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
+    ...adminCookieOptions(),
     maxAge: ADMIN_SESSION_TTL_SECONDS,
-    ...(cookieDomain ? { domain: cookieDomain } : {}),
+  });
+  return response;
+}
+
+/** Admin logout: expire the session cookie (same domain/path it was set with). */
+export async function DELETE() {
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set(ADMIN_COOKIE_NAME, "", {
+    ...adminCookieOptions(),
+    maxAge: 0,
   });
   return response;
 }

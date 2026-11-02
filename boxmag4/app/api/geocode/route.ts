@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { consumeRateLimit, getClientIp } from "@/lib/rate-limit";
+
+/** Public endpoint backed by a paid Google Maps key — throttle per client IP. */
+const GEOCODE_RATE_LIMIT = { windowMs: 15 * 60 * 1000, max: 60 };
 
 type GoogleGeocodeResult = {
   types?: string[];
@@ -231,6 +235,14 @@ async function geocodeBest(query: string): Promise<Coords | null> {
 }
 
 export async function GET(request: NextRequest) {
+  const rate = consumeRateLimit(`geocode:${getClientIp(request)}`, GEOCODE_RATE_LIMIT);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { ok: false, message: "Too many requests. Try again later." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } },
+    );
+  }
+
   const query = request.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (query.length < 3) {
     return NextResponse.json({ ok: false, message: "Query too short" }, { status: 400 });

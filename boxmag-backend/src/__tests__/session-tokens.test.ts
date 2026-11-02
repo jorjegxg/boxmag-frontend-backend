@@ -11,10 +11,17 @@ import {
 describe("admin session tokens", () => {
   const password = "test-admin-password";
 
-  it("accepts a fresh v2 token", () => {
+  it("accepts a fresh v3 (HMAC) token", () => {
     const token = createAdminSessionToken(password);
-    expect(token.startsWith("v2.")).toBe(true);
+    expect(token.startsWith("v3.")).toBe(true);
     expect(isAdminSessionValid(token, password)).toBe(true);
+  });
+
+  it("matches the frontend token format (shared test vector)", () => {
+    // Same vector in boxmag4/lib/__tests__/admin-auth.test.ts.
+    expect(createAdminSessionToken("secret-admin", 1_700_000_000)).toBe(
+      "v3.1700604800.eb6758f38a588151f9bb760d4e08f8b25edfb4aa211ee27fec08e0e05e55597c",
+    );
   });
 
   it("rejects a wrong password", () => {

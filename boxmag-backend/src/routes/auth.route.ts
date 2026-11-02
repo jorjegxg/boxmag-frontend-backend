@@ -93,16 +93,29 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function hashPassword(password: string): string {
+/** Async scrypt: the sync variant blocks the event loop for every login. */
+function scryptHex(password: string, salt: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(password, salt, 64, (error, derivedKey) => {
+      if (error) reject(error);
+      else resolve(derivedKey.toString("hex"));
+    });
+  });
+}
+
+async function hashPassword(password: string): Promise<string> {
   const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  const hash = await scryptHex(password, salt);
   return `${salt}:${hash}`;
 }
 
-function verifyPassword(password: string, storedPasswordHash: string): boolean {
+async function verifyPassword(
+  password: string,
+  storedPasswordHash: string,
+): Promise<boolean> {
   const [salt, expectedHash] = storedPasswordHash.split(":");
   if (!salt || !expectedHash) return false;
-  const actualHash = crypto.scryptSync(password, salt, 64).toString("hex");
+  const actualHash = await scryptHex(password, salt);
   const actualHashBuffer = Buffer.from(actualHash, "hex");
   const expectedHashBuffer = Buffer.from(expectedHash, "hex");
   if (actualHashBuffer.length !== expectedHashBuffer.length) return false;
@@ -157,7 +170,7 @@ authRouter.post("/login", async (req, res) => {
     }
 
     const user = rows[0]!;
-    if (!verifyPassword(passwordRaw, user.password_hash)) {
+    if (!(await verifyPassword(passwordRaw, user.password_hash))) {
       res.status(401).json({
         ok: false,
         message: "Invalid email or password",
@@ -380,7 +393,7 @@ authRouter.post("/register", async (req, res) => {
       return;
     }
 
-    const passwordHash = hashPassword(passwordRaw);
+    const passwordHash = await hashPassword(passwordRaw);
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const verificationTokenHash = sha256Hex(verificationToken);
     const expiresMinutes = env.verificationExpiresMinutes;
@@ -683,7 +696,7 @@ authRouter.post("/reset-password", async (req, res) => {
       return;
     }
 
-    const passwordHash = hashPassword(password);
+    const passwordHash = await hashPassword(password);
     await mysqlPool.execute(
       `UPDATE users
        SET password_hash = ?,
