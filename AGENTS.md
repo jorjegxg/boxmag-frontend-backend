@@ -70,7 +70,7 @@ Quick-reference for AI agents working in the Boxmag monorepo. For local setup an
 ### Admin
 
 ```
-/admin/login → /admin (hub) → /admin/orders | /admin/box-types | /admin/shipping-methods | /admin/messages
+/admin/login → /admin (hub) → /admin/orders | /admin/box-types | /admin/shipping-methods | /admin/messages | /admin/customers | /admin/newsletter
                               → /admin/orders/[id] | /admin/box-types/[id]/edit | /admin/messages/[id]
 ```
 
@@ -453,7 +453,7 @@ Each section follows: **Purpose → What to expect → Key files → Backend/API
 
 **Purpose:** Landing panou cu linkuri către secțiunile admin.
 
-**What to expect:** Romanian UI. Carduri către Comenzi, Tipuri de cutii, Metode de livrare. Nav comună pe toate paginile admin (except login).
+**What to expect:** Redirect la `/admin/orders`. Nav comună pe toate paginile admin (except login), cu buton „Deconectare” (`DELETE /api/admin/auth`).
 
 **Key files:** `boxmag4/app/admin/page.tsx`, `boxmag4/app/admin/components/AdminNav.tsx`
 
@@ -465,13 +465,13 @@ Each section follows: **Purpose → What to expect → Key files → Backend/API
 
 ### `/admin/orders` — Admin orders list
 
-**Purpose:** Listă comenzi cu status și paginare.
+**Purpose:** Listă comenzi cu status și paginare server-side.
 
-**What to expect:** Tabel comenzi; click pe rând → detaliu.
+**What to expect:** Căutare (ORD-xxxx / nume / companie / email), filtre status + plată, toggle „Arată plățile abandonate”; click pe rând → detaliu.
 
 **Key files:** `boxmag4/app/admin/orders/page.tsx`, `admin-ro.ts`
 
-**Backend/API:** `GET /api/orders`, `PATCH /api/orders/:id/status`
+**Backend/API:** `GET /api/orders?page&pageSize&q&status&paymentStatus&includeAbandoned`, `PATCH /api/orders/:id/status`
 
 **Gotchas:** Back-linkurile din detaliu duc aici, nu pe hub.
 
@@ -513,9 +513,33 @@ Each section follows: **Purpose → What to expect → Key files → Backend/API
 
 **Key files:** `boxmag4/app/admin/messages/page.tsx`, `boxmag4/app/admin/components/AdminNav.tsx`
 
-**Backend/API:** `GET /api/contact` (admin)
+**Backend/API:** `GET /api/contact?page&pageSize&q&status` (admin)
 
 **Gotchas:** Mesajele sunt persistate de backend, nu de ruta Next `/api/contact` (aceea doar forwardează).
+
+---
+
+### `/admin/customers` — Admin customers
+
+**Purpose:** Listă conturi client (nume, companie, TVA, telefon, nr. comenzi, stare).
+
+**Key files:** `boxmag4/app/admin/customers/page.tsx`, `boxmag4/app/admin/components/admin-list.tsx`
+
+**Backend/API:** `GET /api/customers?page&pageSize&q` (admin)
+
+**Gotchas:** Read-only. Nu expune coloane de parolă/token.
+
+---
+
+### `/admin/newsletter` — Admin newsletter subscribers
+
+**Purpose:** Abonați newsletter (implicit doar activi) + export CSV.
+
+**Key files:** `boxmag4/app/admin/newsletter/page.tsx`
+
+**Backend/API:** `GET /api/newsletter/subscribers?page&pageSize&q&status` (admin), `?format=csv` pentru export
+
+**Gotchas:** Export-ul ia toate rândurile care corespund filtrelor (fără paginare).
 
 ---
 
@@ -571,6 +595,20 @@ Each section follows: **Purpose → What to expect → Key files → Backend/API
 - `POST /api/box-types/upload-image(s)`
 
 **Gotchas:** `PUT /:id/products` bulk-replaces all products/prices. Images stored in MinIO.
+
+---
+
+### `/newsletter/unsubscribe` — Newsletter unsubscribe
+
+**Purpose:** Dezabonare din linkul semnat din emailuri (`?email=&token=`).
+
+**What to expect:** Buton de confirmare explicit (nu dezabonează la încărcare). Link invalid → mesaj de eroare.
+
+**Key files:** `boxmag4/app/newsletter/unsubscribe/page.tsx`, `boxmag-backend/src/services/newsletter-token.ts`
+
+**Backend/API:** `POST /api/newsletter/unsubscribe`
+
+**Gotchas:** Token = HMAC pe email cu `USER_SESSION_SECRET` (schimbarea secretului invalidează linkurile vechi). Disallowed în `robots.ts`.
 
 ---
 
@@ -647,14 +685,19 @@ Rate-limited via `authRateLimiter` in `app.ts`.
 - `POST /`, `PUT|DELETE /:shippingMethodId` — Admin
 
 ### `/api/newsletter` (`newsletter.route.ts`)
-- `POST /subscribe` — Public
+- `POST /subscribe` — Public (re-abonarea golește `unsubscribed_at`)
+- `POST /unsubscribe` — Public, cere token HMAC (body JSON sau query pentru one-click RFC 8058)
+- `GET /subscribers` — Admin; listă / `?format=csv`
+
+### `/api/customers` (`customers.route.ts`)
+- `GET /` — Admin; conturi client cu nr. comenzi, căutare + paginare
 
 ### `/api/exchange-rate` (`exchange-rate.route.ts`)
 - `GET /eur-ron` — EUR→RON rate (BNR XML, 1h cache)
 
 ### `/api/contact` (`contact.route.ts`)
 - `POST /` — Public; persists a submission into `contact_messages` (called server-to-server by the Next `/api/contact` route, not by the browser)
-- `GET /` — Admin; inbox list
+- `GET /` — Admin; inbox list (`q`, `status`, paginare opțională)
 - `GET /:id` — Admin; message detail
 - `GET /reply-senders` — Admin; configured sender addresses (`info` / `b2b` / `orders`)
 - `POST /:id/reply` — Admin; sends the reply email and sets `status = 'replied'`
@@ -692,7 +735,7 @@ Schema: `boxmag-backend/db/reset_and_seed.sql` (+ ordered migrations in `boxmag-
 | `addresses` | Saved customer addresses |
 | `shipping_methods` | Checkout shipping options |
 | `contact_messages` | Contact form submissions + admin replies |
-| `newsletter_subscribers` | Newsletter |
+| `newsletter_subscribers` | Newsletter (`consent`, `unsubscribed_at`) |
 | `schema_migrations` | Applied migration filenames (created by `db/migrate.sh`) |
 
 Password reset uses columns on `users` (`password_reset_token_hash`, `password_reset_expires_at`), not a separate table.
@@ -711,9 +754,10 @@ Password reset uses columns on `users` (`password_reset_token_hash`, `password_r
 - Use backend port **3005** (not 4000 from code default)
 - Run backend tests: `cd boxmag-backend && npm test` (Vitest)
 - Run frontend unit tests: `cd boxmag4 && npm test` (Vitest)
+- Lint frontend: `cd boxmag4 && npm run lint` (0 errors required in CI)
 - Run e2e tests: `cd boxmag4 && npx cypress run` (Cypress)
 - Run all unit tests from root: `npm test`
-- Production redeploy: **only** [`scripts/deploy.sh`](scripts/deploy.sh) (or GH Actions → that script). Schema changes: add a numbered file under `boxmag-backend/db/migrations/` and mirror into `reset_and_seed.sql` for fresh local DBs; deploy runs `db:migrate`
+- Production redeploy: **only** [`scripts/deploy.sh`](scripts/deploy.sh) (or GH Actions → that script); it runs [`scripts/backup.sh`](scripts/backup.sh) before migrations. Schema changes: add a numbered file under `boxmag-backend/db/migrations/` and mirror into `reset_and_seed.sql` for fresh local DBs; deploy runs `db:migrate`
 
 ### Don't
 
@@ -741,7 +785,7 @@ Password reset uses columns on `users` (`password_reset_token_hash`, `password_r
 | `boxmag-backend/src/__tests__/` | Vitest + Supertest | Auth, orders, payments, exchange rate, middleware |
 | `boxmag4/` (`npm test`) | Vitest + RTL | Stores, guards, Next API handlers |
 | `boxmag4/cypress/` | Cypress | E2E flows (B2C, B2B, account, admin) |
-| `.github/workflows/test.yml` | CI | Unit BE+FE + build; smoke pe `workflow_dispatch` |
+| `.github/workflows/test.yml` | CI | Unit BE+FE + BE typecheck + FE lint + build; smoke pe `workflow_dispatch` |
 
 ```bash
 cd boxmag-backend && npm test
