@@ -75,7 +75,7 @@ Quick-reference for AI agents working in the Boxmag monorepo. For local setup an
 ```
 
 - UI is in Romanian
-- Protected by `boxmag4/middleware.ts`
+- Protected by `boxmag4/proxy.ts`
 - Shared nav in `boxmag4/app/admin/components/AdminNav.tsx`
 
 ---
