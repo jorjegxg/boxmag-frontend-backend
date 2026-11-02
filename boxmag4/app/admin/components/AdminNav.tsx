@@ -21,6 +21,8 @@ const NAV_ITEMS = [
     label: "Mesaje contact",
     match: "/admin/messages",
   },
+  { href: "/admin/customers", label: "Clienți", match: "/admin/customers" },
+  { href: "/admin/newsletter", label: "Newsletter", match: "/admin/newsletter" },
 ] as const;
 
 export default function AdminNav() {

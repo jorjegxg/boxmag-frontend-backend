@@ -29,6 +29,13 @@ import {
 } from "../config/uploads";
 import { resolveAttachmentServing } from "../utils/attachment-content-type";
 import { parseCartItemsJson } from "../utils/cart-items";
+import {
+  buildLikeSearch,
+  buildListMeta,
+  buildWhereSql,
+  readPagination,
+  readQueryString,
+} from "../utils/list-query";
 import { toPositiveInt } from "../utils/numbers";
 
 type CreateOrderPayload = {
@@ -349,8 +356,6 @@ function buildPriceBreakdown(row: OrderListRow) {
   };
 }
 
-const MAX_ORDERS_PAGE_SIZE = 100;
-
 /**
  * Card checkouts that never completed (expired / Stripe error). They have a
  * row so the webhook can match the session, but are not real orders.
@@ -358,14 +363,6 @@ const MAX_ORDERS_PAGE_SIZE = 100;
  */
 const ABANDONED_CHECKOUT_SQL = `(o.payment_status = 'failed'
   AND (o.stripe_session_id IS NOT NULL OR o.items_json IS NOT NULL))`;
-
-function readQueryString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function escapeLikePattern(value: string): string {
-  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
-}
 
 type OrderListFilters = { whereSql: string; params: unknown[] };
 
@@ -402,10 +399,9 @@ function buildOrderListFilters(
     params.push(paymentStatus);
   }
 
-  const search = readQueryString(query.q).slice(0, 100);
-  if (search) {
-    const orderNumberMatch = /^(?:ord-?)?0*(\d+)$/i.exec(search);
-    const like = `%${escapeLikePattern(search.toLowerCase())}%`;
+  const like = buildLikeSearch(query.q);
+  if (like) {
+    const orderNumberMatch = /^(?:ord-?)?0*(\d+)$/i.exec(readQueryString(query.q));
     clauses.push(`(${orderNumberMatch ? "o.id = ? OR " : ""}LOWER(c.email) LIKE ?
               OR LOWER(c.company_name) LIKE ?
               OR LOWER(CONCAT_WS(' ', c.first_name, c.surname)) LIKE ?)`);
@@ -417,21 +413,6 @@ function buildOrderListFilters(
     whereSql: clauses.length > 0 ? `WHERE ${clauses.join("\n         AND ")}` : "",
     params,
   };
-}
-
-/** `page` / `pageSize` are opt-in so existing callers keep the full list. */
-function readPagination(
-  query: Record<string, unknown>,
-): { page: number; pageSize: number } | null {
-  const pageRaw = readQueryString(query.page);
-  const pageSizeRaw = readQueryString(query.pageSize);
-  if (!pageRaw && !pageSizeRaw) return null;
-  const page = Math.max(1, toPositiveInt(pageRaw) ?? 1);
-  const pageSize = Math.min(
-    MAX_ORDERS_PAGE_SIZE,
-    Math.max(1, toPositiveInt(pageSizeRaw) ?? 25),
-  );
-  return { page, pageSize };
 }
 
 ordersRouter.get("/", requireAdminOrUserEmail, async (req, res) => {
@@ -460,7 +441,7 @@ ordersRouter.get("/", requireAdminOrUserEmail, async (req, res) => {
     const [rows] = await mysqlPool.query<OrderListRow[]>(
       sql,
       pagination
-        ? [...params, pagination.pageSize, (pagination.page - 1) * pagination.pageSize]
+        ? [...params, pagination.pageSize, pagination.offset]
         : params,
     );
 
@@ -478,11 +459,7 @@ ordersRouter.get("/", requireAdminOrUserEmail, async (req, res) => {
 
     res.json({
       ok: true,
-      meta: {
-        total,
-        page: pagination?.page ?? 1,
-        pageSize: pagination?.pageSize ?? total,
-      },
+      meta: buildListMeta(pagination, total),
       data: rows.map((row) => ({
         id: row.id,
         orderNumber: `ORD-${String(row.id).padStart(4, "0")}`,

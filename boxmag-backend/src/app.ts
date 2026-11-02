@@ -17,6 +17,7 @@ import {
 } from "./routes/payments.route";
 import { exchangeRateRouter } from "./routes/exchange-rate.route";
 import { contactRouter } from "./routes/contact.route";
+import { customersRouter } from "./routes/customers.route";
 import {
   authRateLimiter,
   publicFormRateLimiter,
@@ -83,4 +84,5 @@ app.use("/api/shipping-methods", shippingMethodsRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/exchange-rate", exchangeRateRouter);
 app.use("/api/contact", publicFormRateLimiter, contactRouter);
+app.use("/api/customers", customersRouter);
 

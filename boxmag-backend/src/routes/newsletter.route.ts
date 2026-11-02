@@ -1,6 +1,14 @@
 import { Router, type Request } from "express";
-import { ResultSetHeader } from "mysql2";
+import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { mysqlPool } from "../db/mysql";
+import { requireAdmin } from "../middleware/require-admin";
+import {
+  buildLikeSearch,
+  buildListMeta,
+  buildWhereSql,
+  readPagination,
+  readQueryString,
+} from "../utils/list-query";
 import { sendNewsletterWelcomeEmail } from "../services/email";
 import { isNewsletterUnsubscribeTokenValid } from "../services/newsletter-token";
 
@@ -124,6 +132,116 @@ newsletterRouter.post("/unsubscribe", async (req, res) => {
     res.status(500).json({
       ok: false,
       message: "Failed to unsubscribe newsletter",
+    });
+  }
+});
+
+type SubscriberRow = RowDataPacket & {
+  id: number;
+  email: string;
+  consent: number;
+  locale: string | null;
+  source: string | null;
+  unsubscribed_at: Date | string | null;
+  created_at: Date | string;
+};
+
+function toIso(value: Date | string | null): string | null {
+  if (value == null) return null;
+  return value instanceof Date ? value.toISOString() : String(value);
+}
+
+/** RFC 4180 field; also defuses spreadsheet formula injection (=, +, -, @). */
+function csvField(value: string | number | null): string {
+  let text = value == null ? "" : String(value);
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+/**
+ * Admin: newsletter subscribers. Optional `q` (email), `status`
+ * (`subscribed` / `unsubscribed`), `page` / `pageSize`; `format=csv` exports
+ * every matching row.
+ */
+newsletterRouter.get("/subscribers", requireAdmin, async (req, res) => {
+  const query = req.query as Record<string, unknown>;
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+
+  const status = readQueryString(query.status);
+  if (status === "subscribed") clauses.push("consent = 1");
+  if (status === "unsubscribed") clauses.push("consent = 0");
+
+  const like = buildLikeSearch(query.q);
+  if (like) {
+    clauses.push("LOWER(email) LIKE ?");
+    params.push(like);
+  }
+
+  const whereSql = buildWhereSql(clauses);
+  const isCsv = readQueryString(query.format) === "csv";
+  const pagination = isCsv ? null : readPagination(query);
+
+  try {
+    const [rows] = await mysqlPool.query<SubscriberRow[]>(
+      `SELECT id, email, consent, locale, source, unsubscribed_at, created_at
+       FROM newsletter_subscribers
+       ${whereSql}
+       ORDER BY created_at DESC, id DESC
+       ${pagination ? "LIMIT ? OFFSET ?" : ""}`,
+      pagination ? [...params, pagination.pageSize, pagination.offset] : params,
+    );
+
+    const data = rows.map((row) => ({
+      id: row.id,
+      email: row.email,
+      subscribed: row.consent === 1,
+      locale: row.locale,
+      source: row.source,
+      unsubscribedAt: toIso(row.unsubscribed_at),
+      createdAt: toIso(row.created_at),
+    }));
+
+    if (isCsv) {
+      const lines = [
+        ["email", "subscribed", "locale", "source", "created_at", "unsubscribed_at"].join(","),
+        ...data.map((row) =>
+          [
+            row.email,
+            row.subscribed ? "yes" : "no",
+            row.locale,
+            row.source,
+            row.createdAt,
+            row.unsubscribedAt,
+          ]
+            .map(csvField)
+            .join(","),
+        ),
+      ];
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="newsletter-subscribers.csv"',
+      );
+      res.send(`\uFEFF${lines.join("\r\n")}\r\n`);
+      return;
+    }
+
+    let total = rows.length;
+    if (pagination) {
+      const [countRows] = await mysqlPool.query<Array<RowDataPacket & { total: number }>>(
+        `SELECT COUNT(*) AS total FROM newsletter_subscribers ${whereSql}`,
+        params,
+      );
+      total = Number(countRows[0]?.total ?? 0);
+    }
+
+    res.json({ ok: true, data, meta: buildListMeta(pagination, total) });
+  } catch (error) {
+    console.error("Failed to load newsletter subscribers", error);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to load newsletter subscribers",
     });
   }
 });

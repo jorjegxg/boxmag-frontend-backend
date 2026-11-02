@@ -3,6 +3,13 @@ import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { mysqlPool } from "../db/mysql";
 import { requireAdmin } from "../middleware/require-admin";
 import {
+  buildLikeSearch,
+  buildListMeta,
+  buildWhereSql,
+  readPagination,
+  readQueryString,
+} from "../utils/list-query";
+import {
   getOrderOfferSenderOptions,
   isEmailTransportConfigured,
   resolveDefaultOrderOfferFromKey,
@@ -119,17 +126,54 @@ contactRouter.post("/", async (req, res) => {
   }
 });
 
-// Admin: list all contact messages.
-contactRouter.get("/", requireAdmin, async (_req, res) => {
+const CONTACT_MESSAGE_STATUSES = new Set(["new", "read", "replied"]);
+
+// Admin: list contact messages. Optional `q`, `status`, `page` / `pageSize`.
+contactRouter.get("/", requireAdmin, async (req, res) => {
+  const query = req.query as Record<string, unknown>;
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+
+  const status = readQueryString(query.status);
+  if (CONTACT_MESSAGE_STATUSES.has(status)) {
+    clauses.push("status = ?");
+    params.push(status);
+  }
+
+  const like = buildLikeSearch(query.q);
+  if (like) {
+    clauses.push(`(LOWER(email) LIKE ?
+              OR LOWER(company_name) LIKE ?
+              OR LOWER(CONCAT_WS(' ', first_name, surname)) LIKE ?
+              OR LOWER(message) LIKE ?)`);
+    params.push(like, like, like, like);
+  }
+
+  const whereSql = buildWhereSql(clauses);
+  const pagination = readPagination(query);
+
   try {
     const [rows] = await mysqlPool.query<ContactMessageRow[]>(
       `SELECT id, first_name, surname, company_name, vat_number, email, phone,
               country, message, attachment_names, status, reply_message,
               replied_at, replied_from, created_at
        FROM contact_messages
-       ORDER BY created_at DESC, id DESC`,
+       ${whereSql}
+       ORDER BY created_at DESC, id DESC
+       ${pagination ? "LIMIT ? OFFSET ?" : ""}`,
+      pagination ? [...params, pagination.pageSize, pagination.offset] : params,
     );
-    res.json({ ok: true, data: rows.map(mapRow) });
+
+    let total = rows.length;
+    if (pagination) {
+      const [countRows] = await mysqlPool.query<Array<RowDataPacket & { total: number }>>(
+        `SELECT COUNT(*) AS total FROM contact_messages ${whereSql}`,
+        params,
+      );
+      total = Number(countRows[0]?.total ?? 0);
+    }
+
+    res.json({ ok: true, data: rows.map(mapRow), meta: buildListMeta(pagination, total) });
   } catch (error) {
     console.error("Failed to load contact messages", error);
     res.status(500).json({
