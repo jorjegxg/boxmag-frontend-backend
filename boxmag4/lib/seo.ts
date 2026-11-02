@@ -8,7 +8,7 @@ import { getSiteBaseUrl } from "./site-url";
  * `metadata` (or `generateMetadata`) built from here and render its client page.
  *
  * Note on i18n: the site serves EN/RO/DE from the same URLs via the
- * `boxmag.language` cookie (see `middleware.ts`), so there is no `hreflang` —
+ * `boxmag.language` cookie (see `proxy.ts`), so there is no `hreflang` —
  * canonical always points at the single URL for the route.
  */
 
