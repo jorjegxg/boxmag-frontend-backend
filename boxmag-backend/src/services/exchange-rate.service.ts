@@ -3,6 +3,8 @@ const FRANKFURTER_URL =
   "https://api.frankfurter.app/latest?from=EUR&to=RON";
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
+/** A hung rate provider must not block RON checkout. */
+const FETCH_TIMEOUT_MS = 5_000;
 
 export type ExchangeRateSource = "bnr" | "frankfurter";
 
@@ -36,6 +38,7 @@ export function parseBnrEurRate(xml: string): number | null {
 async function fetchBnrEurRonRate(): Promise<number | null> {
   const response = await fetch(BNR_XML_URL, {
     headers: { Accept: "application/xml,text/xml" },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!response.ok) return null;
   const xml = await response.text();
@@ -45,6 +48,7 @@ async function fetchBnrEurRonRate(): Promise<number | null> {
 async function fetchFrankfurterEurRonRate(): Promise<number | null> {
   const response = await fetch(FRANKFURTER_URL, {
     headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!response.ok) return null;
   const payload = (await response.json()) as {
@@ -54,6 +58,19 @@ async function fetchFrankfurterEurRonRate(): Promise<number | null> {
   return typeof rate === "number" && Number.isFinite(rate) && rate > 0
     ? rate
     : null;
+}
+
+/** Network errors, timeouts and bad payloads all mean "try the next source". */
+async function tryRateSource(
+  source: ExchangeRateSource,
+  fetchRate: () => Promise<number | null>,
+): Promise<number | null> {
+  try {
+    return await fetchRate();
+  } catch (error) {
+    console.warn(`EUR/RON rate source ${source} failed`, error);
+    return null;
+  }
 }
 
 export async function getEurRonRate(options?: {
@@ -73,7 +90,7 @@ export async function getEurRonRate(options?: {
   }
 
   const fetchedAt = new Date().toISOString();
-  const bnrRate = await fetchBnrEurRonRate();
+  const bnrRate = await tryRateSource("bnr", fetchBnrEurRonRate);
   if (bnrRate != null) {
     cachedRate = {
       rate: bnrRate,
@@ -88,7 +105,10 @@ export async function getEurRonRate(options?: {
     };
   }
 
-  const frankfurterRate = await fetchFrankfurterEurRonRate();
+  const frankfurterRate = await tryRateSource(
+    "frankfurter",
+    fetchFrankfurterEurRonRate,
+  );
   if (frankfurterRate != null) {
     cachedRate = {
       rate: frankfurterRate,
