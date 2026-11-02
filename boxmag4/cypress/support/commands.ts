@@ -148,9 +148,18 @@ declare global {
       }): Chainable<void>;
       visitCheckoutLoggedOut(options?: { cartItems?: SeedCartItem[] }): Chainable<void>;
       loginAdmin(): Chainable<void>;
+      waitForHydration(): Chainable<void>;
     }
   }
 }
+
+/**
+ * Next dev hydrates slowly; input before hydration is reverted by React.
+ * LanguageProvider sets html[data-hydrated] once the client app is live.
+ */
+Cypress.Commands.add("waitForHydration", () => {
+  cy.get('html[data-hydrated="true"]', { timeout: 30000 });
+});
 
 const defaultProfile: MockProfile = {
   firstName: "John",

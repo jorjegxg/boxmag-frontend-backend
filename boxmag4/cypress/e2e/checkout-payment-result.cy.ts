@@ -234,7 +234,10 @@ describe("Checkout success page", () => {
     cy.wait("@getSessionFail");
 
     cy.contains("We could not verify your payment").should("exist");
-    cy.contains("Stripe error: session not found").should("exist");
+    // Raw API message is never shown; "Stripe error…" maps to a localized
+    // payment-provider message (INV-I18N-ERRORS).
+    cy.contains("The payment provider returned an error").should("exist");
+    cy.contains("Stripe error: session not found").should("not.exist");
     cy.contains("a", "Back to checkout")
       .should("have.attr", "href")
       .and("eq", "/checkout");
@@ -397,8 +400,9 @@ describe("Guest checkout → create account", () => {
     cy.get("#reg-surname").clear().type("Marin");
     cy.get("#reg-vat").clear().type("RO12345678");
     cy.get("#reg-phone").clear().type("799888777");
-    // Company is readonly — filled by VAT lookup/cache after typing VAT.
-    cy.get("#reg-company").should("have.attr", "readonly");
+    // Company stays editable (INV-VAT-COMPANY-EDITABLE); empty field is
+    // autofilled by VAT lookup/cache after typing VAT.
+    cy.get("#reg-company").should("not.have.attr", "readonly");
     cy.get("#reg-company").should("have.value", "Guest Checkout SRL");
 
     cy.intercept("POST", "**/api/auth/register", {

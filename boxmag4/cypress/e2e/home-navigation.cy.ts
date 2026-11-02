@@ -16,6 +16,7 @@ const visitHome = () => {
       win.localStorage.setItem("boxmag.language", "en");
     },
   });
+  cy.waitForHydration();
 };
 
 const heroSelects = () =>

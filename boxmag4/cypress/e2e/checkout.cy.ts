@@ -85,7 +85,13 @@ const fillValidVat = (
   // negative if the debounce simply hasn't fired yet).
   cy.wait("@vatLookup", { timeout: 15000 });
 
-  // Company input is read-only and only fills from VAT lookup/cache.
+  // The lookup must be finished before "Place order": while it runs, the page
+  // refuses to submit. Company may already be filled from the profile cache
+  // (INV-VAT-COMPANY-EDITABLE), so its value alone does not prove that.
+  cy.contains(/Looking up company details|Se caută datele companiei/i, {
+    timeout: 15000,
+  }).should("not.exist");
+
   // With a saved address, place-order can still use selectedAddress.companyName,
   // so callers may skip this assert via expectCompany: null.
   if (expectCompany) {
@@ -94,9 +100,6 @@ const fillValidVat = (
       expectCompany,
     );
   }
-  cy.contains(/verify the VAT number|verificăm numărul de TVA/i, {
-    timeout: 15000,
-  }).should("not.exist");
 };
 
 describe("/checkout", () => {
@@ -267,7 +270,9 @@ describe("/checkout", () => {
 
     cy.contains("button", "Place order").click();
     cy.wait("@createCheckoutFail");
-    cy.contains("Server error").should("exist");
+    // Unknown API messages fall back to the localized checkout error (INV-I18N-ERRORS).
+    cy.contains("Failed to start checkout.").should("exist");
+    cy.contains("Server error").should("not.exist");
   });
 
   it("butonul Place order arată stare submitting în timpul request-ului", () => {

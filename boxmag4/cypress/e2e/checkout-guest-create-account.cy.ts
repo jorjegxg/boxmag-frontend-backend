@@ -73,8 +73,9 @@ describe("checkout-guest-create-account", () => {
     cy.get("#reg-surname").clear().type(SURNAME);
     cy.get("#reg-vat").clear().type(VAT_NUMBER);
     cy.get("#reg-phone").clear().type(PHONE);
-    // Company is readonly — filled by VAT lookup/cache, never typed.
-    cy.get("#reg-company").should("have.attr", "readonly");
+    // Company stays editable (INV-VAT-COMPANY-EDITABLE); empty field is
+    // autofilled by VAT lookup/cache.
+    cy.get("#reg-company").should("not.have.attr", "readonly");
     cy.get("#reg-company").should("have.value", COMPANY_NAME);
 
     cy.get("#reg-password").clear().type(ACCOUNT_PASSWORD);
