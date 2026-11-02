@@ -72,3 +72,22 @@ Do **not** run `reset_and_seed.sql` on a live database.
 3. Pay test/live → webhook marks paid → success page shows order number
 4. Admin login + open an order; attachment download works via API (not public MinIO URL)
 5. Guest registration CTA on success still prefills email
+
+## Backup
+
+`scripts/deploy.sh` face backup automat înainte de migrări (`SKIP_BACKUP=1` îl sare). Plus cron zilnic:
+
+```bash
+15 3 * * * cd /opt/boxmag && BACKUP_DIR=/var/backups/boxmag bash scripts/backup.sh >> /var/log/boxmag-backup.log 2>&1
+```
+
+- `mysql-<ts>.sql.gz` = `mysqldump --single-transaction`; `minio-<ts>.tar.gz` = volumul `/data` al MinIO.
+- Retenție `BACKUP_RETENTION_DAYS` (default 14). Copiază `BACKUP_DIR` **în afara serverului** (rclone / S3 / alt host).
+- Restore (pe un host gol sau după incident, nu peste date bune):
+
+```bash
+gunzip -c mysql-<ts>.sql.gz | docker exec -i -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" boxmag4-mysql mysql -uroot
+docker run --rm --volumes-from boxmag4-minio -v "$PWD":/backup alpine tar xzf /backup/minio-<ts>.tar.gz -C /
+```
+
+- Testează un restore pe local măcar o dată pe lună.

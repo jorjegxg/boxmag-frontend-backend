@@ -33,6 +33,13 @@ git pull --ff-only origin main
 echo "==> Pornesc dependinte (MySQL, MinIO)..."
 docker compose up -d mysql minio
 
+echo "==> Backup DB + MinIO inainte de migrari..."
+if [[ "${SKIP_BACKUP:-0}" == "1" ]]; then
+  echo "    (sarit: SKIP_BACKUP=1)"
+else
+  bash "$ROOT_DIR/scripts/backup.sh"
+fi
+
 echo "==> Aplic migrari schema (boxmag-backend/db/migrations)..."
 bash "$ROOT_DIR/boxmag-backend/db/migrate.sh"
 
