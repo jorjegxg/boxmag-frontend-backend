@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import nodemailer, { type Transporter } from "nodemailer";
 import fs from "fs";
 import path from "path";
 import { checkVAT, countries } from "jsvat";
@@ -113,7 +113,7 @@ async function persistContactMessage(body: ContactPayload): Promise<number | nul
   }
 }
 
-let sharedTransporter: nodemailer.Transporter | null = null;
+let sharedTransporter: Transporter | null = null;
 
 function getTransporter(smtpHost: string, smtpPort: number, smtpUser: string, smtpPass: string) {
   if (!sharedTransporter) {
