@@ -40,6 +40,8 @@ async function withConnection<T>(
   run: (connection: import("mysql2/promise").Connection) => Promise<T>,
   options: { multipleStatements?: boolean } = {},
 ): Promise<T> {
+  // mysql2 lives in the backend's node_modules; resolve it at runtime.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const mysql = require(path.resolve(
     REPO_ROOT,
     "boxmag-backend/node_modules/mysql2/promise",

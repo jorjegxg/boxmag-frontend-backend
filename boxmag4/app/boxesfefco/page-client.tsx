@@ -8,7 +8,6 @@ import { WhyChooseBoxfixSection } from "../global/components/why-choose-boxfix-s
 import Link from "next/link";
 import Image from "next/image";
 import { ServicesSection } from "../global/components/services-section";
-import { TrainingProductVideoSection } from "../global/components/training-product-video-section";
 import { useLanguage } from "../i18n/language-context";
 
 export default function ShopPage() {
