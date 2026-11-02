@@ -151,6 +151,9 @@ describe("Contact page – validare VAT", () => {
 
   it("afișează eroare la VAT invalid", () => {
     fillForm({ vatNumber: "INVALID000", companyName: "" });
+    // Company e editabil și required (INV-VAT-COMPANY-EDITABLE): fără el,
+    // validarea nativă a browserului oprește submit-ul înainte de check-ul VAT.
+    cy.get("#companyName").clear().type("Test SRL");
     // acceptăm termenii
     cy.get('input[type="checkbox"]').check({ force: true });
 
@@ -278,7 +281,9 @@ describe("Contact page – eroare API", () => {
     cy.get('button[type="submit"]').click();
 
     cy.wait("@contactError");
-    cy.contains("Server error").should("exist");
+    // Unknown API messages fall back to the localized send error (INV-I18N-ERRORS).
+    cy.contains("Unable to send your message.").should("exist");
+    cy.contains("Server error").should("not.exist");
   });
 
   it("butonul este dezactivat în timp ce se trimite", () => {

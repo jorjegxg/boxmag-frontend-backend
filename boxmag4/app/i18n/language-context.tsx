@@ -55,6 +55,8 @@ export function LanguageProvider({
       setLanguageState(saved);
     }
     setHydrated(true);
+    // Lets e2e tests wait for React before interacting (pre-hydration input is lost).
+    document.documentElement.dataset.hydrated = "true";
     // initialLanguage seeds first paint from server cookie; remount if cookie changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

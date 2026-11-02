@@ -320,7 +320,9 @@ describe("/account – tab Address (logat)", () => {
     cy.contains("button", "Save address").click();
 
     cy.wait("@createAddressFail");
-    cy.contains("Address validation failed").should("exist");
+    // Unknown API messages fall back to the page's localized error (INV-I18N-ERRORS).
+    cy.contains("Failed to save address.").should("exist");
+    cy.contains("Address validation failed").should("not.exist");
   });
 
   it("permite bifarea/debifarea default shipping și billing", () => {

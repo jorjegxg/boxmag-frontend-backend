@@ -22,6 +22,7 @@ const visitEn = (path: string) => {
       win.document.cookie = `${LANG_STORAGE}=en; path=/; max-age=31536000; samesite=lax`;
     },
   });
+  cy.waitForHydration();
 };
 
 describe("Limbă i18n (EN / RO / DE)", () => {

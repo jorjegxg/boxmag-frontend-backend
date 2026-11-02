@@ -103,7 +103,8 @@ describe("Registration page", () => {
   it("shows registration form fields", () => {
     cy.contains("h1", "Registration").should("exist");
     cy.get("#reg-vat").should("exist");
-    cy.get("#reg-company").should("exist").and("have.attr", "readonly");
+    // INV-VAT-COMPANY-EDITABLE
+    cy.get("#reg-company").should("exist").and("not.have.attr", "readonly");
     cy.get("#reg-email").should("exist");
     cy.get("#reg-password").should("exist");
     cy.get("#reg-confirm").should("exist");
@@ -264,7 +265,9 @@ describe("Registration page — B2B query prefill", () => {
     cy.get("#reg-phone").should("have.value", "+40700000000");
     cy.get("#reg-vat").should("have.value", "RO12345678");
     cy.wait("@vatLookup");
-    cy.get("#reg-company").should("have.value", "Guest Co SRL");
+    // Query-prefilled company is never overwritten by the VAT lookup
+    // (INV-VAT-COMPANY-EDITABLE).
+    cy.get("#reg-company").should("have.value", "Guest Co");
   });
 
   it("uses returnTo from query after successful registration", () => {
