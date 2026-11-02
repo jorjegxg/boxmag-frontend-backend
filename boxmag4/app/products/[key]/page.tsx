@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { buildMetadata } from "@/lib/seo";
 import { breadcrumbSchema, productSchema } from "@/lib/schema";
 import { getShopPriceTiers } from "@/app/constants/price-tiers";
@@ -46,8 +47,12 @@ async function fetchJson<T>(url: string): Promise<T | null> {
 /**
  * There is no by-key endpoint on the backend, so resolve the key from the list
  * the same way the client page does (`page-client.tsx`).
+ * `null` = backend unreachable (let the client page retry); `"not-found"` =
+ * catalog loaded and no active box type has this key (real 404).
  */
-async function resolveBoxType(key: string): Promise<ResolvedBoxType | null> {
+async function resolveBoxType(
+  key: string,
+): Promise<ResolvedBoxType | "not-found" | null> {
   const backendBaseUrl = getSitemapBackendBaseUrl();
 
   const listPayload = await fetchJson<{ ok?: boolean; data?: BoxTypeApi[] }>(
@@ -59,7 +64,7 @@ async function resolveBoxType(key: string): Promise<ResolvedBoxType | null> {
   const boxType = listPayload.data.find(
     (candidate) => candidate.key === decodedKey && candidate.isActive,
   );
-  if (!boxType) return null;
+  if (!boxType) return "not-found";
 
   const productsPayload = await fetchJson<{
     ok?: boolean;
@@ -116,7 +121,7 @@ export async function generateMetadata({
   const resolved = await resolveBoxType(key);
   const path = `/products/${encodeURIComponent(decodeURIComponent(key))}`;
 
-  if (!resolved) {
+  if (!resolved || resolved === "not-found") {
     return buildMetadata({
       title: "Corrugated Box",
       description:
@@ -144,6 +149,7 @@ export default async function ProductByKeyPage({
   const resolved = await resolveBoxType(key);
   const path = `/products/${encodeURIComponent(decodeURIComponent(key))}`;
 
+  if (resolved === "not-found") notFound();
   if (!resolved) {
     return <ProductByKeyClient />;
   }

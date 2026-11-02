@@ -960,5 +960,13 @@
   "newsletterUnsubscribe.errorTitle": "Unsubscribe failed",
   "newsletterUnsubscribe.invalidLink": "This unsubscribe link is invalid. Use the link from the latest newsletter email or contact us.",
   "newsletterUnsubscribe.tryAgain": "We could not process the request right now. Please try again.",
-  "newsletterUnsubscribe.backHome": "Back to home"
+  "newsletterUnsubscribe.backHome": "Back to home",
+  "notFound.title": "Page not found",
+  "notFound.text": "The page you are looking for does not exist or has been moved.",
+  "notFound.backHome": "Back to home",
+  "notFound.goToShop": "Browse the shop",
+  "errorPage.title": "Something went wrong",
+  "errorPage.text": "An unexpected error occurred. Please try again; if it keeps happening, contact us.",
+  "errorPage.retry": "Try again",
+  "errorPage.backHome": "Back to home"
 }

@@ -7,6 +7,20 @@ import { FaFacebookF, FaInstagram } from "react-icons/fa6";
 import { useLanguage } from "../../i18n/language-context";
 import { siteEmails } from "../../../lib/site-emails";
 
+/** Social profiles are shown only once their URLs are configured in .env. */
+const SOCIAL_LINKS = [
+  {
+    href: process.env.NEXT_PUBLIC_FACEBOOK_URL?.trim() ?? "",
+    label: "Facebook",
+    Icon: FaFacebookF,
+  },
+  {
+    href: process.env.NEXT_PUBLIC_INSTAGRAM_URL?.trim() ?? "",
+    label: "Instagram",
+    Icon: FaInstagram,
+  },
+].filter((link) => link.href.startsWith("https://"));
+
 export function Footer() {
   const { t } = useLanguage();
 
@@ -165,14 +179,22 @@ export function Footer() {
                 </Link>
               </li>
             </ul>
-            <div className="flex gap-3 pt-3">
-              <a href="#" aria-label="Facebook" className="hover:opacity-80">
-                <FaFacebookF />
-              </a>
-              <a href="#" aria-label="Instagram" className="hover:opacity-80">
-                <FaInstagram />
-              </a>
-            </div>
+            {SOCIAL_LINKS.length > 0 ? (
+              <div className="flex gap-3 pt-3">
+                {SOCIAL_LINKS.map(({ href, label, Icon }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    aria-label={label}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:opacity-80"
+                  >
+                    <Icon />
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

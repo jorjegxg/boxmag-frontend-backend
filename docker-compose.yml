@@ -97,6 +97,8 @@ services:
         NEXT_PUBLIC_INFO_EMAIL: ${NEXT_PUBLIC_INFO_EMAIL:-}
         NEXT_PUBLIC_B2B_EMAIL: ${NEXT_PUBLIC_B2B_EMAIL:-}
         NEXT_PUBLIC_ORDERS_EMAIL: ${NEXT_PUBLIC_ORDERS_EMAIL:-}
+        NEXT_PUBLIC_FACEBOOK_URL: ${NEXT_PUBLIC_FACEBOOK_URL:-}
+        NEXT_PUBLIC_INSTAGRAM_URL: ${NEXT_PUBLIC_INSTAGRAM_URL:-}
     container_name: boxmag4-frontend
     command: ["npm", "run", "start"]
     restart: unless-stopped

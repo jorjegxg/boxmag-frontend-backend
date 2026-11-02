@@ -960,5 +960,13 @@
   "newsletterUnsubscribe.errorTitle": "Abmeldung fehlgeschlagen",
   "newsletterUnsubscribe.invalidLink": "Dieser Abmeldelink ist ungültig. Verwenden Sie den Link aus der neuesten Newsletter-E-Mail oder kontaktieren Sie uns.",
   "newsletterUnsubscribe.tryAgain": "Die Anfrage konnte gerade nicht verarbeitet werden. Bitte versuchen Sie es erneut.",
-  "newsletterUnsubscribe.backHome": "Zur Startseite"
+  "newsletterUnsubscribe.backHome": "Zur Startseite",
+  "notFound.title": "Seite nicht gefunden",
+  "notFound.text": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
+  "notFound.backHome": "Zur Startseite",
+  "notFound.goToShop": "Zum Shop",
+  "errorPage.title": "Etwas ist schiefgelaufen",
+  "errorPage.text": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut; wenn das Problem bleibt, kontaktieren Sie uns.",
+  "errorPage.retry": "Erneut versuchen",
+  "errorPage.backHome": "Zur Startseite"
 }

@@ -969,5 +969,13 @@
   "newsletterUnsubscribe.errorTitle": "Dezabonarea a eșuat",
   "newsletterUnsubscribe.invalidLink": "Linkul de dezabonare nu este valid. Folosește linkul din cel mai recent email sau contactează-ne.",
   "newsletterUnsubscribe.tryAgain": "Nu am putut procesa cererea acum. Încearcă din nou.",
-  "newsletterUnsubscribe.backHome": "Înapoi la pagina principală"
+  "newsletterUnsubscribe.backHome": "Înapoi la pagina principală",
+  "notFound.title": "Pagina nu a fost găsită",
+  "notFound.text": "Pagina pe care o cauți nu există sau a fost mutată.",
+  "notFound.backHome": "Înapoi la pagina principală",
+  "notFound.goToShop": "Vezi magazinul",
+  "errorPage.title": "A apărut o eroare",
+  "errorPage.text": "S-a produs o eroare neașteptată. Încearcă din nou; dacă problema persistă, contactează-ne.",
+  "errorPage.retry": "Încearcă din nou",
+  "errorPage.backHome": "Înapoi la pagina principală"
 }
