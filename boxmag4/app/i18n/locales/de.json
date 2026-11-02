@@ -950,5 +950,13 @@
   "resetPassword.expired": "Der Reset-Link ist ungültig oder abgelaufen. Bitte fordere einen neuen an.",
   "resetPassword.tryAgain": "Das Passwort konnte gerade nicht zurückgesetzt werden. Bitte versuche es erneut.",
   "resetPassword.goToSignIn": "Zur Anmeldung",
-  "resetPassword.backHome": "Zur Startseite"
+  "resetPassword.backHome": "Zur Startseite",
+  "notFound.title": "Seite nicht gefunden",
+  "notFound.text": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
+  "notFound.backHome": "Zur Startseite",
+  "notFound.goToShop": "Zum Shop",
+  "errorPage.title": "Etwas ist schiefgelaufen",
+  "errorPage.text": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut; wenn das Problem bleibt, kontaktieren Sie uns.",
+  "errorPage.retry": "Erneut versuchen",
+  "errorPage.backHome": "Zur Startseite"
 }

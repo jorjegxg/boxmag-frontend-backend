@@ -959,5 +959,13 @@
   "boxTypes.flat-box-a5-din": "Cutii de carton pliate",
   "boxTypes.pizza-box-325x325x39-e-wave": "Cutii pizza",
   "boxTypes.height-adjustable-shipping-box-fefco-710": "Cutii cu înălțime reglabilă (Fefco 710)",
-  "boxTypes.corrugated-cardboard-envelope": "Plicuri de expediție"
+  "boxTypes.corrugated-cardboard-envelope": "Plicuri de expediție",
+  "notFound.title": "Pagina nu a fost găsită",
+  "notFound.text": "Pagina pe care o cauți nu există sau a fost mutată.",
+  "notFound.backHome": "Înapoi la pagina principală",
+  "notFound.goToShop": "Vezi magazinul",
+  "errorPage.title": "A apărut o eroare",
+  "errorPage.text": "S-a produs o eroare neașteptată. Încearcă din nou; dacă problema persistă, contactează-ne.",
+  "errorPage.retry": "Încearcă din nou",
+  "errorPage.backHome": "Înapoi la pagina principală"
 }
