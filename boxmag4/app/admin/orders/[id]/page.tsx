@@ -267,7 +267,7 @@ export default function AdminOrderDetailsPage() {
           }
           return payload.data?.[0]?.key ?? "";
         });
-      } catch (error) {
+      } catch (_error) {
         if (controller.signal.aborted) return;
         setOfferSenders([]);
       }

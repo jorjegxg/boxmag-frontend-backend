@@ -124,6 +124,8 @@ const TAB_LABELS: Record<AccountTab, string> = {
 };
 
 declare global {
+  // Cypress custom commands are typed by augmenting its global namespace.
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Cypress {
     interface Chainable {
       visitAccountLoggedOut(): Chainable<void>;

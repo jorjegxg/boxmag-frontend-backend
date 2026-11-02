@@ -364,7 +364,6 @@ test("prezentare Boxmag RO", async ({ page }, testInfo) => {
     const dest = path.join(destDir, "boxmag-prezentare-ro.webm");
     if (src && fs.existsSync(src)) {
       fs.copyFileSync(src, dest);
-      // eslint-disable-next-line no-console
       console.log(`[demo] Video salvat: ${dest}`);
     }
   }

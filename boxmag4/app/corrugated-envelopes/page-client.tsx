@@ -91,7 +91,7 @@ export default function CorrugatedEnvelopesPage() {
             <div className="mt-10 text-center max-w-5xl mx-auto text-black">
               <p className="leading-relaxed text-lg">
                 Crafted from high-quality E-flute corrugated cardboard our
-                "M-EV" range envelopes guarantee a high level of bend protection
+                &ldquo;M-EV&rdquo; range envelopes guarantee a high level of bend protection
                 for your items throughout the shipping process.
               </p>
               <p className="mt-5 leading-relaxed text-lg">

@@ -16,6 +16,22 @@ type TableStoreType = {
   resetAmountQty: (itemNo: string) => void;
 };
 const incrementNumber = 20;
+type Dimensions = { l?: unknown; w?: unknown; h?: unknown };
+
+/** Raw `/api/box-types/:id/products` row; every field is validated below. */
+type ApiProductRow = {
+  itemNo?: unknown;
+  productName?: unknown;
+  imageUrl?: unknown;
+  internalDimensionsMM?: Dimensions;
+  qualityCardboard?: unknown;
+  palletDimensionsCM?: Dimensions;
+  weightPieceGr?: unknown;
+  weightPalletKg?: unknown;
+  prices?: Array<{ name?: unknown; withoutTax?: unknown; withTax?: unknown }>;
+  [key: string]: unknown;
+};
+
 const configuredTaxPercent = Number(process.env.NEXT_PUBLIC_TAX_PERCENT ?? "21");
 const taxMultiplier = 1 + (Number.isFinite(configuredTaxPercent) ? configuredTaxPercent : 21) / 100;
 const useTableEComStore = create<TableStoreType>((set) => ({
@@ -31,10 +47,10 @@ const useTableEComStore = create<TableStoreType>((set) => ({
         throw new Error(payload.message ?? `Failed with status ${response.status}`);
       }
 
-      const mapped = (payload.data as Array<any>).map((row) => {
+      const mapped = (payload.data as ApiProductRow[]).map((row) => {
         const rawPrices = Array.isArray(row.prices) ? row.prices : [];
         const prices = getShopPriceTiers(
-          rawPrices.map((p: any) => ({
+          rawPrices.map((p) => ({
             name: String(p.name ?? ""),
             withoutTax: Number(p.withoutTax ?? 0),
             withTax: Number(p.withTax ?? Number(p.withoutTax ?? 0) * taxMultiplier),

@@ -4,7 +4,6 @@ import { B2b } from "../global/components/b2b";
 import Image from "next/image";
 import Link from "next/link";
 import { FaQuoteLeft, FaQuoteRight } from "react-icons/fa";
-import { FeaturesSection } from "../global/components/features-section";
 import { ServicesSection } from "../global/components/services-section";
 import { HaveAQuestion } from "../global/components/have-a-question";
 import { NewsletterSubscribe } from "../global/components/newsletter-subscribe";
