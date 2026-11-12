@@ -15,7 +15,6 @@ import { FaCheck } from "react-icons/fa";
 import { normalizeImageUrl } from "@/app/utils/normalize-image-url";
 import type { PriceTier } from "../../types/product";
 
-const BOXES_PER_PALLET = 9000;
 const imageRequestCache = new Set<string>();
 
 type BoxTypeApi = {
@@ -37,6 +36,7 @@ type BoxTypeProductApi = {
   boxTypeId: number;
   itemNo: string;
   productName: string;
+  palletPcs?: number;
   internalDimensionsMM?: {
     l: number;
     w: number;
@@ -70,6 +70,7 @@ function ProductByKeyPageContent() {
   const [productName, setProductName] = useState("");
   const [itemNo, setItemNo] = useState("");
   const [sizeLabel, setSizeLabel] = useState("");
+  const [palletPcs, setPalletPcs] = useState(0);
   const [imageUrls, setImageUrls] = useState<string[]>(["/placeholders/box4.png"]);
   const [selectedProductPrices, setSelectedProductPrices] = useState<PriceTier[]>([]);
   const [firstWithTax, setFirstWithTax] = useState<number | null>(null);
@@ -99,6 +100,7 @@ function ProductByKeyPageContent() {
     setProductName(String(product.productName ?? ""));
     setItemNo(String(product.itemNo ?? ""));
     setSizeLabel(formatSizeLabel(product));
+    setPalletPcs(Math.max(0, Math.floor(Number(product.palletPcs ?? 0)) || 0));
     setImageUrls(normalizedImageUrls.length > 0 ? normalizedImageUrls : ["/placeholders/box4.png"]);
     setSelectedProductPrices(shopPrices);
     setFirstWithTax(
@@ -497,16 +499,18 @@ function ProductByKeyPageContent() {
                   </div>
                 </div>
 
-                <div>
-                  <p className="mb-2 text-sm font-semibold text-gray-700">{t("productDemo.addPallet")}</p>
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((prev) => prev + BOXES_PER_PALLET)}
-                    className="w-full rounded-xl bg-black px-4 py-3 text-base font-bold text-white hover:bg-black/90"
-                  >
-                    + {BOXES_PER_PALLET}
-                  </button>
-                </div>
+                {palletPcs > 0 ? (
+                  <div>
+                    <p className="mb-2 text-sm font-semibold text-gray-700">{t("productDemo.addPallet")}</p>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((prev) => prev + palletPcs)}
+                      className="w-full rounded-xl bg-black px-4 py-3 text-base font-bold text-white hover:bg-black/90"
+                    >
+                      + {palletPcs}
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               <button
