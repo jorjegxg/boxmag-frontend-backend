@@ -387,6 +387,7 @@ export default function CheckoutPage() {
             companyName: manualAddress.companyName.trim(),
             phone: manualAddress.phone.trim(),
             addressLine1: manualAddress.addressLine1.trim(),
+            addressLine2: manualAddress.addressLine2.trim(),
             postcode: manualAddress.postcode.trim(),
             city: manualAddress.city.trim(),
             country: manualAddress.country.trim(),
@@ -400,6 +401,7 @@ export default function CheckoutPage() {
               "",
             phone: selectedAddress?.phone.trim() ?? "",
             addressLine1: selectedAddress?.addressLine1.trim() ?? "",
+            addressLine2: selectedAddress?.addressLine2?.trim() ?? "",
             postcode: selectedAddress?.postcode.trim() ?? "",
             city: selectedAddress?.city.trim() ?? "",
             country: selectedAddress?.country.trim() ?? "",
@@ -477,7 +479,9 @@ export default function CheckoutPage() {
               lastName: activeAddress.lastName,
               companyName: activeAddress.companyName,
               phone: activeAddress.phone,
-              address: activeAddress.addressLine1,
+              address: [activeAddress.addressLine1, activeAddress.addressLine2]
+                .filter(Boolean)
+                .join(", "),
               postcode: activeAddress.postcode,
               city: activeAddress.city,
               country: activeAddress.country,
