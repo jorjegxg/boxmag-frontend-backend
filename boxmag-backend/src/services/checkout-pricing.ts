@@ -62,6 +62,7 @@ export async function resolveCheckoutCartItems(
     `SELECT btp.item_no, btp.product_name, p.price_name, p.price_without_tax
      FROM box_type_products btp
      INNER JOIN box_type_product_prices p ON p.box_type_product_id = btp.id
+     INNER JOIN box_types bt ON bt.id = btp.box_type_id AND bt.is_active = 1
      WHERE btp.item_no IN (${placeholders})`,
     itemNos,
   );
