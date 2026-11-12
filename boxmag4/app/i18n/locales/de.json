@@ -908,6 +908,7 @@
   "forgotPassword.createAccount": "Neues Konto erstellen",
   "forgotPassword.invalidEmail": "Bitte gib eine gültige E-Mail-Adresse ein.",
   "forgotPassword.error": "Wir konnten deine Anfrage gerade nicht verarbeiten. Bitte versuche es erneut.",
+  "forgotPassword.errorTitle": "Etwas ist schiefgelaufen",
   "resetPassword.breadcrumb": "Passwort zurücksetzen",
   "resetPassword.title": "Neues Passwort festlegen",
   "resetPassword.subtitle": "Wähle ein neues Passwort für dein Konto.",

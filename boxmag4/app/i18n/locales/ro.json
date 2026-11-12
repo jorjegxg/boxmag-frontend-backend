@@ -908,6 +908,7 @@
   "forgotPassword.createAccount": "Creează un cont nou",
   "forgotPassword.invalidEmail": "Te rugăm să introduci o adresă de email validă.",
   "forgotPassword.error": "Nu am putut procesa cererea acum. Te rugăm să încerci din nou.",
+  "forgotPassword.errorTitle": "A apărut o eroare",
   "resetPassword.breadcrumb": "Resetare parolă",
   "resetPassword.title": "Setează o parolă nouă",
   "resetPassword.subtitle": "Alege o parolă nouă pentru contul tău.",
