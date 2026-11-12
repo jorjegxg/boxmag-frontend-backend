@@ -14,8 +14,10 @@ import { parseCartItemsJson } from "../utils/cart-items";
 import { toNonNegativeNumber, toPositiveInt } from "../utils/numbers";
 import { MIN_ORDER_QTY } from "../constants/order";
 import {
+  ALLOWED_ORDER_ATTACHMENT_EXTENSIONS,
   MAX_ORDER_ATTACHMENT_BYTES,
   MAX_ORDER_ATTACHMENT_MB,
+  isAllowedOrderAttachmentName,
 } from "../config/uploads";
 import { uploadOrderAttachmentToMinio } from "../services/minio";
 import {
@@ -408,11 +410,17 @@ paymentsRouter.post("/create-checkout-session", checkoutRateLimiter, async (req,
       });
       return;
     }
+    if (!isAllowedOrderAttachmentName(attachmentPayload.fileName)) {
+      res.status(400).json({
+        ok: false,
+        message: `Attachment file type is not allowed. Allowed types: ${ALLOWED_ORDER_ATTACHMENT_EXTENSIONS.join(", ")}.`,
+      });
+      return;
+    }
     try {
       const uploaded = await uploadOrderAttachmentToMinio({
         fileBuffer: attachmentBuffer,
         originalFileName: attachmentPayload.fileName,
-        ...(attachmentPayload.mimeType ? { mimeType: attachmentPayload.mimeType } : {}),
       });
       attachmentName = attachmentPayload.fileName;
       attachmentObjectName = uploaded.objectName;
@@ -443,7 +451,7 @@ paymentsRouter.post("/create-checkout-session", checkoutRateLimiter, async (req,
     );
 
     // Link only when signed session email matches checkout email (INV-GUEST-LINK).
-    const userSession = getRequestUserSession(req);
+    const userSession = await getRequestUserSession(req);
     const normalizedOrderEmail = email.toLowerCase();
     const linkedUserId =
       userSession && userSession.email === normalizedOrderEmail

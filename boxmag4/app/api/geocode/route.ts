@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { enforceRateLimit } from "../../../lib/rate-limit";
 
 type GoogleGeocodeResult = {
   types?: string[];
@@ -231,6 +232,10 @@ async function geocodeBest(query: string): Promise<Coords | null> {
 }
 
 export async function GET(request: NextRequest) {
+  // Each call fans out to paid Google Geocoding / Nominatim requests.
+  const limited = enforceRateLimit(request, "geocode", { max: 120 });
+  if (limited) return limited;
+
   const query = request.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (query.length < 3) {
     return NextResponse.json({ ok: false, message: "Query too short" }, { status: 400 });

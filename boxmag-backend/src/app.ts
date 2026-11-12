@@ -19,6 +19,7 @@ import { exchangeRateRouter } from "./routes/exchange-rate.route";
 import { contactRouter } from "./routes/contact.route";
 import {
   authRateLimiter,
+  orderCreateRateLimiter,
   publicFormRateLimiter,
 } from "./middleware/rate-limit";
 
@@ -44,6 +45,10 @@ app.post(
   express.raw({ type: "application/json" }),
   stripeWebhookHandler,
 );
+
+// Before the JSON parser on purpose: a rate-limited client must not get its
+// (up to 25 MB) body buffered and parsed first.
+app.post("/api/orders", orderCreateRateLimiter);
 
 app.use(express.json({ limit: JSON_BODY_LIMIT }));
 
@@ -82,5 +87,6 @@ app.use("/api/auth", authRateLimiter, authRouter);
 app.use("/api/shipping-methods", shippingMethodsRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/exchange-rate", exchangeRateRouter);
-app.use("/api/contact", publicFormRateLimiter, contactRouter);
+// Rate limit lives on the public POST inside the router (admin inbox is exempt).
+app.use("/api/contact", contactRouter);
 

@@ -42,6 +42,10 @@ Quick-reference for AI agents working in the Boxmag monorepo. For local setup an
 
 **Customer API access:** `requireUser` middleware reads `boxmag-user-session`. Orders can also be scoped via `?email=` with `requireAdminOrUserEmail`.
 
+**Session invalidation:** the customer cookie signature covers a stamp of the user's current `password_hash` (`services/user-credential-stamp.ts`), looked up on every authenticated request — a password reset logs out all older sessions (`INV-SESSION-RESET`). Backend tests stub that lookup globally in `src/__tests__/setup.ts`.
+
+**Client IP for Next rate limits:** always `getClientIp()` from `boxmag4/lib/rate-limit.ts` (X-Real-IP / last X-Forwarded-For entry) — never the first X-Forwarded-For entry.
+
 **Password reset:** `/forgot-password` → emailed link → `/reset-password?token=`. Only the sha256 hash is stored (`users.password_reset_token_hash`), cleared on use.
 
 ---
@@ -629,7 +633,7 @@ Rate-limited via `authRateLimiter` in `app.ts`.
 
 ### `/api/orders` (`orders.route.ts`)
 - `GET /` — Admin or `?email=` scoped user
-- `POST /` — Public B2B order creation
+- `POST /` — Public B2B order creation (`orderCreateRateLimiter`, 10 / 15 min per IP, mounted in `app.ts` before the JSON parser)
 - `GET /:orderId`, `GET /:orderId/attachment` — Admin or email-scoped
 - `PATCH /:orderId/status`, `PATCH /:orderId/payment-status` — Admin
 - `POST /:orderId/send-offer`, `GET /offer-senders` — Admin
@@ -659,7 +663,7 @@ Rate-limited via `authRateLimiter` in `app.ts`.
 - `GET /reply-senders` — Admin; configured sender addresses (`info` / `b2b` / `orders`)
 - `POST /:id/reply` — Admin; sends the reply email and sets `status = 'replied'`
 
-Rate-limited via `publicFormRateLimiter` in `app.ts`.
+Public `POST /` is rate-limited via `contactSubmitRateLimiter` (on the route, not in `app.ts`); requests carrying the admin credential — the Next server and the admin inbox — are exempt.
 
 **Stripe webhook** is mounted in `boxmag-backend/src/app.ts` before JSON body parser (requires raw body).
 

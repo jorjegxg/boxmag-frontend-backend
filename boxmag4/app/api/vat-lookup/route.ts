@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { parseViesAddress, type VatLookupAddressFields } from "@/lib/parse-vat-address";
 import {
   isVatLookupSupportedCountry,
@@ -262,6 +263,10 @@ function successFromLookup(
 }
 
 export async function GET(request: NextRequest) {
+  // Each call proxies to VIES / ANAF; keep one client from burning our quota.
+  const limited = enforceRateLimit(request, "vat-lookup", { max: 60 });
+  if (limited) return limited;
+
   const vat = request.nextUrl.searchParams.get("vat")?.trim() ?? "";
   const parsed = parseVatNumber(vat);
 

@@ -38,6 +38,9 @@ function looksLikeLocalhost(value: string): boolean {
   return /localhost|127\.0\.0\.1/i.test(value);
 }
 
+/** The whole admin panel + API hangs off this one password. */
+export const MIN_ADMIN_PASSWORD_LENGTH = 12;
+
 export type ProductionEnvSnapshot = {
   nodeEnv?: string;
   corsOrigin?: string;
@@ -111,6 +114,14 @@ export function assertProductionEnv(snapshot: ProductionEnvSnapshot = {}): void 
   if (isWeakSecret(adminPassword)) {
     errors.push(
       "ADMIN_PASSWORD must be set and must not use a change-me-* default",
+    );
+  }
+  if (
+    !isWeakSecret(adminPassword) &&
+    (adminPassword ?? "").trim().length < MIN_ADMIN_PASSWORD_LENGTH
+  ) {
+    errors.push(
+      `ADMIN_PASSWORD must be at least ${MIN_ADMIN_PASSWORD_LENGTH} characters long`,
     );
   }
   if (!(userSessionSecret ?? "").trim()) {

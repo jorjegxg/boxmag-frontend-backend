@@ -21,8 +21,11 @@ import {
   sendOrderOfferEmailToCustomer,
 } from "../services/email";
 import {
+  ALLOWED_ORDER_ATTACHMENT_EXTENSIONS,
   MAX_ORDER_ATTACHMENT_BYTES,
   MAX_ORDER_ATTACHMENT_MB,
+  isAllowedOrderAttachmentName,
+  resolveOrderAttachmentServing,
 } from "../config/uploads";
 import { parseCartItemsJson } from "../utils/cart-items";
 import { toPositiveInt } from "../utils/numbers";
@@ -244,27 +247,6 @@ function orderHasStoredAttachment(row: {
   return Boolean(
     row.attachment_object_name?.trim() || row.attachment_url?.trim(),
   );
-}
-
-function guessAttachmentMimeType(fileName: string): string {
-  const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
-  const mimeByExtension: Record<string, string> = {
-    pdf: "application/pdf",
-    png: "image/png",
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    gif: "image/gif",
-    webp: "image/webp",
-    svg: "image/svg+xml",
-    zip: "application/zip",
-    doc: "application/msword",
-    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    xls: "application/vnd.ms-excel",
-    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    txt: "text/plain",
-    csv: "text/csv",
-  };
-  return mimeByExtension[extension] ?? "application/octet-stream";
 }
 
 function buildAttachmentContentDisposition(
@@ -617,7 +599,6 @@ ordersRouter.get("/:orderId/attachment", requireAdminOrUserEmail, async (req, re
 
     const fileName = row.attachment_name?.trim() || "attachment";
     let buffer: Buffer;
-    let contentType: string | null = null;
 
     const objectNameFromRow = row.attachment_object_name?.trim() || null;
     const objectNameFromUrl = row.attachment_url?.trim()
@@ -628,7 +609,6 @@ ordersRouter.get("/:orderId/attachment", requireAdminOrUserEmail, async (req, re
     if (minioObjectName) {
       const attachment = await getOrderAttachmentFromMinio(minioObjectName);
       buffer = attachment.buffer;
-      contentType = attachment.contentType;
     } else if (row.attachment_url?.trim()) {
       const attachmentResponse = await fetch(row.attachment_url.trim());
       if (!attachmentResponse.ok) {
@@ -640,7 +620,6 @@ ordersRouter.get("/:orderId/attachment", requireAdminOrUserEmail, async (req, re
       }
       const arrayBuffer = await attachmentResponse.arrayBuffer();
       buffer = Buffer.from(arrayBuffer);
-      contentType = attachmentResponse.headers.get("content-type");
     } else {
       res.status(404).json({
         ok: false,
@@ -649,13 +628,21 @@ ordersRouter.get("/:orderId/attachment", requireAdminOrUserEmail, async (req, re
       return;
     }
 
-    res.setHeader(
-      "Content-Type",
-      contentType?.trim() || guessAttachmentMimeType(fileName),
-    );
+    // Never trust the stored / upstream Content-Type: an attacker-supplied
+    // text/html attachment would otherwise execute on the API origin with the
+    // admin session. Type and inline-ability come from the extension allowlist.
+    const serving = resolveOrderAttachmentServing(fileName);
+    const inline = serving.allowInline && !forceDownload;
+    res.setHeader("Content-Type", serving.contentType);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Cache-Control", "private, no-store");
+    if (serving.contentType !== "application/pdf") {
+      // Sandbox everything except PDFs (browsers refuse to render a sandboxed PDF).
+      res.setHeader("Content-Security-Policy", "sandbox; default-src 'none'");
+    }
     res.setHeader(
       "Content-Disposition",
-      buildAttachmentContentDisposition(fileName, !forceDownload),
+      buildAttachmentContentDisposition(fileName, inline),
     );
     res.send(buffer);
   } catch (error) {
@@ -860,9 +847,6 @@ ordersRouter.post("/", async (req, res) => {
   const attachmentBuffer =
     parseAttachmentBase64(payload.attachmentBase64) ??
     parseAttachmentBase64(attachmentPayload?.contentBase64);
-  const attachmentMimeType =
-    toOptionalString(payload.attachmentMimeType) ??
-    toOptionalString(attachmentPayload?.mimeType ?? null);
   const effectiveAttachmentName = attachmentName ?? attachmentPayload?.fileName ?? null;
   let attachmentObjectName: string | null = null;
   if (attachmentBuffer && attachmentBuffer.length > MAX_ORDER_ATTACHMENT_BYTES) {
@@ -872,12 +856,22 @@ ordersRouter.post("/", async (req, res) => {
     });
     return;
   }
+  if (
+    effectiveAttachmentName &&
+    attachmentBuffer &&
+    !isAllowedOrderAttachmentName(effectiveAttachmentName)
+  ) {
+    res.status(400).json({
+      ok: false,
+      message: `Attachment file type is not allowed. Allowed types: ${ALLOWED_ORDER_ATTACHMENT_EXTENSIONS.join(", ")}.`,
+    });
+    return;
+  }
   if (effectiveAttachmentName && attachmentBuffer) {
     try {
       const uploaded = await uploadOrderAttachmentToMinio({
         fileBuffer: attachmentBuffer,
         originalFileName: effectiveAttachmentName,
-        ...(attachmentMimeType ? { mimeType: attachmentMimeType } : {}),
       });
       attachmentObjectName = uploaded.objectName;
     } catch (uploadError) {

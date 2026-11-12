@@ -1,5 +1,6 @@
 import { Client as MinioClient } from "minio";
 import { env } from "../config/env";
+import { resolveOrderAttachmentServing } from "../config/uploads";
 import { Readable } from "stream";
 
 const minioClient = new MinioClient({
@@ -141,21 +142,18 @@ export async function uploadBoxImageToMinio(args: {
 export async function uploadOrderAttachmentToMinio(args: {
   fileBuffer: Buffer;
   originalFileName: string;
-  mimeType?: string;
 }): Promise<{ objectName: string }> {
   await ensureBucket();
 
   const objectName = sanitizeOrderAttachmentObjectName(args.originalFileName);
+  // Content-Type comes from the extension allowlist, never from the client.
+  const { contentType } = resolveOrderAttachmentServing(args.originalFileName);
   await minioClient.putObject(
     env.minioBucketName,
     objectName,
     args.fileBuffer,
     args.fileBuffer.length,
-    args.mimeType
-      ? {
-          "Content-Type": args.mimeType,
-        }
-      : undefined,
+    { "Content-Type": contentType },
   );
 
   return { objectName };

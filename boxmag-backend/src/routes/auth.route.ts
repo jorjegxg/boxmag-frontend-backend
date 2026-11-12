@@ -6,6 +6,7 @@ import {
   USER_COOKIE_NAME,
   buildUserSessionCookieOptions,
   createUserSessionToken,
+  credentialStampFromPasswordHash,
 } from "../config/user-auth";
 import { mysqlPool } from "../db/mysql";
 import { requireUser } from "../middleware/require-user";
@@ -189,7 +190,12 @@ authRouter.post("/login", async (req, res) => {
     // Backfill guest orders placed with this email before login (INV-GUEST-LINK).
     await linkGuestOrdersToUser(user.id, user.email);
 
-    const sessionToken = createUserSessionToken(user.id, user.email);
+    const sessionToken = createUserSessionToken(
+      user.id,
+      user.email,
+      undefined,
+      credentialStampFromPasswordHash(user.password_hash),
+    );
     if (!sessionToken) {
       res.status(503).json({
         ok: false,

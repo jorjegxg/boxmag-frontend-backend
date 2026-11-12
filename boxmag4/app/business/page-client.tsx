@@ -353,6 +353,7 @@ const BussinessPage = () => {
               ref={fileInputRef}
               id="pdf"
               type="file"
+              accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.tif,.tiff,.ai,.eps,.psd,.cdr,.dxf,.dwg,.zip,.doc,.docx,.xls,.xlsx,.txt,.csv"
               className="sr-only"
               onChange={(e) => {
                 const file = e.target.files?.[0];

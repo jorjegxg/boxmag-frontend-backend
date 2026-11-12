@@ -35,6 +35,12 @@ describe("assertProductionEnv", () => {
     expect(() => assertProductionEnv(validProd)).not.toThrow();
   });
 
+  it("rejects a short ADMIN_PASSWORD", () => {
+    expect(() =>
+      assertProductionEnv({ ...validProd, adminPassword: "abc123" }),
+    ).toThrow(/ADMIN_PASSWORD must be at least 12 characters/);
+  });
+
   it("rejects CORS_ORIGIN *", () => {
     expect(() =>
       assertProductionEnv({ ...validProd, corsOrigin: "*" }),

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { mysqlPool } from "../db/mysql";
+import { contactSubmitRateLimiter } from "../middleware/rate-limit";
 import { requireAdmin } from "../middleware/require-admin";
 import {
   getOrderOfferSenderOptions,
@@ -72,7 +73,7 @@ function mapRow(row: ContactMessageRow) {
 export const contactRouter = Router();
 
 // Public: persist an incoming contact form submission.
-contactRouter.post("/", async (req, res) => {
+contactRouter.post("/", contactSubmitRateLimiter, async (req, res) => {
   const payload = (req.body ?? {}) as Record<string, unknown>;
 
   const firstName = toRequiredString(payload.firstName);

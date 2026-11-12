@@ -13,11 +13,11 @@ function readEmailParam(req: Request): string {
  * Admin-only when no email filter is present. When `?email=` is supplied, the
  * caller must either be an admin or an authenticated user with that email.
  */
-export function requireAdminOrUserEmail(
+export async function requireAdminOrUserEmail(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
   const email = readEmailParam(req);
   if (!email) {
     if (isRequestAuthenticatedAsAdmin(req)) {
@@ -36,7 +36,7 @@ export function requireAdminOrUserEmail(
     return;
   }
 
-  const session = getRequestUserSession(req);
+  const session = await getRequestUserSession(req);
   if (session?.email === email) {
     req.userSession = session;
     next();

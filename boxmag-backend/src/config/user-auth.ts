@@ -29,11 +29,25 @@ export function safeEqualStrings(a: string, b: string): boolean {
   return crypto.timingSafeEqual(bufferA, bufferB);
 }
 
-function signPayload(payload: string, secret: string): string {
+/**
+ * The signature also covers a "credential stamp" derived from the user's
+ * current password hash (see services/user-credential-stamp.ts). Changing the
+ * password changes the stamp, which invalidates every session issued before.
+ */
+function signPayload(
+  payload: string,
+  secret: string,
+  credentialStamp: string,
+): string {
   return crypto
     .createHmac("sha256", secret)
-    .update(`${USER_COOKIE_SALT}:${payload}`)
+    .update(`${USER_COOKIE_SALT}:${payload}:${credentialStamp}`)
     .digest("hex");
+}
+
+/** Stamp for a stored password hash; opaque, never sent to the client. */
+export function credentialStampFromPasswordHash(passwordHash: string): string {
+  return crypto.createHash("sha256").update(passwordHash).digest("hex");
 }
 
 export type VerifiedUserSession = {
@@ -45,6 +59,7 @@ export function createUserSessionToken(
   userId: number,
   email: string,
   nowSeconds: number = Math.floor(Date.now() / 1000),
+  credentialStamp: string = "",
 ): string | null {
   const secret = getUserSessionSecret();
   if (!secret || !Number.isInteger(userId) || userId <= 0) return null;
@@ -52,15 +67,18 @@ export function createUserSessionToken(
   if (!normalizedEmail) return null;
   const exp = nowSeconds + USER_SESSION_TTL_SECONDS;
   const payload = `${userId}:${normalizedEmail}:${exp}`;
-  return `${payload}.${signPayload(payload, secret)}`;
+  return `${payload}.${signPayload(payload, secret, credentialStamp)}`;
 }
 
-export function verifyUserSessionToken(
+type ParsedUserSessionToken = VerifiedUserSession & {
+  payload: string;
+  signature: string;
+};
+
+function parseUserSessionToken(
   token: string | undefined,
-): VerifiedUserSession | null {
+): ParsedUserSessionToken | null {
   if (!token) return null;
-  const secret = getUserSessionSecret();
-  if (!secret) return null;
 
   const separatorIndex = token.lastIndexOf(".");
   if (separatorIndex <= 0) return null;
@@ -68,9 +86,6 @@ export function verifyUserSessionToken(
   const payload = token.slice(0, separatorIndex);
   const signature = token.slice(separatorIndex + 1);
   if (!payload || !signature) return null;
-
-  const expectedSignature = signPayload(payload, secret);
-  if (!safeEqualStrings(signature, expectedSignature)) return null;
 
   const lastColon = payload.lastIndexOf(":");
   if (lastColon <= 0) return null;
@@ -88,7 +103,35 @@ export function verifyUserSessionToken(
   const email = withoutExp.slice(firstColon + 1).trim().toLowerCase();
   if (!Number.isInteger(userId) || userId <= 0 || !email) return null;
 
-  return { userId, email };
+  return { userId, email, payload, signature };
+}
+
+/**
+ * UNVERIFIED user id claimed by a token — only for looking up the credential
+ * stamp needed to verify it. Never use it for authorization.
+ */
+export function peekUserSessionUserId(token: string | undefined): number | null {
+  return parseUserSessionToken(token)?.userId ?? null;
+}
+
+export function verifyUserSessionToken(
+  token: string | undefined,
+  credentialStamp: string = "",
+): VerifiedUserSession | null {
+  const secret = getUserSessionSecret();
+  if (!secret) return null;
+
+  const parsed = parseUserSessionToken(token);
+  if (!parsed) return null;
+
+  const expectedSignature = signPayload(
+    parsed.payload,
+    secret,
+    credentialStamp,
+  );
+  if (!safeEqualStrings(parsed.signature, expectedSignature)) return null;
+
+  return { userId: parsed.userId, email: parsed.email };
 }
 
 export function buildUserSessionCookieOptions(): {

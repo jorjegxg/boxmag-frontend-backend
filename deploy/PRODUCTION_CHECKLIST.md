@@ -12,7 +12,7 @@ Backend `assertProductionEnv()` refuses to start unless these hold when `NODE_EN
 | `DB_PASSWORD` | Strong; not empty / `change-me-*` |
 | `MYSQL_ROOT_PASSWORD` / `MYSQL_PASSWORD` | Strong (compose requires them) |
 | `MINIO_ROOT_PASSWORD` | Strong; not `change-me-*` |
-| `ADMIN_PASSWORD` | Strong; not `change-me-*` |
+| `ADMIN_PASSWORD` | Strong; not `change-me-*`; **min. 12 characters** (backend refuses to start otherwise) |
 | `USER_SESSION_SECRET` | Dedicated secret (required; no `ADMIN_PASSWORD` fallback in prod) |
 | `STRIPE_SECRET_KEY` | Live key `sk_live_…`, **or** `sk_test_…` with `STRIPE_ALLOW_TEST_KEYS=1` |
 | `STRIPE_ALLOW_TEST_KEYS` | Set `1` only for production host still on Stripe test mode; remove before go-live |

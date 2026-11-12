@@ -2,7 +2,9 @@ import nodemailer from "nodemailer";
 import fs from "fs";
 import path from "path";
 import { checkVAT, countries } from "jsvat";
+import { createAdminSessionToken, ADMIN_COOKIE_NAME } from "../../../lib/admin-auth";
 import { getBackendBaseUrl } from "../../../lib/backend-url";
+import { enforceRateLimit } from "../../../lib/rate-limit";
 
 type ContactPayload = {
   firstName: string;
@@ -59,6 +61,21 @@ function getSiteBaseUrl(): string {
 }
 
 /**
+ * Credential for the server-to-server call to the backend. Every submission
+ * reaches the backend from this server's IP, so without it the backend's
+ * per-IP limit would silently drop messages from the admin inbox once the
+ * whole site exceeds it. Per-client limiting happens in this route instead.
+ */
+async function backendServiceHeaders(): Promise<Record<string, string>> {
+  const apiToken = envValue("ADMIN_API_TOKEN");
+  if (apiToken) return { "x-admin-token": apiToken };
+  const adminPassword = envValue("ADMIN_PASSWORD");
+  if (!adminPassword) return {};
+  const sessionToken = await createAdminSessionToken(adminPassword);
+  return { Cookie: `${ADMIN_COOKIE_NAME}=${sessionToken}` };
+}
+
+/**
  * Persist the submission so it shows up in the admin panel. Best-effort.
  * Returns the created message id when the backend reports one.
  */
@@ -66,7 +83,10 @@ async function persistContactMessage(body: ContactPayload): Promise<number | nul
   try {
     const response = await fetch(`${getBackendBaseUrl()}/api/contact`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(await backendServiceHeaders()),
+      },
       body: JSON.stringify({
         firstName: body.firstName,
         surname: body.surname,
@@ -79,6 +99,12 @@ async function persistContactMessage(body: ContactPayload): Promise<number | nul
         attachmentNames: body.fileName ?? "",
       }),
     });
+    if (!response.ok) {
+      console.error(
+        `Backend rejected contact message persistence (HTTP ${response.status})`,
+      );
+      return null;
+    }
     const payload = (await response.json()) as {
       data?: { id?: number };
     };
@@ -121,6 +147,10 @@ function escapeHtml(value: string): string {
 }
 
 export async function POST(req: Request): Promise<Response> {
+  // Sends email + accepts up to 15 MB of attachments: 8 submissions / 15 min per client.
+  const limited = enforceRateLimit(req, "contact", { max: 8 });
+  if (limited) return limited;
+
   try {
     const contentType = req.headers.get("content-type") ?? "";
     let body: ContactPayload;

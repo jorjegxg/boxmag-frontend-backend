@@ -1,9 +1,11 @@
 import type { NextFunction, Request, Response } from "express";
 import {
   USER_COOKIE_NAME,
+  peekUserSessionUserId,
   verifyUserSessionToken,
   type VerifiedUserSession,
 } from "../config/user-auth";
+import { getUserCredentialStamp } from "../services/user-credential-stamp";
 
 declare module "express-serve-static-core" {
   interface Request {
@@ -29,21 +31,39 @@ function readUserCookie(req: Request): string | undefined {
   return undefined;
 }
 
-export function getRequestUserSession(
+/**
+ * Verified session for the request, or null. Fails closed (null) when the
+ * credential stamp cannot be loaded — the session is bound to the user's
+ * current password, so it stops working after a password reset.
+ */
+export async function getRequestUserSession(
   req: Request,
-): VerifiedUserSession | null {
-  return verifyUserSessionToken(readUserCookie(req));
+): Promise<VerifiedUserSession | null> {
+  const token = readUserCookie(req);
+  const claimedUserId = peekUserSessionUserId(token);
+  if (claimedUserId == null) return null;
+
+  let credentialStamp: string | null;
+  try {
+    credentialStamp = await getUserCredentialStamp(claimedUserId);
+  } catch (error) {
+    console.error("Failed to load user credential stamp", error);
+    return null;
+  }
+  if (credentialStamp == null) return null;
+
+  return verifyUserSessionToken(token, credentialStamp);
 }
 
 /**
  * Requires a valid signed user session cookie issued by POST /api/auth/login.
  */
-export function requireUser(
+export async function requireUser(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
-  const session = getRequestUserSession(req);
+): Promise<void> {
+  const session = await getRequestUserSession(req);
   if (!session) {
     res.status(401).json({
       ok: false,
@@ -59,13 +79,13 @@ export function requireUser(
 /**
  * Ensures the authenticated user matches the provided email (case-insensitive).
  */
-export function requireUserEmail(
+export async function requireUserEmail(
   email: string | undefined,
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
-  const session = req.userSession ?? getRequestUserSession(req);
+): Promise<void> {
+  const session = req.userSession ?? (await getRequestUserSession(req));
   if (!session) {
     res.status(401).json({
       ok: false,
