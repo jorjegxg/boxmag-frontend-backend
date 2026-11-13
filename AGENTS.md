@@ -706,6 +706,27 @@ Password reset uses columns on `users` (`password_reset_token_hash`, `password_r
 
 ---
 
+## Live instance on the VPS (host-run `next dev`, no Docker)
+
+Since 2026-11-12 **boxmag.eu itself is served by the hot-reload instance** (owner's choice): every saved file in `/opt/boxmag-dev` is live on the public site immediately.
+
+| What | Where |
+|------|-------|
+| Code (edits go live instantly) | `/opt/boxmag-dev` — git worktree, branch `dev`, own `.env` |
+| Frontend | `boxmag-dev-frontend.service` → `next dev` on `127.0.0.1:3016` → `boxmag.eu` |
+| Backend | `boxmag-dev-backend.service` → `ts-node-dev` on `127.0.0.1:3015` → `api.boxmag.eu` |
+| Database | live `boxmag4` in the `boxmag4-mysql` container (MySQL + MinIO stay in Docker) |
+| Docker app containers | `boxmag4-frontend` / `boxmag4-backend` are **stopped** (kept for rollback) |
+| nginx | `/etc/nginx/sites-available/boxmag` (HMR websocket is `/_next/hmr`) |
+
+- Logs: `journalctl -u boxmag-dev-frontend -f` / `-u boxmag-dev-backend -f`. Restart the units after `.env` or `next.config.ts` changes, not after code edits.
+- A syntax error saved here breaks the public site until fixed — keep edits small and check the page after each one.
+- Both units have `MemoryMax` caps (4 GB host) — do not remove them.
+- Rollback to Docker production: `cp /root/nginx-boxmag.bak-docker /etc/nginx/sites-available/boxmag && nginx -t && systemctl reload nginx && docker start boxmag4-backend boxmag4-frontend`.
+- `scripts/deploy.sh` would rebuild and start the Docker app on `:3005`/`:3006`, which nginx no longer routes to — do not run it while this mode is active.
+
+---
+
 ## Agent conventions
 
 ### Do
