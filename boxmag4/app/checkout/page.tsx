@@ -52,6 +52,8 @@ type ManualAddress = {
 
 const GUEST_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SHIPPING_METHODS_CACHE_KEY = "boxmag.checkout.shippingMethods.v2";
+const PENDING_ORDER_ID_STORAGE_KEY = "boxmag.checkout.pendingOrderId";
+const PENDING_SESSION_ID_STORAGE_KEY = "boxmag.checkout.pendingSessionId";
 const SHIPPING_METHODS_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 const CART_QTY_STEP = 10;
 const MAX_ATTACHMENT_MB = 18;
@@ -165,6 +167,7 @@ export default function CheckoutPage() {
   });
   const cartItems = useCartStore((s) => s.items);
   const cartSubtotal = useCartStore((s) => s.subtotal);
+  const applyUnitPrices = useCartStore((s) => s.applyUnitPrices);
   const setCartItemQuantity = useCartStore((s) => s.setQuantity);
   const removeCartItem = useCartStore((s) => s.removeItem);
   const restoreCartItem = useCartStore((s) => s.restoreItem);
@@ -446,6 +449,25 @@ export default function CheckoutPage() {
 
     const shippingDisplay = getShippingMethodDisplay(selectedShippingMethod, t);
 
+    // A previous unpaid attempt from this tab is reused by the server instead
+    // of creating a duplicate pending order on every click.
+    let pendingOrderId: number | null = null;
+    let pendingSessionId: string | null = null;
+    try {
+      const storedOrderId = Number(
+        sessionStorage.getItem(PENDING_ORDER_ID_STORAGE_KEY) ?? "",
+      );
+      const storedSessionId = (
+        sessionStorage.getItem(PENDING_SESSION_ID_STORAGE_KEY) ?? ""
+      ).trim();
+      if (Number.isInteger(storedOrderId) && storedOrderId > 0 && storedSessionId) {
+        pendingOrderId = storedOrderId;
+        pendingSessionId = storedSessionId;
+      }
+    } catch (_storageError) {
+      // ignore
+    }
+
     setIsSubmittingOrder(true);
     setSubmitOrderMessage(t("checkout.redirecting"));
     try {
@@ -474,6 +496,10 @@ export default function CheckoutPage() {
               price: orderShipping,
             },
             vatPercent: taxPercent,
+            expectedTotal: orderTotal,
+            ...(pendingOrderId != null && pendingSessionId
+              ? { pendingOrderId, pendingSessionId }
+              : {}),
             address: {
               firstName: activeAddress.firstName,
               lastName: activeAddress.lastName,
@@ -504,8 +530,50 @@ export default function CheckoutPage() {
       const payload = (await response.json()) as {
         ok?: boolean;
         message?: string;
-        data?: { url?: string; orderId?: number; sessionId?: string };
+        code?: string;
+        data?: {
+          url?: string;
+          orderId?: number;
+          sessionId?: string;
+          total?: number;
+          shipping?: number;
+          items?: Array<{ itemNo: string; unitPrice: number }>;
+        };
       };
+      if (response.status === 409 && payload.code === "PRICE_CHANGED") {
+        // The cart showed stale prices. Show what the server will charge and
+        // let the customer confirm with a second click.
+        const serverData = payload.data ?? {};
+        if (Array.isArray(serverData.items)) {
+          applyUnitPrices(serverData.items);
+        }
+        if (typeof serverData.shipping === "number") {
+          const serverShipping = serverData.shipping;
+          const nextMethods = (
+            shippingMethods.length > 0 ? shippingMethods : FALLBACK_SHIPPING_METHODS
+          ).map((method) =>
+            method.key === selectedShippingMethod.key
+              ? { ...method, price: serverShipping }
+              : method,
+          );
+          setShippingMethods(nextMethods);
+          try {
+            localStorage.removeItem(SHIPPING_METHODS_CACHE_KEY);
+          } catch (_storageError) {
+            // ignore
+          }
+        }
+        setSubmitOrderMessage(
+          t("checkout.error.priceChanged").replace(
+            "{{total}}",
+            typeof serverData.total === "number"
+              ? formatPrice(serverData.total)
+              : "",
+          ),
+        );
+        setIsSubmittingOrder(false);
+        return;
+      }
       if (!response.ok || payload.ok !== true || !payload.data?.url) {
         throw new Error(
           payload.message ?? `Failed with status ${response.status}`,
@@ -514,8 +582,12 @@ export default function CheckoutPage() {
 
       try {
         sessionStorage.setItem(
-          "boxmag.checkout.pendingOrderId",
+          PENDING_ORDER_ID_STORAGE_KEY,
           String(payload.data.orderId ?? ""),
+        );
+        sessionStorage.setItem(
+          PENDING_SESSION_ID_STORAGE_KEY,
+          String(payload.data.sessionId ?? ""),
         );
       } catch (_storageError) {
         // ignore

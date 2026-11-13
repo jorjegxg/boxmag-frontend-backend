@@ -12,6 +12,7 @@ const {
   getConnectionMock,
   stripeCreateMock,
   stripeRetrieveMock,
+  stripeExpireMock,
   constructEventMock,
   isOrderEmailTransportConfiguredMock,
   sendOrderConfirmationEmailToCustomerMock,
@@ -23,6 +24,7 @@ const {
   getConnectionMock: vi.fn(),
   stripeCreateMock: vi.fn(),
   stripeRetrieveMock: vi.fn(),
+  stripeExpireMock: vi.fn(),
   constructEventMock: vi.fn(),
   isOrderEmailTransportConfiguredMock: vi.fn(() => false),
   sendOrderConfirmationEmailToCustomerMock: vi.fn(async (_params: unknown) => undefined),
@@ -73,6 +75,7 @@ vi.mock("../services/stripe", () => ({
       sessions: {
         create: stripeCreateMock,
         retrieve: stripeRetrieveMock,
+        expire: stripeExpireMock,
       },
     },
     webhooks: {
@@ -171,6 +174,7 @@ describe("payments routes", () => {
     getConnectionMock.mockReset();
     stripeCreateMock.mockReset();
     stripeRetrieveMock.mockReset();
+    stripeExpireMock.mockReset();
     constructEventMock.mockReset();
     isOrderEmailTransportConfiguredMock.mockReset();
     isOrderEmailTransportConfiguredMock.mockReturnValue(false);
@@ -437,6 +441,140 @@ describe("payments routes", () => {
     expect(stripePayload.line_items[0].price_data.unit_amount).toBe(5000);
     expect(stripePayload.metadata.charge_currency).toBe("ron");
     expect(stripePayload.metadata.eur_ron_rate).toBe("5.0000");
+  });
+
+  it("keeps subtotal + VAT + shipping equal to the total Stripe charges in RON", async () => {
+    const { getEurRonRate } = await import("../services/exchange-rate.service");
+    vi.mocked(getEurRonRate).mockResolvedValueOnce({
+      rate: 4.9771,
+      source: "bnr",
+      fetchedAt: "2026-01-01T00:00:00.000Z",
+    } as Awaited<ReturnType<typeof getEurRonRate>>);
+    mockCatalogAndShipping({ unitPrice: 0.37, shippingPrice: 25 });
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({
+        ...validCheckoutBody,
+        currency: "ron",
+        cartItems: [{ ...validCheckoutBody.cartItems[0], quantity: 900 }],
+      });
+
+    expect(response.status).toBe(200);
+    const lineItems = stripeCreateMock.mock.calls[0]?.[0]?.line_items as Array<{
+      quantity: number;
+      price_data: { unit_amount: number };
+    }>;
+    const stripeTotal = lineItems.reduce(
+      (sum, line) => sum + line.quantity * line.price_data.unit_amount,
+      0,
+    );
+    const insertArgs = findOrderInsertArgs()!;
+    const [totalCents, subtotalCents, , vatCents, shippingCents] =
+      insertArgs.slice(17, 22) as number[];
+    // 0.37 EUR x 4.9771 = 1.84 RON per piece -> 184 bani x 900
+    expect(subtotalCents).toBe(165600);
+    expect(vatCents).toBe(34776);
+    expect(shippingCents).toBe(12443);
+    expect(totalCents).toBe(subtotalCents! + vatCents! + shippingCents!);
+    expect(stripeTotal).toBe(totalCents);
+  });
+
+  it("returns 409 PRICE_CHANGED without creating anything when the cart total is stale", async () => {
+    mockCatalogAndShipping({ unitPrice: 12, shippingPrice: 30 });
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({ ...validCheckoutBody, expectedTotal: 1240 });
+
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe("PRICE_CHANGED");
+    expect(response.body.data).toMatchObject({
+      subtotal: 1200,
+      vatAmount: 252,
+      shipping: 30,
+      total: 1482,
+      items: [{ itemNo: "STD-001", unitPrice: 12 }],
+    });
+    expect(getConnectionMock).not.toHaveBeenCalled();
+    expect(stripeCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts the checkout when expectedTotal matches the server total", async () => {
+    mockCatalogAndShipping({ unitPrice: 10, shippingPrice: 30 });
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({ ...validCheckoutBody, expectedTotal: 1240 });
+
+    expect(response.status).toBe(200);
+    expect(stripeCreateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reuses the previous pending order instead of inserting a duplicate", async () => {
+    mockCatalogAndShipping({ unitPrice: 10, shippingPrice: 30 });
+    queryMock.mockResolvedValueOnce([
+      [{ id: 55, stripe_session_id: "cs_old" }],
+    ]);
+    stripeRetrieveMock.mockResolvedValueOnce({ status: "open" });
+    stripeExpireMock.mockResolvedValueOnce({ status: "expired" });
+    executeMock.mockResolvedValue([{ affectedRows: 1 }]);
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({
+        ...validCheckoutBody,
+        pendingOrderId: 55,
+        pendingSessionId: "cs_old",
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.orderId).toBe(55);
+    expect(stripeExpireMock).toHaveBeenCalledWith("cs_old");
+    expect(findOrderInsertArgs()).toBeUndefined();
+    const lookup = queryMock.mock.calls[2]!;
+    expect(String(lookup[0])).toContain("o.stripe_session_id = ?");
+    expect(lookup[1]).toEqual([55, "cs_old", "buyer@example.com"]);
+    expect(stripeCreateMock.mock.calls[0]?.[0]?.metadata.order_id).toBe("55");
+  });
+
+  it("inserts a new order when the previous session was already completed", async () => {
+    mockCatalogAndShipping({ unitPrice: 10, shippingPrice: 30 });
+    queryMock.mockResolvedValueOnce([
+      [{ id: 55, stripe_session_id: "cs_old" }],
+    ]);
+    stripeRetrieveMock.mockResolvedValueOnce({ status: "complete" });
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({
+        ...validCheckoutBody,
+        pendingOrderId: 55,
+        pendingSessionId: "cs_old",
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.orderId).toBe(99);
+    expect(stripeExpireMock).not.toHaveBeenCalled();
+    expect(findOrderInsertArgs()).toBeDefined();
+  });
+
+  it("ignores a pending order reference that does not match id + session + email", async () => {
+    mockCatalogAndShipping({ unitPrice: 10, shippingPrice: 30 });
+    queryMock.mockResolvedValueOnce([[]]);
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({
+        ...validCheckoutBody,
+        pendingOrderId: 55,
+        pendingSessionId: "cs_someone_else",
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.orderId).toBe(99);
+    expect(stripeRetrieveMock).not.toHaveBeenCalled();
+    expect(findOrderInsertArgs()).toBeDefined();
   });
 
   it("overwrites client unitPrice and shipping.price with catalog values", async () => {

@@ -24,6 +24,8 @@ export type CartStoreType = {
   removeItem: (itemNo: string) => void;
   restoreItem: (item: CartItem) => void;
   setQuantity: (itemNo: string, quantity: number) => void;
+  /** Replace stale unit prices with the ones the server will charge. */
+  applyUnitPrices: (prices: Array<{ itemNo: string; unitPrice: number }>) => void;
   clearCart: () => void;
 };
 
@@ -134,6 +136,22 @@ export const useCartStore = create<CartStoreType>()(
             totalItems: computeTotalItems(nextItems),
             subtotal: computeSubtotal(nextItems),
           };
+        });
+      },
+      applyUnitPrices: (prices) => {
+        const priceByItemNo = new Map(
+          prices
+            .filter(
+              (entry) => Number.isFinite(entry.unitPrice) && entry.unitPrice >= 0,
+            )
+            .map((entry) => [entry.itemNo, entry.unitPrice]),
+        );
+        set((state) => {
+          const nextItems = state.items.map((entry) => {
+            const unitPrice = priceByItemNo.get(entry.itemNo);
+            return unitPrice == null ? entry : { ...entry, unitPrice };
+          });
+          return { items: nextItems, subtotal: computeSubtotal(nextItems) };
         });
       },
       clearCart: () => {

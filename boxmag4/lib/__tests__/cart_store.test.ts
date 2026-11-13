@@ -113,4 +113,20 @@ describe("cart_store (INV-QTY-100)", () => {
     expect(state.items).toHaveLength(1);
     expect(state.items[0]?.quantity).toBe(200);
   });
+
+  it("applyUnitPrices replaces stale prices and recomputes the subtotal (INV-PRICE-CHANGED)", () => {
+    const store = useCartStore.getState();
+    store.addItem({ itemNo: "BOX-1", name: "Box", unitPrice: 1, quantity: 100 });
+    store.addItem({ itemNo: "BOX-2", name: "Box 2", unitPrice: 2, quantity: 300 });
+
+    useCartStore.getState().applyUnitPrices([
+      { itemNo: "BOX-1", unitPrice: 1.2 },
+      { itemNo: "UNKNOWN", unitPrice: 9 },
+    ]);
+
+    const state = useCartStore.getState();
+    expect(state.items.map((item) => item.unitPrice)).toEqual([1.2, 2]);
+    expect(state.items.map((item) => item.quantity)).toEqual([100, 300]);
+    expect(state.subtotal).toBeCloseTo(1.2 * 100 + 2 * 300, 6);
+  });
 });

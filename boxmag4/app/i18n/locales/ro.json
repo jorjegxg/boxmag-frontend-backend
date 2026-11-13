@@ -158,6 +158,7 @@
   "checkout.error.vatNumberInvalid": "Codul TVA trebuie să fie într-un format valid (ex: RO12345678, RO 12345678).",
   "checkout.error.minOrderQty": "Fiecare produs necesită o comandă minimă de 100 buc.",
   "checkout.error.startCheckout": "Nu s-a putut începe finalizarea comenzii.",
+  "checkout.error.priceChanged": "Prețurile s-au modificat de când ai adăugat produsele. Noul total este {{total}} — verifică comanda și confirmă din nou.",
   "account.nav.account": "CONTUL MEU",
   "account.nav.address": "ADRESĂ",
   "account.nav.billing": "FACTURARE",

@@ -70,7 +70,58 @@ type CreateCheckoutSessionPayload = {
   consentEmail?: unknown;
   acceptedTerms?: unknown;
   attachment?: unknown;
+  /** EUR total the customer saw in the cart; a mismatch returns 409 PRICE_CHANGED. */
+  expectedTotal?: unknown;
+  /** Previous unpaid attempt from the same browser; reused instead of inserting a duplicate. */
+  pendingOrderId?: unknown;
+  pendingSessionId?: unknown;
 };
+
+type ReusableOrderRow = RowDataPacket & {
+  id: number;
+  stripe_session_id: string | null;
+};
+
+/**
+ * A second click on "Pay" reuses the unpaid order of the previous attempt.
+ * The caller must present both the order id and its Stripe session id (only the
+ * browser that started the checkout knows it) and the same email. The old
+ * session is expired first so it can no longer be paid with stale amounts.
+ */
+async function findReusablePendingOrderId(args: {
+  orderId: number;
+  sessionId: string;
+  email: string;
+}): Promise<number | null> {
+  try {
+    const [rows] = await mysqlPool.query<ReusableOrderRow[]>(
+      `SELECT o.id, o.stripe_session_id
+       FROM orders o
+       INNER JOIN contacts c ON c.order_id = o.id
+       WHERE o.id = ?
+         AND o.stripe_session_id = ?
+         AND o.payment_status = 'pending'
+         AND o.status = 'new'
+         AND LOWER(c.email) = ?
+       LIMIT 1`,
+      [args.orderId, args.sessionId, args.email.toLowerCase()],
+    );
+    const row = rows?.[0];
+    if (!row) return null;
+
+    const stripe = getStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(args.sessionId);
+    if (session.status === "open") {
+      await stripe.checkout.sessions.expire(args.sessionId);
+      return row.id;
+    }
+    // "complete" means a payment is on its way: leave that order alone.
+    return session.status === "expired" ? row.id : null;
+  } catch (error) {
+    console.error("Failed to reuse pending checkout order", error);
+    return null;
+  }
+}
 
 type AttachmentPayload = {
   fileName: string;
@@ -105,6 +156,13 @@ function parseCheckoutCurrency(value: unknown): CheckoutCurrency {
   if (normalized === "ron") return "ron";
   return "eur";
 }
+
+/**
+ * The cart rounds VAT on an unrounded float subtotal, so it can legitimately be
+ * one cent off. Any real catalog change moves the total by far more
+ * (minimum order is 100 pieces).
+ */
+const PRICE_CHANGE_TOLERANCE_EUR = 0.02;
 
 function toCents(amount: number): number {
   return Math.round(amount * 100);
@@ -359,16 +417,59 @@ paymentsRouter.post("/create-checkout-session", checkoutRateLimiter, async (req,
       ? convertEurToRon(amountEur, eurRonRate)
       : roundMoney(amountEur);
 
-  const chargedCartItems = resolvedCartItems.map((item) => ({
-    ...item,
-    unitPrice: convertForCharge(item.unitPrice),
-    lineTotal: convertForCharge(item.unitPrice * item.quantity),
-  }));
+  const expectedTotal = toNonNegativeNumber(payload.expectedTotal);
+  if (expectedTotal != null && Math.abs(expectedTotal - totalEur) > PRICE_CHANGE_TOLERANCE_EUR) {
+    // The cart showed stale prices (catalog or shipping changed since it was
+    // loaded). Nothing is created; the client shows the new total and asks again.
+    res.status(409).json({
+      ok: false,
+      code: "PRICE_CHANGED",
+      message: "Prices have changed since the cart was loaded.",
+      data: {
+        currency: "eur",
+        subtotal: subtotalEur,
+        vatPercent,
+        vatAmount: vatAmountEur,
+        shipping: shippingPriceEur,
+        total: totalEur,
+        items: resolvedCartItems.map((item) => ({
+          itemNo: item.itemNo,
+          unitPrice: item.unitPrice,
+        })),
+      },
+    });
+    return;
+  }
 
-  const subtotal = convertForCharge(subtotalEur);
-  const vatAmount = convertForCharge(vatAmountEur);
-  const shippingPriceCharged = convertForCharge(shippingPriceEur);
-  const total = convertForCharge(totalEur);
+  // Everything below is derived, in minor units, from the exact amounts Stripe
+  // charges (unit price rounded per piece x quantity), so that
+  // subtotal + VAT + shipping === total in the DB, in emails and on Stripe,
+  // for RON as well as EUR.
+  const chargedCartItems = resolvedCartItems.map((item) => {
+    const unitPrice = convertForCharge(item.unitPrice);
+    const unitCents = toCents(unitPrice);
+    const lineCents = unitCents * item.quantity;
+    return {
+      ...item,
+      unitPrice,
+      unitCents,
+      lineCents,
+      lineTotal: lineCents / 100,
+    };
+  });
+
+  const subtotalCents = chargedCartItems.reduce(
+    (sum, item) => sum + item.lineCents,
+    0,
+  );
+  const vatCents = Math.round((subtotalCents * vatPercent) / 100);
+  const shippingCents = toCents(convertForCharge(shippingPriceEur));
+  const totalCents = subtotalCents + vatCents + shippingCents;
+
+  const subtotal = subtotalCents / 100;
+  const vatAmount = vatCents / 100;
+  const shippingPriceCharged = shippingCents / 100;
+  const total = totalCents / 100;
   const currency = chargeCurrency;
 
   const orderMessageLines = [
@@ -389,6 +490,17 @@ paymentsRouter.post("/create-checkout-session", checkoutRateLimiter, async (req,
     `Shipping: ${shippingPriceCharged.toFixed(2)} ${currency.toUpperCase()}`,
     `Total: ${total.toFixed(2)} ${currency.toUpperCase()}`,
   ];
+
+  const pendingOrderId = toPositiveInt(payload.pendingOrderId);
+  const pendingSessionId = toRequiredString(payload.pendingSessionId);
+  const reusableOrderId =
+    pendingOrderId != null && pendingSessionId
+      ? await findReusablePendingOrderId({
+          orderId: pendingOrderId,
+          sessionId: pendingSessionId,
+          email,
+        })
+      : null;
 
   let connection: PoolConnection | undefined;
   let createdOrderId: number | null = null;
@@ -458,68 +570,116 @@ paymentsRouter.post("/create-checkout-session", checkoutRateLimiter, async (req,
         ? userSession.userId
         : null;
 
-    const [orderInsertResult] = await conn.execute<ResultSetHeader>(
-      `INSERT INTO orders
-        (user_id, box_type_name, cardboard_type, cardboard_colour, box_print,
-         size_type, transport, quantity, ftl, attachment_name, attachment_object_name, attachment_url, message, items_json,
-         accepted_terms, status, payment_status,
-         total_amount_cents, subtotal_cents, vat_percent, vat_cents,
-         shipping_cents, shipping_method, shipping_eta, currency)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        linkedUserId,
-        "Checkout Cart Order",
-        "N/A",
-        "N/A",
-        "N/A",
-        "N/A",
-        shippingName,
-        totalQuantity || 1,
-        0,
-        attachmentName,
-        attachmentObjectName,
-        null,
-        orderMessageLines.join("\n"),
-        itemsJson,
-        1,
-        "new",
-        "pending",
-        toCents(total),
-        toCents(subtotal),
-        vatPercent,
-        toCents(vatAmount),
-        toCents(shippingPriceCharged),
-        shippingName,
-        shippingEta,
-        currency,
-      ],
-    );
+    const contactValues = [
+      address.firstName,
+      address.lastName,
+      address.companyName || `${address.firstName} ${address.lastName}`.trim(),
+      vatNumber,
+      email,
+      address.phone || "N/A",
+      address.address,
+      address.postcode,
+      address.city,
+      address.country,
+      0,
+      payload.consentPhone === true ? 1 : 0,
+      payload.consentEmail === true ? 1 : 0,
+    ];
 
-    createdOrderId = orderInsertResult.insertId;
+    let reused = false;
+    if (reusableOrderId != null) {
+      // Guarded by payment_status so a payment that landed meanwhile wins.
+      const [updateResult] = await conn.execute<ResultSetHeader>(
+        `UPDATE orders
+         SET user_id = ?, transport = ?, quantity = ?,
+             attachment_name = COALESCE(?, attachment_name),
+             attachment_object_name = COALESCE(?, attachment_object_name),
+             message = ?, items_json = ?,
+             total_amount_cents = ?, subtotal_cents = ?, vat_percent = ?, vat_cents = ?,
+             shipping_cents = ?, shipping_method = ?, shipping_eta = ?, currency = ?,
+             stripe_session_id = NULL
+         WHERE id = ? AND payment_status = 'pending'`,
+        [
+          linkedUserId,
+          shippingName,
+          totalQuantity || 1,
+          attachmentName,
+          attachmentObjectName,
+          orderMessageLines.join("\n"),
+          itemsJson,
+          totalCents,
+          subtotalCents,
+          vatPercent,
+          vatCents,
+          shippingCents,
+          shippingName,
+          shippingEta,
+          currency,
+          reusableOrderId,
+        ],
+      );
+      if (updateResult.affectedRows > 0) {
+        reused = true;
+        createdOrderId = reusableOrderId;
+        await conn.execute(
+          `UPDATE contacts
+           SET first_name = ?, surname = ?, company_name = ?, vat_number = ?, email = ?,
+               phone = ?, address = ?, postcode = ?, city = ?, country = ?,
+               create_account = ?, consent_phone = ?, consent_email = ?
+           WHERE order_id = ?`,
+          [...contactValues, reusableOrderId],
+        );
+      }
+    }
 
-    await conn.execute(
-      `INSERT INTO contacts
-        (order_id, first_name, surname, company_name, vat_number, email, phone, address, postcode, city, country,
-         create_account, consent_phone, consent_email)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        createdOrderId,
-        address.firstName,
-        address.lastName,
-        address.companyName ||
-          `${address.firstName} ${address.lastName}`.trim(),
-        vatNumber,
-        email,
-        address.phone || "N/A",
-        address.address,
-        address.postcode,
-        address.city,
-        address.country,
-        0,
-        payload.consentPhone === true ? 1 : 0,
-        payload.consentEmail === true ? 1 : 0,
-      ],
-    );
+    if (!reused) {
+      const [orderInsertResult] = await conn.execute<ResultSetHeader>(
+        `INSERT INTO orders
+          (user_id, box_type_name, cardboard_type, cardboard_colour, box_print,
+           size_type, transport, quantity, ftl, attachment_name, attachment_object_name, attachment_url, message, items_json,
+           accepted_terms, status, payment_status,
+           total_amount_cents, subtotal_cents, vat_percent, vat_cents,
+           shipping_cents, shipping_method, shipping_eta, currency)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          linkedUserId,
+          "Checkout Cart Order",
+          "N/A",
+          "N/A",
+          "N/A",
+          "N/A",
+          shippingName,
+          totalQuantity || 1,
+          0,
+          attachmentName,
+          attachmentObjectName,
+          null,
+          orderMessageLines.join("\n"),
+          itemsJson,
+          1,
+          "new",
+          "pending",
+          totalCents,
+          subtotalCents,
+          vatPercent,
+          vatCents,
+          shippingCents,
+          shippingName,
+          shippingEta,
+          currency,
+        ],
+      );
+
+      createdOrderId = orderInsertResult.insertId;
+
+      await conn.execute(
+        `INSERT INTO contacts
+          (order_id, first_name, surname, company_name, vat_number, email, phone, address, postcode, city, country,
+           create_account, consent_phone, consent_email)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [createdOrderId, ...contactValues],
+      );
+    }
 
     await conn.commit();
   } catch (error) {
@@ -550,7 +710,7 @@ paymentsRouter.post("/create-checkout-session", checkoutRateLimiter, async (req,
         quantity: item.quantity,
         price_data: {
           currency,
-          unit_amount: toCents(item.unitPrice),
+          unit_amount: item.unitCents,
           product_data: {
             name: item.name,
             description: `Item No: ${item.itemNo}`,
@@ -561,12 +721,12 @@ paymentsRouter.post("/create-checkout-session", checkoutRateLimiter, async (req,
     },
   );
 
-  if (vatAmount > 0) {
+  if (vatCents > 0) {
     lineItems.push({
       quantity: 1,
       price_data: {
         currency,
-        unit_amount: toCents(vatAmount),
+        unit_amount: vatCents,
         product_data: {
           name: `VAT (${vatPercent}%)`,
         },
@@ -574,12 +734,12 @@ paymentsRouter.post("/create-checkout-session", checkoutRateLimiter, async (req,
     });
   }
 
-  if (shippingPriceCharged > 0) {
+  if (shippingCents > 0) {
     lineItems.push({
       quantity: 1,
       price_data: {
         currency,
-        unit_amount: toCents(shippingPriceCharged),
+        unit_amount: shippingCents,
         product_data: {
           name: `Shipping - ${shippingName}`,
           ...(shippingEta ? { description: shippingEta } : {}),

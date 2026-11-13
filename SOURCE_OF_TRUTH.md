@@ -30,6 +30,9 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 | `INV-WEBHOOK-PAID` | Doar webhook Stripe marchează comanda `paid`. `GET /api/payments/sessions/:id` e read-only (status + order id/number + email; fără PII contact). | `payments.route.ts`, `app.ts` (raw body) |
 | `INV-STRIPE-LOCK` | Admin **nu** poate schimba manual `payment_status` dacă există `stripe_session_id`. | `orders.route.ts` |
 | `INV-PAY-STATUS` | Valori permise: `pending`, `paid`, `failed`. | `orders.route.ts` |
+| `INV-CHECKOUT-TOTALS` | Sumele comenzii B2C se calculează în unități minore din exact ce taxează Stripe (preț unitar rotunjit × cantitate): `subtotal_cents + vat_cents + shipping_cents = total_amount_cents` = suma liniilor Stripe, în EUR și în RON. | `payments.route.ts` |
+| `INV-PRICE-CHANGED` | Clientul trimite `expectedTotal` (totalul EUR afișat în coș). Dacă diferă de totalul recalculat de server cu peste 0,02 € → `409 { code: "PRICE_CHANGED" }` cu sumele și prețurile noi; **nu** se creează comandă / sesiune Stripe. UI actualizează coșul, afișează noul total și cere o a doua confirmare. | `payments.route.ts`, `checkout/page.tsx`, `cart_store.ts` |
+| `INV-PENDING-REUSE` | Un nou click pe „Plătește” din același tab trimite `pendingOrderId` + `pendingSessionId`; dacă se potrivesc id + `stripe_session_id` + email și comanda e încă `pending`, vechea sesiune Stripe e expirată și comanda e **actualizată**, nu duplicată. Sesiune deja `complete` sau referință nepotrivită → comandă nouă. | `payments.route.ts`, `checkout/page.tsx` |
 
 ### Comenzi
 
@@ -134,6 +137,9 @@ Legendă: **OK** = există assert; **TODO** = de adăugat; **—** = neaplicabil
 | `INV-TIERS` | OK `price-tiers`, `box-types` | — | OK `product-detail` | — |
 | `INV-TAX-SERVER` | OK `payments` | — | OK `checkout` (body) | — |
 | `INV-CHECKOUT-TIER-300` | OK `payments` | — | OK `checkout` | — |
+| `INV-CHECKOUT-TOTALS` | OK `payments` (RON) | — | — | — |
+| `INV-PRICE-CHANGED` | OK `payments` | OK `cart_store` | — | — |
+| `INV-PENDING-REUSE` | OK `payments` | — | — | — |
 | `INV-WEBHOOK-PAID` | OK `payments` | — | OK success poll (mock) | — |
 | `INV-STRIPE-LOCK` | OK `orders` | — | OK `admin-orders` | — |
 | `INV-PAY-STATUS` | OK `orders` | — | — | — |

@@ -90,6 +90,7 @@ function CheckoutSuccessPageContent() {
           clearCart();
           try {
             sessionStorage.removeItem("boxmag.checkout.pendingOrderId");
+            sessionStorage.removeItem("boxmag.checkout.pendingSessionId");
           } catch (_storageError) {
             // ignore
           }

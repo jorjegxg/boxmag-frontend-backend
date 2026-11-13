@@ -158,6 +158,7 @@
   "checkout.error.vatNumberInvalid": "VAT number must be in a valid format (e.g. RO12345678, RO 12345678).",
   "checkout.error.minOrderQty": "Each product requires a minimum order of 100 pcs.",
   "checkout.error.startCheckout": "Failed to start checkout.",
+  "checkout.error.priceChanged": "Prices have changed since you added these products. The new total is {{total}} — please review your order and confirm again.",
   "account.nav.account": "MY ACCOUNT",
   "account.nav.address": "ADDRESS",
   "account.nav.billing": "BILLING",

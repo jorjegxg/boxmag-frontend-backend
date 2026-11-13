@@ -158,6 +158,7 @@
   "checkout.error.vatNumberInvalid": "USt-Nummer muss ein gültiges Format haben (z. B. DE123456789, DE 123456789).",
   "checkout.error.minOrderQty": "Jedes Produkt erfordert eine Mindestbestellmenge von 100 Stück.",
   "checkout.error.startCheckout": "Checkout konnte nicht gestartet werden.",
+  "checkout.error.priceChanged": "Die Preise haben sich geändert, seit Sie die Produkte hinzugefügt haben. Die neue Gesamtsumme beträgt {{total}} — bitte prüfen Sie die Bestellung und bestätigen Sie erneut.",
   "account.nav.account": "MEIN KONTO",
   "account.nav.address": "ADRESSE",
   "account.nav.billing": "ABRECHNUNG",
