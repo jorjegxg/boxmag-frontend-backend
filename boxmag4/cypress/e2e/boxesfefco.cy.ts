@@ -1,5 +1,5 @@
 /**
- * E2E tests – /boxesfetco (BoxFix product table)
+ * E2E tests – /boxesfefco (BoxFix product table)
  *
  * Scenarii:
  *  1. Tabelul se încarcă din API (mock)
@@ -52,8 +52,8 @@ const interceptBoxFixProducts = (products: MockProductRow[] = [mockBoxFixProduct
   }).as("getBoxFixProducts");
 };
 
-const visitBoxesfetco = () => {
-  cy.visit("/boxesfetco", {
+const visitBoxesfefco = () => {
+  cy.visit("/boxesfefco", {
     onBeforeLoad(win) {
       win.localStorage.setItem("boxmag.language", "en");
       win.localStorage.removeItem("boxmag.cart");
@@ -64,10 +64,10 @@ const visitBoxesfetco = () => {
 const productRow = (itemNo: string) =>
   cy.contains("td", itemNo).closest("tr");
 
-describe("/boxesfetco – product table", () => {
+describe("/boxesfefco – product table", () => {
   beforeEach(() => {
     interceptBoxFixProducts();
-    visitBoxesfetco();
+    visitBoxesfefco();
     cy.wait("@getBoxFixProducts");
   });
 
@@ -164,11 +164,11 @@ describe("/boxesfetco – product table", () => {
   });
 });
 
-describe("/boxesfetco → /checkout", () => {
+describe("/boxesfefco → /checkout", () => {
   beforeEach(() => {
     interceptBoxFixProducts();
     cy.mockCheckoutApis();
-    visitBoxesfetco();
+    visitBoxesfefco();
     cy.wait("@getBoxFixProducts");
   });
 

@@ -10,6 +10,8 @@ import { FaShoppingCart, FaCopy } from "react-icons/fa";
 import { useLanguage } from "../i18n/language-context";
 
 const SWIFT_CODE = "BTRLRO22";
+// Full EUR account number; the bank-transfer line shows it only when configured.
+const BANK_IBAN_EUR = (process.env.NEXT_PUBLIC_BANK_IBAN_EUR ?? "").trim();
 
 export default function HowToBuyPage() {
   const { t } = useLanguage();
@@ -55,12 +57,16 @@ export default function HowToBuyPage() {
             <li>
               {t("howToBuy.li3")}
               <ul className="mt-2 ml-4 list-disc list-inside space-y-1">
-                <li>Tpay payments,</li>
-                <li>VISA/Mastercard payments,</li>
-                <li>Stripe payments,</li>
-                <li>PayPal payments,</li>
-                <li>Netopya payments – deferred payments, up to 90 days,</li>
-                <li>bank transfer (EUR): RO85 BTRL 0610 4202 4207 76XX</li>
+                <li>{t("howToBuy.payCard")}</li>
+                <li>
+                  {t("howToBuy.payTransfer")}
+                  {BANK_IBAN_EUR ? (
+                    <>
+                      {" "}
+                      <span className="font-mono">{BANK_IBAN_EUR}</span>
+                    </>
+                  ) : null}
+                </li>
               </ul>
             </li>
             <li>{t("howToBuy.li4")}</li>

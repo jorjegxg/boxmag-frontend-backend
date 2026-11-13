@@ -46,15 +46,15 @@ export default function CorrugatedEnvelopesPage() {
               {[
                 {
                   src: "/b2b/boxes/envelope.png",
-                  alt: "Corrugated cardboard envelope left",
+                  alt: t("envelopes.imageAlt"),
                 },
                 {
                   src: "/b2b/boxes/envelope.png",
-                  alt: "Corrugated cardboard envelope center",
+                  alt: t("envelopes.imageAlt"),
                 },
                 {
                   src: "/b2b/boxes/envelope.png",
-                  alt: "Corrugated cardboard envelope right",
+                  alt: t("envelopes.imageAlt"),
                 },
               ].map(({ src, alt }, i) => (
                 <div
@@ -89,24 +89,15 @@ export default function CorrugatedEnvelopesPage() {
             </div>
 
             <div className="mt-10 text-center max-w-5xl mx-auto text-black">
-              <p className="leading-relaxed text-lg">
-                Crafted from high-quality E-flute corrugated cardboard our
-                "M-EV" range envelopes guarantee a high level of bend protection
-                for your items throughout the shipping process.
+              <p className="leading-relaxed text-lg">{t("envelopes.intro1")}</p>
+              <p className="mt-5 leading-relaxed text-lg">
+                {t("envelopes.intro2")}
               </p>
               <p className="mt-5 leading-relaxed text-lg">
-                Engineered with box-form capacity these envelopes offer an
-                unmatched durability compared to conventional postal options.
+                {t("envelopes.intro3")}
               </p>
               <p className="mt-5 leading-relaxed text-lg">
-                Designed for efficiency our envelopes simplify the packaging
-                process and save you valuable time.
-              </p>
-              <p className="mt-5 leading-relaxed text-lg">
-                Is available in various sizes and can be used universally both
-                as an envelope and a box. They are made from 100% biodegradable
-                and fully recyclable materials. Corrugated cardboard is a
-                particularly circular product.
+                {t("envelopes.intro4")}
               </p>
             </div>
           </div>
@@ -117,9 +108,9 @@ export default function CorrugatedEnvelopesPage() {
       <section className="w-full bg-[#f36a45] mt-10">
         <div className="max-w-7xl mx-auto px-6 lg:px-20 py-6">
           <p className="text-center text-white font-bold uppercase leading-tight text-lg lg:text-2xl">
-            DISCOVER OUR VARIOUS CORRUGATED CARDBOARD ENVELOPES SIZES.
+            {t("envelopes.discover1")}
             <br />
-            ORDER NOW AND PACK ON TIME.
+            {t("envelopes.discover2")}
           </p>
         </div>
       </section>
@@ -128,15 +119,12 @@ export default function CorrugatedEnvelopesPage() {
       <section className="w-full px-4 py-10 sm:px-6 lg:px-20 bg-[#f2f2f2]">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl lg:text-4xl font-extrabold text-[#16c8c2] uppercase leading-tight mb-8">
-            EXCELLENT AND FLEXIBLE SOLUTIONS FOR E-COMMERCE
+            {t("envelopes.solutions1")}
             <br />
-            BUSSINES TO SEND PRODUCTS WITH POST VIA COURIER.
+            {t("envelopes.solutions2")}
           </h1>
           <div className="-mx-4 sm:mx-0 min-w-0">
             <ProductsTable boxTypeId={9} />
-            <p className="mt-5 text-sm text-gray-500">
-              Showing 1-5 of 5 item(s)
-            </p>
           </div>
         </div>{" "}
       </section>
@@ -145,24 +133,15 @@ export default function CorrugatedEnvelopesPage() {
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
           <div>
             <h2 className="text-my-red text-3xl lg:text-5xl font-extrabold uppercase leading-tight mb-8">
-              WHY CHOOSE CORRUGATED
+              {t("envelopes.whyTitle1")}
               <br />
-              CARDBOARD ENVELOPES?
+              {t("envelopes.whyTitle2")}
             </h2>
 
             <ul className="space-y-3 text-black text-xl">
-              {[
-                "Designed with variable filling, height up to 75 mm",
-                "Easy to close, thanks to glue tape",
-                "Easy to opened, thanks to tear strip",
-                "Strong E-flute corrugated cardboard secure shipping",
-                "Easy handling, secure shipping",
-                "Material: FSC certified, plastic FREE",
-                "Material: 100% biodegradable, complete recyclable.",
-                "E-flute or F-flute corrugated cardboard: 300-325 gr/sqm",
-                "Length+ width+depth are all adjustable",
-                "Also known in the market as M-envelopes folders, those packaging solution is widely used by Amazon and other online markets.",
-              ].map((item) => (
+              {Array.from({ length: 10 }, (_, index) =>
+                t(`envelopes.why${index + 1}`),
+              ).map((item) => (
                 <li key={item} className="flex items-start gap-3 leading-snug">
                   <span className="mt-1 text-[#10cfc3]">
                     <FaCheck className="w-5 h-5" />
@@ -177,7 +156,7 @@ export default function CorrugatedEnvelopesPage() {
             <div className="bg-[#f0ab3c] rounded-[28px] p-8 w-full max-w-lg min-h-[320px] flex items-center justify-center">
               <Image
                 src="/b2b/boxes/envelope.png"
-                alt="Corrugated cardboard envelope"
+                alt={t("envelopes.imageAlt")}
                 width={360}
                 height={420}
                 className="w-full max-w-[360px] h-auto object-contain"

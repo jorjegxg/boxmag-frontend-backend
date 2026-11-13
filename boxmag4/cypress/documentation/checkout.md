@@ -60,7 +60,7 @@ Put printed `whsec_…` into root `.env` as `STRIPE_WEBHOOK_SECRET`, restart bac
 5. Paid session → **CHECK:** cart localStorage emptied
 6. Unpaid session → **CHECK:** pending copy; cart kept
 7. Session API fail / missing `session_id` → **CHECK:** error UI
-8. Cancel → **CHECK:** links to checkout + boxesfetco
+8. Cancel → **CHECK:** links to checkout + boxesfefco
 
 ### checkout-guest-create-account.cy.ts
 

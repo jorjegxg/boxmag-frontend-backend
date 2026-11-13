@@ -62,7 +62,7 @@ export default function HomeBelowFold() {
   return (
     <div>
       <ProducersBanner />
-      <BoxfixSection onSeeNow={() => router.push("/boxesfetco")} />
+      <BoxfixSection onSeeNow={() => router.push("/boxesfefco")} />
       <CorrugatedEnvelopesSection
         onSeeNow={() => router.push("/corrugated-envelopes")}
       />

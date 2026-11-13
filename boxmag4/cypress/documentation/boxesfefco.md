@@ -1,7 +1,7 @@
-# /boxesfetco — BoxFix product table
+# /boxesfefco — BoxFix product table
 
-**Spec:** `cypress/e2e/boxesfetco.cy.ts`  
-**UI:** `boxmag4/app/boxesfetco/page.tsx` + `ProductsTable` (`boxmag4/app/components/ProductTable.tsx`)  
+**Spec:** `cypress/e2e/boxesfefco.cy.ts`  
+**UI:** `boxmag4/app/boxesfefco/page.tsx` + `ProductsTable` (`boxmag4/app/components/ProductTable.tsx`)  
 **State:** `table_e_commerce_store` (qty per row) + `boxmag.cart` (Zustand persist)
 
 Default `boxTypeId=1`. Min order qty: **100**. Increment step: **+20**. Reset after add: `resetAmountQty` → `defaultAmountQtyInPcs`.
@@ -24,7 +24,7 @@ Default `boxTypeId=1`. Min order qty: **100**. Increment step: **+20**. Reset af
 ### 1. Tabelul se încarcă
 
 1. Mock `GET **/api/box-types/1/products` cu `BFX-001`
-2. Visit `/boxesfetco` (EN, cart gol)
+2. Visit `/boxesfefco` (EN, cart gol)
 3. **CHECK:** itemNo + name vizibile; qty = `100`; Add to cart enabled
 
 ### 2. Add to cart → localStorage
@@ -47,7 +47,7 @@ Default `boxTypeId=1`. Min order qty: **100**. Increment step: **+20**. Reset af
 3. **CHECK:** cart `quantity: 9100`
 4. **CHECK:** UI qty revine la `100`
 
-### 5. /boxesfetco → /checkout (articole corecte)
+### 5. /boxesfefco → /checkout (articole corecte)
 
 1. Add to cart (qty 100) → visit `/checkout`
 2. **CHECK:** `BFX-001`, name, line total `€ 45.00` (0.45 × 100)
@@ -76,7 +76,7 @@ Storage: `boxmag.cart` → `state.items[]`.
 
 ```bash
 cd boxmag4
-npx cypress run --spec cypress/e2e/boxesfetco.cy.ts
+npx cypress run --spec cypress/e2e/boxesfefco.cy.ts
 ```
 
 Frontend pe `http://localhost:3006`. Mock API — backend optional pentru acest spec.

@@ -50,7 +50,7 @@ Auth: Guest | Customer | Admin
   - [ ] TEST Totalurile pe linie la checkout = preț tip × cantitate
 
 - [ ] FLOW Tabele landing pe linii de produs
-  - [x] TEST /boxesfetco — tabelul se încarcă, adauga în coș min 100, reset qty | boxesfetco.cy.ts
+  - [x] TEST /boxesfefco — tabelul se încarcă, adauga în coș min 100, reset qty | boxesfefco.cy.ts
   - [x] TEST /corrugated-envelopes — adauga în coș din tabel → checkout arată articolul | corrugated-envelopes.cy.ts
   - [ ] TEST Secțiunile training / marketing se randează fără erori
 
@@ -289,7 +289,7 @@ Auth: Guest | Customer | Admin
   - [ ] TEST Pagina se încarcă, linkul breadcrumb home funcționează
   - [ ] TEST Secțiunile de conținut se randează în EN / RO / DE
 
-- [ ] PAGE /boxesfetco — Linie BoxFix
+- [ ] PAGE /boxesfefco — Linie BoxFix
   - [ ] TEST (vezi FLOW Tabele linii produs mai sus)
 
 - [x] DONE PAGE /corrugated-envelopes — Linie plicuri

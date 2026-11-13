@@ -47,7 +47,7 @@ export default function CheckoutCancelPage() {
               {t("checkout.cancel.backToCheckout")}
             </Link>
             <Link
-              href="/boxesfetco"
+              href="/boxesfefco"
               className="inline-flex items-center justify-center rounded-lg border-2 border-my-red px-5 py-2.5 text-sm font-semibold text-my-red transition-colors hover:bg-my-red/10"
             >
               {t("checkout.cancel.continueShopping")}

@@ -266,7 +266,7 @@ describe("Checkout cancel page", () => {
       .and("eq", "/checkout");
     cy.contains("a", "Continue shopping")
       .should("have.attr", "href")
-      .and("eq", "/boxesfetco");
+      .and("eq", "/boxesfefco");
   });
 });
 

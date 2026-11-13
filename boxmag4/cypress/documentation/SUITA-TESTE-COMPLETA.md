@@ -27,7 +27,7 @@ Reset DB automat înainte de rulare (`CYPRESS_RESET_DB=false` ca să-l dezactive
 | --- | --- | --- |
 | `shop.cy.ts` | 9 | `/shop`: loading state, categorii + produse din API, filtrare `?boxTypeId=`, mesaj „fără produse”, add-to-cart în localStorage, click card vs. click buton, produsele apar corect pe `/checkout` |
 | `product-detail.cy.ts` | 8 | PDP (`/products/[key]`): galerie imagini (primary prima), tabel prețuri fără tier legacy `<100`, `?itemNo=` selectează SKU corect, selector de mărime schimbă preț, cantitatea nu scade sub 100, butonul „+9000” (pallet), add-to-cart, produs/tip inexistent → „Product not found.” |
-| `boxesfetco.cy.ts` | 7 | `/boxesfetco` (linie BoxFix): tabel din API, add-to-cart, reset cantitate după add, buton pallet, articolele ajung corect pe checkout (preț × cantitate) |
+| `boxesfefco.cy.ts` | 7 | `/boxesfefco` (linie BoxFix): tabel din API, add-to-cart, reset cantitate după add, buton pallet, articolele ajung corect pe checkout (preț × cantitate) |
 | `corrugated-envelopes.cy.ts` | 3 | `/corrugated-envelopes` (linie plicuri, boxTypeId=9): tabel din API, add-to-cart în localStorage, articolul apare corect pe checkout |
 | `cart-persistence.cy.ts` | 5 | Badge-ul de coș din header și subtotalul supraviețuiesc unui reload; badge-ul numără **linii distincte**, nu cantitatea totală; ștergerea ultimului articol pe checkout duce badge-ul la zero; Undo readaugă articolul; iconița coșului duce la `/checkout` |
 

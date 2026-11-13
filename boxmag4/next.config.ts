@@ -37,6 +37,12 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },
+  async redirects() {
+    return [
+      // The route was originally misspelled ("FETCO"); keep old links working.
+      { source: "/boxesfetco", destination: "/boxesfefco", permanent: true },
+    ];
+  },
   images: {
     // Prefer serving CDN assets directly (see ProductCard). Local public/ assets
     // still use the optimizer; keep remotePatterns for any remaining next/image usage.
@@ -103,6 +109,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_ORDERS_EMAIL:
       envFromRoot("NEXT_PUBLIC_ORDERS_EMAIL") ||
       envFromRoot("EMAIL_ORDERS_FROM"),
+    NEXT_PUBLIC_BANK_IBAN_EUR: envFromRoot("NEXT_PUBLIC_BANK_IBAN_EUR"),
     DEV_DEMO_CUSTOMER_EMAIL: envFromRoot("DEV_DEMO_CUSTOMER_EMAIL"),
     DEV_AUTOFILL_EMAIL: envFromRoot("DEV_AUTOFILL_EMAIL"),
   },

@@ -26,7 +26,7 @@ const STATIC_PAGES: Array<{
   { path: "/delivery", changeFrequency: "monthly", priority: 0.6 },
   { path: "/how-to-buy", changeFrequency: "monthly", priority: 0.6 },
   { path: "/corrugated-envelopes", changeFrequency: "monthly", priority: 0.7 },
-  { path: "/boxesfetco", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/boxesfefco", changeFrequency: "monthly", priority: 0.7 },
   { path: "/privacy-policy", changeFrequency: "yearly", priority: 0.3 },
   { path: "/regulations", changeFrequency: "yearly", priority: 0.3 },
   { path: "/complaints-and-returns", changeFrequency: "yearly", priority: 0.3 },

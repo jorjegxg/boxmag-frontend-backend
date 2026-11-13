@@ -709,7 +709,7 @@ export default function CheckoutPage() {
           vatPercent={taxPercent}
           shipping={orderShipping}
           formatPrice={formatPrice}
-          onContinueHref="/boxesfetco"
+          onContinueHref="/boxesfefco"
           onPlaceOrder={() => void handlePlaceOrder()}
           isSubmittingOrder={isSubmittingOrder}
           submitOrderMessage={submitOrderMessage}
@@ -728,7 +728,7 @@ export default function CheckoutPage() {
     vatPercent,
     shipping,
     formatPrice,
-    onContinueHref = "/boxesfetco",
+    onContinueHref = "/boxesfefco",
     onPlaceOrder,
     isSubmittingOrder,
     submitOrderMessage,

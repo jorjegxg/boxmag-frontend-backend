@@ -159,7 +159,7 @@ describe("/products/[key] – PDP", () => {
     cy.contains("span", "100").should("be.visible"); // rămâne la minim
   });
 
-  it("butonul + 9000 adaugă la cantitatea curentă (100 + 9000 = 9100), consistent cu /boxesfetco", () => {
+  it("butonul + 9000 adaugă la cantitatea curentă (100 + 9000 = 9100), consistent cu /boxesfefco", () => {
     interceptPdpApis();
     visitPdp("/products/standard?itemNo=STD-001");
     cy.wait(["@getBoxTypes", "@getProducts"]);

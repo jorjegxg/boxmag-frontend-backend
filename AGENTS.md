@@ -132,17 +132,17 @@ Each section follows: **Purpose → What to expect → Key files → Backend/API
 
 ---
 
-### `/boxesfetco` — BoxFix product line
+### `/boxesfefco` — BoxFix product line
 
 **Purpose:** Landing page for the BoxFix e-commerce box product line.
 
 **What to expect:** Static marketing content plus `ProductsTable` for that line. Training video section.
 
-**Key files:** `boxmag4/app/boxesfetco/page.tsx`, `ProductsTable`, `TrainingProductVideoSection`
+**Key files:** `boxmag4/app/boxesfefco/page.tsx`, `ProductsTable`, `TrainingProductVideoSection`
 
 **Backend/API:** Product table may fetch box types filtered client-side.
 
-**Gotchas:** Product-line-specific page; not the main `/shop` catalog.
+**Gotchas:** Product-line-specific page; not the main `/shop` catalog. The old misspelled URL `/boxesfetco` 308-redirects here (`next.config.ts`).
 
 ---
 
@@ -150,7 +150,7 @@ Each section follows: **Purpose → What to expect → Key files → Backend/API
 
 **Purpose:** Landing page for corrugated envelope products.
 
-**What to expect:** Similar to `/boxesfetco` but for envelopes. `ProductsTable` + product images.
+**What to expect:** Similar to `/boxesfefco` but for envelopes. `ProductsTable` + product images.
 
 **Key files:** `boxmag4/app/corrugated-envelopes/page.tsx`
 
@@ -387,7 +387,7 @@ Each section follows: **Purpose → What to expect → Key files → Backend/API
 
 **Purpose:** How to buy guide including SWIFT/bank details.
 
-**What to expect:** Static i18n content with copy-to-clipboard for SWIFT code.
+**What to expect:** Static i18n content with copy-to-clipboard for SWIFT code. Lists only the real payment methods (card via Stripe, bank transfer); the EUR IBAN is shown when `NEXT_PUBLIC_BANK_IBAN_EUR` is set.
 
 **Key files:** `boxmag4/app/how-to-buy/page.tsx`
 
