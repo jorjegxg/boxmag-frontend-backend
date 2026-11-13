@@ -10,8 +10,9 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: [
         "/admin/",
-        "/checkout/",
-        "/account/",
+        // No trailing slash: "/checkout/" would leave "/checkout" itself crawlable.
+        "/checkout",
+        "/account",
         "/order-summary",
         "/registration",
         "/verify-email",
