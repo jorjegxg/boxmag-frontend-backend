@@ -164,6 +164,7 @@ const validCheckoutBody = {
   },
   vatPercent: 21,
   vatNumber: "RO12345678",
+  acceptedTerms: true,
   address: checkoutAddress,
 };
 
@@ -211,6 +212,18 @@ describe("payments routes", () => {
     expect(response.body.ok).toBe(true);
     const insertArgs = findOrderInsertArgs();
     expect(insertArgs?.[0]).toBe(42);
+  });
+
+  it("rejects checkout when terms were not accepted (INV-CHECKOUT-TERMS)", async () => {
+    mockCatalogAndShipping();
+
+    const response = await request(app)
+      .post("/api/payments/create-checkout-session")
+      .send({ ...validCheckoutBody, acceptedTerms: false });
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("TERMS_NOT_ACCEPTED");
+    expect(stripeCreateMock).not.toHaveBeenCalled();
   });
 
   it("keeps user_id null for guest checkout without session (INV-GUEST-LINK)", async () => {
@@ -359,6 +372,7 @@ describe("payments routes", () => {
         },
         vatPercent: 21,
         vatNumber: "RO12345678",
+        acceptedTerms: true,
         address: checkoutAddress,
       });
 
@@ -430,6 +444,7 @@ describe("payments routes", () => {
         },
         vatPercent: 21,
         vatNumber: "RO12345678",
+        acceptedTerms: true,
         address: checkoutAddress,
       });
 
@@ -601,6 +616,7 @@ describe("payments routes", () => {
         },
         vatPercent: 0,
         vatNumber: "RO12345678",
+        acceptedTerms: true,
         address: checkoutAddress,
       });
 
@@ -640,6 +656,7 @@ describe("payments routes", () => {
           price: 30,
         },
         vatNumber: "RO12345678",
+        acceptedTerms: true,
         address: checkoutAddress,
       });
 
@@ -670,6 +687,7 @@ describe("payments routes", () => {
           price: 0,
         },
         vatNumber: "RO12345678",
+        acceptedTerms: true,
         address: checkoutAddress,
       });
 

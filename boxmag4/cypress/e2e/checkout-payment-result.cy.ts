@@ -366,6 +366,8 @@ describe("Guest checkout → create account", () => {
       "Guest Checkout SRL",
     );
 
+    cy.get('[data-testid="checkout-accept-terms"]').check();
+
     cy.contains("button", "Place order").click();
     cy.wait("@createCheckoutGuest");
 

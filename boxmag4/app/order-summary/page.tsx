@@ -127,8 +127,8 @@ export default function OrderSummaryPage() {
   const [postcode, setPostcode] = useState(() => (isDevelopment ? "400000" : ""));
   const [city, setCity] = useState(() => (isDevelopment ? "Cluj-Napoca" : ""));
   const [country, setCountry] = useState(() => (isDevelopment ? "RO" : ""));
-  const [consentPhone, setConsentPhone] = useState(true);
-  const [consentEmail, setConsentEmail] = useState(true);
+  const [consentPhone, setConsentPhone] = useState(false);
+  const [consentEmail, setConsentEmail] = useState(false);
   const [consentPhoneError, setConsentPhoneError] = useState("");
   const [consentEmailError, setConsentEmailError] = useState("");
   const [vatFormatError, setVatFormatError] = useState(false);
@@ -604,20 +604,6 @@ export default function OrderSummaryPage() {
       notify({
         type: "error",
         message: t("orderSummary.errors.acceptTermsStep2"),
-      });
-      return;
-    }
-
-    if (!consentPhone || !consentEmail) {
-      if (!consentPhone) {
-        setConsentPhoneError(t("orderSummary.errors.consentPhoneRequired"));
-      }
-      if (!consentEmail) {
-        setConsentEmailError(t("orderSummary.errors.consentEmailRequired"));
-      }
-      notify({
-        type: "error",
-        message: t("orderSummary.errors.bothConsentsRequired"),
       });
       return;
     }

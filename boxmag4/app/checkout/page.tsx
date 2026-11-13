@@ -175,6 +175,9 @@ export default function CheckoutPage() {
   const [submitOrderMessage, setSubmitOrderMessage] = useState<string | null>(
     null,
   );
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedTermsError, setAcceptedTermsError] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [attachmentName, setAttachmentName] = useState("");
   const [attachmentBase64, setAttachmentBase64] = useState("");
   const [attachmentMimeType, setAttachmentMimeType] = useState("");
@@ -452,6 +455,13 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!acceptedTerms) {
+      setAcceptedTermsError(true);
+      setSubmitOrderMessage(t("checkout.error.acceptTerms"));
+      return;
+    }
+    setAcceptedTermsError(false);
+
     const shippingDisplay = getShippingMethodDisplay(selectedShippingMethod, t);
 
     // A previous unpaid attempt from this tab is reused by the server instead
@@ -518,9 +528,9 @@ export default function CheckoutPage() {
               country: activeAddress.country,
             },
             vatNumber: normalizedVat,
-            consentPhone: true,
-            consentEmail: true,
-            acceptedTerms: true,
+            consentPhone: marketingConsent,
+            consentEmail: marketingConsent,
+            acceptedTerms,
             attachment:
               attachmentName && attachmentBase64
                 ? {
@@ -786,6 +796,54 @@ export default function CheckoutPage() {
                 <span className="text-base font-bold">
                   {formatPrice(total)}
                 </span>
+              </div>
+              <div className="mt-4 max-w-sm space-y-3 text-left">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    data-testid="checkout-accept-terms"
+                    checked={acceptedTerms}
+                    onChange={(e) => {
+                      setAcceptedTerms(e.target.checked);
+                      if (e.target.checked) setAcceptedTermsError(false);
+                    }}
+                    aria-invalid={acceptedTermsError}
+                    className={`mt-0.5 h-5 w-5 shrink-0 rounded border-2 bg-white accent-my-red ${
+                      acceptedTermsError ? "outline outline-2 outline-red-500" : ""
+                    }`}
+                  />
+                  <span className="text-sm text-gray-700">
+                    {t("registration.acceptCheckbox")}{" "}
+                    <Link
+                      href="/regulations"
+                      target="_blank"
+                      className="font-semibold text-my-red hover:underline"
+                    >
+                      {t("registration.regulations")}
+                    </Link>{" "}
+                    {t("registration.and")}{" "}
+                    <Link
+                      href="/privacy-policy"
+                      target="_blank"
+                      className="font-semibold text-my-red hover:underline"
+                    >
+                      {t("registration.privacyPolicy")}
+                    </Link>
+                    . *
+                  </span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    data-testid="checkout-marketing-consent"
+                    checked={marketingConsent}
+                    onChange={(e) => setMarketingConsent(e.target.checked)}
+                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-2 bg-white accent-my-red"
+                  />
+                  <span className="text-sm text-gray-600">
+                    {t("checkout.marketingConsent")}
+                  </span>
+                </label>
               </div>
               <div className="mt-3">
                 <button

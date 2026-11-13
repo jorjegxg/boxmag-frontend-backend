@@ -88,15 +88,21 @@ const fillContact = () => {
 };
 
 describe("/order-summary edges", () => {
-  it("requires phone and email consent before submit", () => {
+  it("marketing consents are optional and unchecked by default (INV-CHECKOUT-TERMS)", () => {
     goToOrderSummary();
     fillContact();
 
-    cy.get('input[type="checkbox"]').eq(0).uncheck({ force: true });
-    cy.get('input[type="checkbox"]').eq(1).uncheck({ force: true });
+    cy.get('input[type="checkbox"]').eq(0).should("not.be.checked");
+    cy.get('input[type="checkbox"]').eq(1).should("not.be.checked");
+
+    cy.intercept("POST", "**/api/orders", (req) => {
+      expect(req.body.consentPhone).to.eq(false);
+      expect(req.body.consentEmail).to.eq(false);
+      req.reply({ statusCode: 500, body: { ok: false, message: "stop here" } });
+    }).as("createOrder");
 
     cy.contains("button", "NEXT").click();
-    cy.contains("Please accept phone consent before sending.").should("exist");
+    cy.wait("@createOrder");
   });
 
   it("shows error when POST /api/orders fails", () => {

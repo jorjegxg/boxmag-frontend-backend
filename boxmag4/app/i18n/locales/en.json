@@ -969,5 +969,7 @@
   "newsletterUnsubscribe.errorTitle": "Unsubscribe failed",
   "newsletterUnsubscribe.invalidLink": "This unsubscribe link is invalid. Use the link from the latest newsletter email or contact us.",
   "newsletterUnsubscribe.tryAgain": "We could not process the request right now. Please try again.",
-  "newsletterUnsubscribe.backHome": "Back to home"
+  "newsletterUnsubscribe.backHome": "Back to home",
+  "checkout.error.acceptTerms": "Please accept the Regulations and the Privacy Policy to place the order.",
+  "checkout.marketingConsent": "I would like to receive offers and news from Boxmag by e-mail or phone (optional)."
 }

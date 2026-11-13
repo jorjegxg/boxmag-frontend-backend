@@ -109,6 +109,7 @@ describe("/checkout", () => {
     cy.visitCheckoutLoggedOut();
     fillManualAddress();
     fillValidVat();
+    cy.get('[data-testid="checkout-accept-terms"]').check();
     cy.contains("button", "Place order").click();
     cy.contains("Please enter your email address.").should("exist");
   });
@@ -116,6 +117,7 @@ describe("/checkout", () => {
   it("blochează place order când VAT e invalid", () => {
     cy.visitCheckoutLoggedIn({ addresses: [sampleWarehouseAddress] });
     cy.get("#checkout-vatNumber").clear().type("!", { delay: 0 });
+    cy.get('[data-testid="checkout-accept-terms"]').check();
     cy.contains("button", "Place order").click();
     cy.contains(/VAT number must be in a valid format|Codul TVA trebuie să fie/i).should(
       "exist",
@@ -125,6 +127,7 @@ describe("/checkout", () => {
   it("blochează place order când VAT lipsește", () => {
     cy.visitCheckoutLoggedIn({ addresses: [sampleWarehouseAddress] });
     cy.get("#checkout-vatNumber").clear();
+    cy.get('[data-testid="checkout-accept-terms"]').check();
     cy.contains("button", "Place order").click();
     cy.contains(/VAT number is required|Codul TVA este obligatoriu/i).should("exist");
   });
@@ -153,6 +156,20 @@ describe("/checkout", () => {
     cy.contains("€ 1537.50").should("exist");
   });
 
+  it("cere bifa de termeni înainte de plată (INV-CHECKOUT-TERMS)", () => {
+    cy.visitCheckoutLoggedOut();
+    fillGuestEmail("guest.buyer@example.com");
+    fillManualAddress();
+    fillValidVat();
+
+    cy.intercept("POST", "**/api/payments/create-checkout-session", cy.spy().as("createSession"));
+    cy.get('[data-testid="checkout-accept-terms"]').should("not.be.checked");
+    cy.get('[data-testid="checkout-marketing-consent"]').should("not.be.checked");
+    cy.contains("button", "Place order").click();
+    cy.contains("Please accept the Regulations and the Privacy Policy").should("be.visible");
+    cy.get("@createSession").should("not.have.been.called");
+  });
+
   it("permite guest checkout când nu ești logat și ai introdus email", () => {
     cy.visitCheckoutLoggedOut();
     fillGuestEmail("guest.buyer@example.com");
@@ -165,12 +182,15 @@ describe("/checkout", () => {
       expect(req.body.address.firstName).to.eq("Elena");
       expect(req.body.address.lastName).to.eq("Marin");
       expect(req.body.shipping.key).to.eq("standard");
-      expect(req.body.consentEmail).to.eq(true);
+      expect(req.body.acceptedTerms).to.eq(true);
+      expect(req.body.consentEmail).to.eq(false);
       req.reply({
         statusCode: 200,
         body: { ok: true, data: { url: "/checkout#payment-redirect", orderId: 6 } },
       });
     }).as("createCheckoutGuest");
+
+    cy.get('[data-testid="checkout-accept-terms"]').check();
 
     cy.contains("button", "Place order").click();
     cy.wait("@createCheckoutGuest");
@@ -181,6 +201,7 @@ describe("/checkout", () => {
     cy.visitCheckoutLoggedIn({ addresses: [] });
 
     cy.contains("Fill the form below with a new shipping address.").should("exist");
+    cy.get('[data-testid="checkout-accept-terms"]').check();
     cy.contains("button", "Place order").click();
     cy.contains("Please complete shipping address details.").should("exist");
   });
@@ -209,6 +230,8 @@ describe("/checkout", () => {
       });
     }).as("createCheckout");
 
+    cy.get('[data-testid="checkout-accept-terms"]').check();
+
     cy.contains("button", "Place order").click();
     cy.wait("@createCheckout", { timeout: 15000 });
     cy.location("hash").should("eq", "#payment-redirect");
@@ -232,6 +255,8 @@ describe("/checkout", () => {
       });
     }).as("createCheckout");
 
+    cy.get('[data-testid="checkout-accept-terms"]').check();
+
     cy.contains("button", "Place order").click();
     cy.wait("@createCheckout");
     cy.location("hash").should("eq", "#payment-redirect");
@@ -252,6 +277,8 @@ describe("/checkout", () => {
       });
     }).as("createCheckoutExpress");
 
+    cy.get('[data-testid="checkout-accept-terms"]').check();
+
     cy.contains("button", "Place order").click();
     cy.wait("@createCheckoutExpress");
   });
@@ -264,6 +291,8 @@ describe("/checkout", () => {
       statusCode: 500,
       body: { ok: false, message: "Server error" },
     }).as("createCheckoutFail");
+
+    cy.get('[data-testid="checkout-accept-terms"]').check();
 
     cy.contains("button", "Place order").click();
     cy.wait("@createCheckoutFail");
@@ -282,6 +311,8 @@ describe("/checkout", () => {
       statusCode: 200,
       body: { ok: true, data: { url: "/checkout#payment-redirect", orderId: 9 } },
     }).as("slowCheckout");
+
+    cy.get('[data-testid="checkout-accept-terms"]').check();
 
     cy.contains("button", "Place order").click();
     cy.contains("button", /Placing order|Se trimite comanda|Bestellung wird gesendet/i).should(

@@ -277,6 +277,8 @@ describe("Monedă EUR / RON", () => {
       });
     }).as("createCheckoutRon");
 
+    cy.get('[data-testid="checkout-accept-terms"]').check();
+
     cy.contains("button", "Place order").click();
     cy.wait("@createCheckoutRon");
   });

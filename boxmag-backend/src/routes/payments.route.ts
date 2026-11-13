@@ -339,6 +339,16 @@ paymentsRouter.post("/create-checkout-session", checkoutRateLimiter, async (req,
     return;
   }
 
+  // Terms must be accepted explicitly by the customer (never assumed).
+  if (payload.acceptedTerms !== true) {
+    res.status(400).json({
+      ok: false,
+      code: "TERMS_NOT_ACCEPTED",
+      message: "The regulations and privacy policy must be accepted.",
+    });
+    return;
+  }
+
   const belowMinQty = cartItems.find((item) => item.quantity < MIN_ORDER_QTY);
   if (belowMinQty) {
     res.status(400).json({

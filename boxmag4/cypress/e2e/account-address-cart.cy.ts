@@ -212,6 +212,7 @@ describe("Account address → checkout (coș)", () => {
 
       cy.get("#checkout-vatNumber").should("have.value", "RO12345678");
       cy.get("#checkout-companyName").should("not.have.value", "");
+      cy.get('[data-testid="checkout-accept-terms"]').check();
       cy.contains("button", "Place order").click();
       cy.wait("@createCheckout");
       cy.location("hash").should("eq", "#payment-redirect");

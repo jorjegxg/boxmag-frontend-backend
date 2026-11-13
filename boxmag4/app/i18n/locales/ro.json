@@ -978,5 +978,7 @@
   "newsletterUnsubscribe.errorTitle": "Dezabonarea a eșuat",
   "newsletterUnsubscribe.invalidLink": "Linkul de dezabonare nu este valid. Folosește linkul din cel mai recent email sau contactează-ne.",
   "newsletterUnsubscribe.tryAgain": "Nu am putut procesa cererea acum. Încearcă din nou.",
-  "newsletterUnsubscribe.backHome": "Înapoi la pagina principală"
+  "newsletterUnsubscribe.backHome": "Înapoi la pagina principală",
+  "checkout.error.acceptTerms": "Te rugăm să accepți Regulamentul și Politica de confidențialitate pentru a plasa comanda.",
+  "checkout.marketingConsent": "Doresc să primesc oferte și noutăți de la Boxmag prin e-mail sau telefon (opțional)."
 }
