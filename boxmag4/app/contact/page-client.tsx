@@ -499,9 +499,9 @@ export default function ContactUsPage() {
       <section className="w-full bg-my-red py-4 px-6 lg:px-20">
         <div className="max-w-7xl mx-auto flex items-center justify-center gap-3">
           <FaCommentAlt className="w-8 h-8 lg:w-10 lg:h-10 text-white shrink-0" />
-          <h2 className="text-white text-xl lg:text-2xl font-bold uppercase tracking-wide">
+          <h1 className="text-white text-xl lg:text-2xl font-bold uppercase tracking-wide">
             {t("contact.sendMessage")}
-          </h2>
+          </h1>
         </div>
       </section>
 

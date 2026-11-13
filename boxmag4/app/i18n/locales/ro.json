@@ -980,5 +980,8 @@
   "newsletterUnsubscribe.tryAgain": "Nu am putut procesa cererea acum. Încearcă din nou.",
   "newsletterUnsubscribe.backHome": "Înapoi la pagina principală",
   "checkout.error.acceptTerms": "Te rugăm să accepți Regulamentul și Politica de confidențialitate pentru a plasa comanda.",
-  "checkout.marketingConsent": "Doresc să primesc oferte și noutăți de la Boxmag prin e-mail sau telefon (opțional)."
+  "checkout.marketingConsent": "Doresc să primesc oferte și noutăți de la Boxmag prin e-mail sau telefon (opțional).",
+  "shop.title": "Cutii din carton ondulat — magazin",
+  "shop.categories": "Categorii",
+  "business.pageTitle": "Cutii personalizate pentru firme — configurator B2B"
 }

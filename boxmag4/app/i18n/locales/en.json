@@ -971,5 +971,8 @@
   "newsletterUnsubscribe.tryAgain": "We could not process the request right now. Please try again.",
   "newsletterUnsubscribe.backHome": "Back to home",
   "checkout.error.acceptTerms": "Please accept the Regulations and the Privacy Policy to place the order.",
-  "checkout.marketingConsent": "I would like to receive offers and news from Boxmag by e-mail or phone (optional)."
+  "checkout.marketingConsent": "I would like to receive offers and news from Boxmag by e-mail or phone (optional).",
+  "shop.title": "Corrugated boxes — shop",
+  "shop.categories": "Categories",
+  "business.pageTitle": "Custom boxes for business — B2B configurator"
 }

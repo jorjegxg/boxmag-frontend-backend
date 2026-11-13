@@ -197,6 +197,7 @@ const BussinessPage = () => {
   return (
     <div>
       <B2b />
+      <h1 className="sr-only">{t("business.pageTitle")}</h1>
 
       {/* Path section */}
       <section className="w-full bg-white px-4 sm:px-6 lg:px-20 pt-6">

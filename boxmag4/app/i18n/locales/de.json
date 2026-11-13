@@ -971,5 +971,8 @@
   "newsletterUnsubscribe.tryAgain": "Die Anfrage konnte gerade nicht verarbeitet werden. Bitte versuchen Sie es erneut.",
   "newsletterUnsubscribe.backHome": "Zur Startseite",
   "checkout.error.acceptTerms": "Bitte akzeptieren Sie die AGB und die Datenschutzerklärung, um die Bestellung aufzugeben.",
-  "checkout.marketingConsent": "Ich möchte Angebote und Neuigkeiten von Boxmag per E-Mail oder Telefon erhalten (optional)."
+  "checkout.marketingConsent": "Ich möchte Angebote und Neuigkeiten von Boxmag per E-Mail oder Telefon erhalten (optional).",
+  "shop.title": "Wellpappkartons — Shop",
+  "shop.categories": "Kategorien",
+  "business.pageTitle": "Individuelle Kartons für Unternehmen — B2B-Konfigurator"
 }

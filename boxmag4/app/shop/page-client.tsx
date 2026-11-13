@@ -222,10 +222,14 @@ function ShopPageContent() {
           <span className="font-semibold text-gray-700">{t("footer.shop")}</span>
         </div>
 
+        <h1 className="mb-6 text-2xl font-extrabold uppercase tracking-wide text-black lg:text-3xl">
+          {t("shop.title")}
+        </h1>
+
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr] lg:items-start">
           <aside className="rounded-xl border border-my-light-gray bg-white p-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Categorii
+              {t("shop.categories")}
             </p>
             <div className="flex flex-wrap gap-2 lg:flex-col lg:gap-1">
               <Link
