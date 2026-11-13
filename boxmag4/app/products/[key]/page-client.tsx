@@ -296,7 +296,7 @@ function ProductByKeyPageContent() {
         <main className="w-full bg-[#f8f8f8] px-4 py-8 lg:px-12">
           <section className="mx-auto max-w-7xl rounded-3xl border border-black/10 bg-white p-4 shadow-sm lg:p-8">
             <div className="mb-5 h-4 w-2/3 animate-pulse rounded bg-gray-200" />
-            <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr_260px]">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.1fr_1fr_260px]">
               <div>
                 <div className="h-[320px] w-[423px] max-w-full animate-pulse rounded-2xl border border-gray-200 bg-gray-200" />
                 <div className="mt-5 flex flex-wrap gap-3">
@@ -377,7 +377,7 @@ function ProductByKeyPageContent() {
             {productName} {sizeLabel}
           </p>
 
-          <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr_260px]">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.1fr_1fr_260px]">
             <div>
               <button
                 type="button"

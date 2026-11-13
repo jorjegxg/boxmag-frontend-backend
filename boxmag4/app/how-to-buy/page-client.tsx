@@ -42,7 +42,7 @@ export default function HowToBuyPage() {
       <section className="w-full px-4 sm:px-6 lg:px-20 py-8">
         <div className="max-w-4xl mx-auto bg-my-red rounded-lg flex items-center justify-center gap-4 py-6 px-6">
           <FaShoppingCart className="w-10 h-10 sm:w-12 sm:h-12 text-white shrink-0" />
-          <h1 className="text-white text-2xl sm:text-3xl lg:text-4xl font-bold uppercase tracking-wide">
+          <h1 className="min-w-0 break-words text-white text-2xl sm:text-3xl lg:text-4xl font-bold uppercase tracking-wide">
             {t("howToBuy.title")}
           </h1>
         </div>

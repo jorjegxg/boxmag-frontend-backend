@@ -10,9 +10,9 @@ export function HomeHeroSection({ language }: { language: Language }) {
       <B2b />
       <section className="w-full bg-white py-10 px-6 lg:px-20">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-my-yellow rounded-3xl px-8 py-10 lg:px-12 lg:py-12 flex flex-col lg:flex-row items-stretch gap-10">
+          <div className="bg-my-yellow rounded-3xl px-5 min-[380px]:px-8 py-10 lg:px-12 lg:py-12 flex flex-col lg:flex-row items-stretch gap-10">
             <div className="flex-1 flex flex-col justify-between gap-8">
-              <h1 className="text-3xl lg:text-5xl font-extrabold text-black leading-tight uppercase">
+              <h1 className="text-2xl min-[380px]:text-3xl lg:text-5xl font-extrabold text-black leading-tight uppercase">
                 {tServer(language, "home.hero.title1")}
                 <br />
                 {tServer(language, "home.hero.title2")}

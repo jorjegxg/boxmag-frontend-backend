@@ -35,7 +35,7 @@ export default function ShopPage() {
       <section className="w-full bg-white px-6 lg:px-20 pt-6">
         <div className="max-w-7xl mx-auto">
           <div className="rounded-[28px] border border-black/15 bg-white px-6 py-10 lg:px-12 lg:py-12">
-            <h2 className="text-center text-3xl lg:text-5xl font-extrabold text-black uppercase tracking-wide">
+            <h2 className="text-center text-2xl min-[380px]:text-3xl lg:text-5xl font-extrabold text-black uppercase tracking-wide break-words">
               {t("shop.packaging")}
             </h2>
 

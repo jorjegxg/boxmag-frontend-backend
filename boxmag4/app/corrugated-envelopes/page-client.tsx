@@ -38,7 +38,7 @@ export default function CorrugatedEnvelopesPage() {
       <section className="w-full bg-white px-6 lg:px-20 pt-6">
         <div className="max-w-7xl mx-auto">
           <div className="rounded-[28px] border border-black/20 bg-[#f2f2f2] px-6 py-10 lg:px-12 lg:py-12">
-            <h2 className="text-center text-3xl lg:text-6xl font-extrabold text-black uppercase tracking-wide">
+            <h2 className="text-center text-2xl min-[380px]:text-3xl lg:text-6xl font-extrabold text-black uppercase tracking-wide break-words">
               {t("home.corrugated.title")}
             </h2>
 
@@ -132,7 +132,7 @@ export default function CorrugatedEnvelopesPage() {
       <section className="bg-my-light-gray2 py-16 px-6 lg:px-20 w-full">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <h2 className="text-my-red text-3xl lg:text-5xl font-extrabold uppercase leading-tight mb-8">
+            <h2 className="text-my-red text-2xl min-[380px]:text-3xl lg:text-5xl font-extrabold uppercase leading-tight mb-8 break-words">
               {t("envelopes.whyTitle1")}
               <br />
               {t("envelopes.whyTitle2")}

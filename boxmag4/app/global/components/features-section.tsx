@@ -40,11 +40,11 @@ export function FeaturesSection() {
                 className={`rounded-2xl border-2 ${borderColor} bg-white p-6 flex flex-row items-center gap-4`}
               >
                 <Icon className={`w-14 h-14 shrink-0 ${iconColor}`} />
-                <div className="text-left">
-                  <p className="font-bold text-black text-lg uppercase leading-tight">
+                <div className="min-w-0 text-left">
+                  <p className="font-bold text-black text-base min-[380px]:text-lg uppercase leading-tight break-words">
                     {line1}
                   </p>
-                  <p className="font-bold text-black text-lg uppercase leading-tight">
+                  <p className="font-bold text-black text-base min-[380px]:text-lg uppercase leading-tight break-words">
                     {line2}
                   </p>
                 </div>

@@ -60,7 +60,7 @@ export default function TestimonialSection() {
               ))}
             </div>
           </div>
-          <FaQuoteRight className="absolute bottom-0 right-0 w-12 h-12 lg:w-16 lg:h-16 text-teal-600 opacity-90" />
+          <FaQuoteRight className="absolute bottom-0 right-6 lg:right-0 w-12 h-12 lg:w-16 lg:h-16 text-teal-600 opacity-90" />
         </div>
 
         <div className="flex justify-end">

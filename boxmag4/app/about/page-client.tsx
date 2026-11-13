@@ -36,7 +36,7 @@ export default function AboutPage() {
           <h1 className="text-center text-3xl lg:text-5xl font-extrabold text-my-red uppercase tracking-wide mb-8">
             {t("about.aboutUs")}
           </h1>
-          <div className="max-w-3xl mx-auto space-y-6 text-gray-800 text-base lg:text-lg leading-relaxed text-justify">
+          <div className="max-w-3xl mx-auto space-y-6 text-gray-800 text-base lg:text-lg leading-relaxed text-left sm:text-justify">
             <p>{t("about.aboutP1")}</p>
             <p>{t("about.aboutP2")}</p>
           </div>

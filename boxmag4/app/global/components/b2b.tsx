@@ -8,8 +8,8 @@ export function B2b() {
   const { t, language } = useLanguage();
 
   return (
-    <div className="bg-my-blue w-full h-16 overflow-visible flex items-center justify-center px-6">
-      <div className="max-w-7xl mx-auto flex items-center justify-center gap-8 w-full">
+    <div className="bg-my-blue w-full min-h-16 py-2 overflow-visible flex items-center justify-center px-4 sm:px-6">
+      <div className="max-w-7xl mx-auto flex items-center justify-center gap-3 sm:gap-8 w-full">
         {/* Left: icon with light border */}
         <div className="shrink-0">
           <span className="bg-my-yellow rounded-xl h-11 w-11 lg:h-12 lg:w-12 flex items-center justify-center shadow-md border-2 border-white/30">
@@ -24,8 +24,8 @@ export function B2b() {
         </div>
 
         {/* Center: B2B PROFESSIONALS + tagline */}
-        <div className="flex flex-col justify-center text-center">
-          <div className="font-bold text-sm lg:text-base tracking-wide uppercase">
+        <div className="flex flex-col justify-center text-center min-w-0">
+          <div className="font-bold text-sm lg:text-base tracking-wide uppercase leading-tight">
             {language === "ro" ? (
               <>
                 <span className="text-my-yellow">{t("b2b.professionals")} </span>
@@ -38,7 +38,7 @@ export function B2b() {
               </>
             )}
           </div>
-          <p className="text-white text-xs lg:text-sm font-normal mt-0.5">
+          <p className="text-white text-xs lg:text-sm font-normal mt-0.5 leading-snug">
             {t("b2b.tagline")}
           </p>
         </div>

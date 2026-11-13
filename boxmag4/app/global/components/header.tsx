@@ -248,7 +248,7 @@ export function Header() {
 
   return (
     <header className="w-full border-b border-my-light-gray bg-white">
-      <div className="max-w-7xl mx-auto px-4 py-4 lg:px-8 flex items-center gap-4 lg:flex-row lg:justify-between">
+      <div className="max-w-7xl mx-auto px-3 py-4 sm:px-4 lg:px-8 flex items-center gap-2 sm:gap-4 lg:flex-row lg:justify-between">
         <div className="relative shrink-0" ref={menuContainerRef}>
           <button
             type="button"
@@ -297,7 +297,7 @@ export function Header() {
             alt="BOXMAG"
             width={160}
             height={48}
-            className="h-10 w-auto lg:h-12"
+            className="h-9 w-auto max-[359px]:h-8 sm:h-10 lg:h-12"
           />
         </Link>
         {/* expanded space on mobile */}
@@ -417,7 +417,7 @@ export function Header() {
         </div>
 
         {/* Cart + User */}
-        <div className="flex items-center justify-center gap-6 lg:gap-8 shrink-0">
+        <div className="flex items-center justify-center gap-3 sm:gap-6 lg:gap-8 shrink-0">
           {/* Cart */}
           <Link
             href="/checkout"
@@ -438,12 +438,13 @@ export function Header() {
             <span className="text-xs font-medium text-black">
               {t("header.cart")}
             </span>
-            <span className="text-xs font-bold text-black">{formatPrice(subtotal)}</span>
+            <span className="whitespace-nowrap text-xs font-bold text-black">{formatPrice(subtotal)}</span>
           </Link>
 
           {/* User */}
           <Link
             href="/account"
+            aria-label={isLoggedIn ? t("header.account") : t("header.signIn")}
             className="flex flex-col items-center gap-0.5 hover:opacity-80 transition-opacity"
           >
             <Image
@@ -455,13 +456,13 @@ export function Header() {
             />
             {!isLoggedIn ? (
               <>
-                <span className="text-xs font-medium text-black">{t("header.signIn")}</span>
-                <span className="text-xs font-medium text-black">{t("header.register")}</span>
+                <span className="text-xs font-medium text-black max-[359px]:hidden">{t("header.signIn")}</span>
+                <span className="text-xs font-medium text-black max-[359px]:hidden">{t("header.register")}</span>
               </>
             ) : (
               <>
-                <span className="text-xs font-medium text-black">{t("header.user")}</span>
-                <span className="text-xs font-medium text-black">{t("header.account")}</span>
+                <span className="text-xs font-medium text-black max-[359px]:hidden">{t("header.user")}</span>
+                <span className="text-xs font-medium text-black max-[359px]:hidden">{t("header.account")}</span>
               </>
             )}
           </Link>

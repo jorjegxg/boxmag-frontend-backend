@@ -13,7 +13,7 @@ const Quantity = ({ quantity, onQuantityChange, quantityError }: QuantityProps) 
 
   return (
     <div>
-      <div className="grid grid-cols-3 gap-x-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 sm:gap-x-8">
         <div className="col-span-1">
           <MyInputField
             text={t("business.quantity")}

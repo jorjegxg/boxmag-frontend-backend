@@ -109,7 +109,9 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
         </ol>
       </div>
 
-      <div className="overflow-x-auto">
+      {MobileCards()}
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="min-w-full text-sm">
           {Headers()}
           {TableBody()}
@@ -138,12 +140,7 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
         {products.map((product: Product) => (
           <tr key={product.itemNo} className="hover:bg-my-light-gray">
             {(() => {
-              const qtyToAdd = Number(product.amountQtyInPcs);
-              const canAddToCart =
-                Number.isFinite(qtyToAdd) && qtyToAdd >= MIN_ORDER_QTY;
               const displayPrices = getShopPriceTiers(product.prices);
-              const basePrice = getMinOrderUnitPrice(product.prices);
-              const isAnimated = animatedItemNo === product.itemNo;
 
               return (
                 <>
@@ -186,12 +183,30 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                   })}
 
                   <td className="min-w-[270px] px-3 py-1.5">
-                    <div className="mx-auto flex w-full max-w-[300px] flex-col gap-1">
+                    {OrderControls(product)}
+                  </td>
+                </>
+              );
+            })()}
+          </tr>
+        ))}
+      </tbody>
+    );
+  }
+
+  function OrderControls(product: Product) {
+    const qtyToAdd = Number(product.amountQtyInPcs);
+    const canAddToCart = Number.isFinite(qtyToAdd) && qtyToAdd >= MIN_ORDER_QTY;
+    const basePrice = getMinOrderUnitPrice(product.prices);
+    const isAnimated = animatedItemNo === product.itemNo;
+
+    return (
+                    <div className="mx-auto flex w-full max-w-none flex-col gap-1.5 md:max-w-[300px] md:gap-1">
                       <div className="flex items-center gap-1.5">
                         <div
                           role="group"
                           aria-label={t("productTable.quantityLabel")}
-                          className="flex h-8 min-w-0 flex-1 items-center overflow-hidden rounded-md border border-gray-300 bg-white"
+                          className="flex h-10 min-w-0 flex-1 items-center overflow-hidden rounded-md border border-gray-300 bg-white md:h-8"
                         >
                           <button
                             type="button"
@@ -202,7 +217,7 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                             onPointerUp={stopHold}
                             onPointerLeave={stopHold}
                             onPointerCancel={stopHold}
-                            className="inline-flex h-full w-7 shrink-0 items-center justify-center border-r border-gray-300 bg-gray-50 text-gray-800 transition hover:bg-gray-100 select-none touch-none"
+                            className="inline-flex h-full w-10 shrink-0 items-center justify-center border-r border-gray-300 md:w-7 bg-gray-50 text-gray-800 transition hover:bg-gray-100 select-none touch-none"
                             aria-label={t("productTable.decreaseQtyAria")}
                           >
                             <FaMinus className="h-2.5 w-2.5" />
@@ -219,7 +234,7 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                             onPointerUp={stopHold}
                             onPointerLeave={stopHold}
                             onPointerCancel={stopHold}
-                            className="inline-flex h-full w-7 shrink-0 items-center justify-center border-l border-gray-300 bg-gray-50 text-gray-800 transition hover:bg-gray-100 select-none touch-none"
+                            className="inline-flex h-full w-10 shrink-0 items-center justify-center border-l border-gray-300 md:w-7 bg-gray-50 text-gray-800 transition hover:bg-gray-100 select-none touch-none"
                             aria-label={t("productTable.increaseQtyAria")}
                           >
                             <FaPlus className="h-2.5 w-2.5" />
@@ -248,7 +263,7 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                             triggerAddToCartAnimation(product.itemNo);
                             resetAmountQty(product.itemNo);
                           }}
-                          className={`inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-xs font-bold transition-all duration-300 ${
+                          className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-sm md:h-8 md:px-2.5 md:text-xs font-bold transition-all duration-300 ${
                             canAddToCart
                               ? isAnimated
                                 ? "bg-green-600 text-white scale-[1.02]"
@@ -268,7 +283,7 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                       </div>
 
                       {product.palletPcs > 0 ? (
-                        <div className="flex h-7 items-center overflow-hidden rounded-md border border-my-red/25 bg-my-red/5">
+                        <div className="flex h-9 items-center overflow-hidden rounded-md border border-my-red/25 bg-my-red/5 md:h-7">
                           <button
                             type="button"
                             disabled={
@@ -276,12 +291,12 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                               MIN_ORDER_QTY
                             }
                             onClick={() => removePallet(product.itemNo)}
-                            className="inline-flex h-full w-7 shrink-0 items-center justify-center border-r border-my-red/25 bg-white text-my-red transition hover:bg-my-red/10 disabled:cursor-not-allowed disabled:opacity-40"
+                            className="inline-flex h-full w-10 shrink-0 items-center justify-center border-r border-my-red/25 md:w-7 bg-white text-my-red transition hover:bg-my-red/10 disabled:cursor-not-allowed disabled:opacity-40"
                             aria-label={t("productTable.removePalletAria")}
                           >
                             <FaMinus className="h-2.5 w-2.5" />
                           </button>
-                          <span className="min-w-0 flex-1 truncate px-1 text-center text-[11px] leading-none">
+                          <span className="min-w-0 flex-1 truncate px-1 text-center text-xs leading-none md:text-[11px]">
                             <span className="font-semibold uppercase tracking-wide text-my-red">
                               {t("productTable.fullPalletLabel")}
                             </span>{" "}
@@ -292,7 +307,7 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                           <button
                             type="button"
                             onClick={() => addPallet(product.itemNo)}
-                            className="inline-flex h-full w-7 shrink-0 items-center justify-center bg-my-red text-white transition hover:brightness-95"
+                            className="inline-flex h-full w-10 shrink-0 items-center justify-center bg-my-red md:w-7 text-white transition hover:brightness-95"
                             aria-label={t("productTable.addPalletAria")}
                           >
                             <FaPlus className="h-2.5 w-2.5" />
@@ -300,13 +315,102 @@ export function ProductsTable({ boxTypeId = 1 }: { boxTypeId?: number }) {
                         </div>
                       ) : null}
                     </div>
-                  </td>
-                </>
-              );
-            })()}
-          </tr>
-        ))}
-      </tbody>
+    );
+  }
+
+  function formatHeight(product: Product) {
+    const h = product.internalDimensionsMM.h;
+    return Array.isArray(h) ? h.join(" / ") : h;
+  }
+
+  // Phones: one card per product instead of a 14-column table.
+  function MobileCards() {
+    const tierLabels = [
+      t("productTable.priceTier300"),
+      t("productTable.priceTier500"),
+      t("productTable.palletPcs"),
+    ];
+
+    return (
+      <div className="md:hidden">
+        {isLoading ? (
+          <p className="px-4 py-6 text-sm text-gray-500">{t("productTable.loading")}</p>
+        ) : null}
+        {!isLoading && loadError ? (
+          <p className="px-4 py-6 text-sm text-red-600">
+            {t("productTable.loadError")}: {loadError}
+          </p>
+        ) : null}
+        <ul className="divide-y divide-my-light-gray">
+          {products.map((product: Product) => {
+            const displayPrices = getShopPriceTiers(product.prices);
+
+            return (
+              <li key={product.itemNo} className="px-4 py-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h3 className="text-base font-bold text-gray-900">{product.name}</h3>
+                  <span className="shrink-0 text-xs font-semibold text-gray-500">
+                    {product.itemNo}
+                  </span>
+                </div>
+
+                <dl className="mt-2 space-y-1 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-gray-500">{t("productTable.internalDimensions")}</dt>
+                    <dd className="text-right font-semibold tabular-nums text-gray-900">
+                      {product.internalDimensionsMM.l} × {product.internalDimensionsMM.w} ×{" "}
+                      {formatHeight(product)}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-gray-500">{t("productTable.qualityCardboard")}</dt>
+                    <dd className="text-right text-gray-900">{product.qualityCardboard}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-gray-500">{t("productTable.palletSizes")}</dt>
+                    <dd className="text-right tabular-nums text-gray-900">
+                      {product.palletDimensionsCM.l} × {product.palletDimensionsCM.w} ×{" "}
+                      {product.palletDimensionsCM.h}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-gray-500">{t("productTable.weight")}</dt>
+                    <dd className="shrink-0 text-right tabular-nums text-gray-900">
+                      {product.weightPieceGr} / {product.weightPalletKg}
+                    </dd>
+                  </div>
+                </dl>
+
+                <p className="mt-3 text-xs text-gray-500">{t("productTable.price")}</p>
+                <div className="mt-1 grid grid-cols-3 gap-2 text-center text-sm">
+                  {SHOP_PRICE_TIER_NAMES.map((tierName, index) => {
+                    const price = displayPrices.find((tier) => tier.name === tierName);
+                    return (
+                      <div key={tierName} className="rounded-md bg-my-light-gray2 px-1 py-1.5">
+                        <div className="text-[11px] font-semibold text-gray-600">
+                          {tierLabels[index]}
+                        </div>
+                        {price ? (
+                          <>
+                            <div className="text-xs text-gray-600">
+                              {formatPrice(price.withoutTax)}
+                            </div>
+                            <div className="font-bold">{formatPrice(price.withTax)}</div>
+                          </>
+                        ) : (
+                          <div className="text-gray-400">—</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-3">{OrderControls(product)}</div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     );
   }
 

@@ -11,7 +11,7 @@ export function TypeOfSizes() {
   );
 
   return (
-    <span className="grid grid-cols-3 gap-x-8 gap-y-4 ">
+    <span className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 sm:gap-x-8 gap-y-4">
       {typeOfSizes.map((option) => (
         <MyOutlinedButton
           key={option.id}
