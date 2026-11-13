@@ -53,6 +53,9 @@ type AdminOrderDetails = {
   customerName: string;
   email: string;
   phone: string;
+  vatNumber?: string | null;
+  address?: string | null;
+  postcode?: string | null;
   city: string;
   country: string;
   message: string;
@@ -624,6 +627,15 @@ export default function AdminOrderDetailsPage() {
                     <DetailField label="Companie" value={order.companyName} />
                     <DetailField label="Email" value={order.email} />
                     <DetailField label="Telefon" value={order.phone} />
+                    <DetailField
+                      label="CUI / VAT"
+                      value={order.vatNumber ?? ""}
+                    />
+                    <DetailField label="Adresă" value={order.address ?? ""} />
+                    <DetailField
+                      label="Cod poștal"
+                      value={order.postcode ?? ""}
+                    />
                     <DetailField label="Oraș" value={order.city} />
                     <DetailField label="Țară" value={order.country} />
                   </div>

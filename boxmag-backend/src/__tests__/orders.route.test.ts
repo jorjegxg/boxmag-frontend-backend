@@ -440,8 +440,11 @@ describe("orders routes", () => {
           first_name: "Ana",
           surname: "Ionescu",
           company_name: "Boxmag SRL",
+          vat_number: "RO123456",
           email: "ana@example.com",
           phone: "+40700000000",
+          address: "Str. Fabricii 1, Hala 2",
+          postcode: "010101",
           city: "Bucuresti",
           country: "RO",
         },
@@ -457,6 +460,12 @@ describe("orders routes", () => {
     expect(response.body.ok).toBe(true);
     expect(response.body.data.orderNumber).toBe("ORD-0012");
     expect(response.body.data.email).toBe("ana@example.com");
+    expect(response.body.data).toMatchObject({
+      vatNumber: "RO123456",
+      address: "Str. Fabricii 1, Hala 2",
+      postcode: "010101",
+      city: "Bucuresti",
+    });
     expect(queryMock).toHaveBeenCalledWith(
       expect.stringContaining("WHERE o.id = ?"),
       [12],

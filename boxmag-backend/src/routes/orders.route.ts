@@ -677,7 +677,8 @@ ordersRouter.get("/:orderId", requireAdminOrUserEmail, async (req, res) => {
               o.payment_status, o.stripe_session_id, o.total_amount_cents, o.subtotal_cents,
               o.vat_percent, o.vat_cents, o.shipping_cents, o.shipping_method,
               o.shipping_eta, o.offer_sent_at, o.offer_sent_from, o.currency, o.created_at,
-              c.first_name, c.surname, c.company_name, c.email, c.phone, c.city, c.country
+              c.first_name, c.surname, c.company_name, c.vat_number, c.email, c.phone,
+              c.address, c.postcode, c.city, c.country
        FROM orders o
        LEFT JOIN contacts c ON c.order_id = o.id
        WHERE o.id = ?
@@ -745,6 +746,9 @@ ordersRouter.get("/:orderId", requireAdminOrUserEmail, async (req, res) => {
         status: row.status,
         email: row.email,
         phone: row.phone,
+        vatNumber: row.vat_number ?? null,
+        address: row.address ?? null,
+        postcode: row.postcode ?? null,
         city: row.city,
         country: row.country,
         createdAt: row.created_at,
