@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useRouter } from "next/navigation";
 import type { Language } from "./translations";
 import { translations } from "./translations";
 import { siteEmails } from "../../lib/site-emails";
@@ -40,6 +48,9 @@ export function LanguageProvider({
 }) {
   const [language, setLanguageState] = useState<Language>(initialLanguage);
   const [hydrated, setHydrated] = useState(false);
+  const router = useRouter();
+  // Language the server-rendered markup currently reflects.
+  const serverLanguageRef = useRef<Language>(initialLanguage);
 
   useEffect(() => {
     const fromCookie = document.cookie
@@ -66,7 +77,13 @@ export function LanguageProvider({
     document.documentElement.lang = language;
     localStorage.setItem(STORAGE_KEY, language);
     document.cookie = `boxmag.language=${language}; path=/; max-age=31536000; samesite=lax`;
-  }, [language, hydrated]);
+    // Server components (e.g. the home hero) translate from the cookie, so
+    // re-render them once the cookie holds the new language.
+    if (serverLanguageRef.current !== language) {
+      serverLanguageRef.current = language;
+      router.refresh();
+    }
+  }, [language, hydrated, router]);
 
   const value = useMemo<LanguageContextType>(
     () => ({
