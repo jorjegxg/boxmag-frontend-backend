@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Footer } from "./global/components/footer";
+import { PaymentNotice } from "./global/components/payment-notice";
 import { Header } from "./global/components/header";
 import { TopBar } from "./global/components/top-bar";
 import { getSiteBaseUrl } from "../lib/site-url";
@@ -68,6 +69,7 @@ export default async function RootLayout({
       >
         <JsonLd data={[organizationSchema(), webSiteSchema()]} />
         <Providers initialLanguage={initialLanguage}>
+          <PaymentNotice />
           <TopBar />
           <Header />
           {children}
