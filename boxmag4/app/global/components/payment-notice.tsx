@@ -5,12 +5,14 @@ import { usePathname } from "next/navigation";
 import { useLanguage } from "../../i18n/language-context";
 import { siteEmails } from "../../../lib/site-emails";
 
-/** Temporary notice at the very top of product pages: online checkout is not live yet. */
+/** Temporary notice at the very top of product pages and checkout: online checkout is not live yet. */
 export function PaymentNotice() {
   const pathname = usePathname();
   const { t } = useLanguage();
 
-  if (!pathname?.startsWith("/products/")) return null;
+  const showNotice =
+    pathname === "/checkout" || pathname?.startsWith("/products/");
+  if (!showNotice) return null;
 
   return (
     <div
