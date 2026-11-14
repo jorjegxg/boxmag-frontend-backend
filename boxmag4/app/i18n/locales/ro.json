@@ -722,6 +722,8 @@
   "shop.boxTypeFallback": "Tip cutie",
   "shop.priceFrom": "de la",
   "shop.priceOnRequest": "Preț la cerere",
+  "shop.sizesAvailable": "{{count}} dimensiuni disponibile",
+  "shop.chooseSize": "Alege dimensiunea",
   "header.loading": "Se încarcă...",
   "header.noBoxTypes": "Nu s-au găsit tipuri de cutii.",
   "header.noResults": "Niciun rezultat.",

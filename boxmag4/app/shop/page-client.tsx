@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useLanguage } from "../i18n/language-context";
 import { boxTypeTitle } from "../i18n/box-type-title";
 import { useCurrency } from "../currency/currency-context";
-import { FaCheck, FaShoppingCart } from "react-icons/fa";
+import { FaArrowRight, FaCheck, FaShoppingCart } from "react-icons/fa";
 import { useCartStore } from "../stores/cart_store";
 import { MIN_ORDER_QTY } from "../constants/order";
 import { getMinOrderUnitPrice, getShopPriceTiers } from "../constants/price-tiers";
@@ -51,6 +51,38 @@ function resolvePrimaryImageUrl(
 ): string {
   const primary = images.find((image) => image.isPrimary) ?? images[0];
   return normalizeImageUrl(baseUrl, primary?.url ?? "");
+}
+
+type ShopCard = {
+  boxType: BoxType;
+  products: BoxTypeProduct[];
+  minPrice: number | null;
+  sizeSummary: string | null;
+};
+
+/** Price shown on a shop card: the "300" tier with tax, else the first shop tier. */
+function cardPrice(prices: BoxTypeProduct["prices"]): number | null {
+  const shopPrices = getShopPriceTiers(prices);
+  const price = shopPrices.find((tier) => tier.name === "300") ?? shopPrices[0];
+  return price ? price.withTax : null;
+}
+
+function formatRange(values: number[]): string {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  return min === max ? String(min) : `${min}–${max}`;
+}
+
+/** "160 x 130 x 80 mm" for one size, per-axis ranges ("160–350 x …") for several. */
+function summarizeSizes(products: BoxTypeProduct[]): string | null {
+  const dims = products
+    .map((product) => product.internalDimensionsMM)
+    .filter(
+      (d): d is { l: number; w: number; h: number } =>
+        typeof d?.l === "number" && typeof d?.w === "number" && typeof d?.h === "number",
+    );
+  if (dims.length === 0) return null;
+  return `${formatRange(dims.map((d) => d.l))} x ${formatRange(dims.map((d) => d.w))} x ${formatRange(dims.map((d) => d.h))} mm`;
 }
 
 function ShopPageContent() {
@@ -188,10 +220,30 @@ function ShopPageContent() {
     };
   }, [backendBaseUrl, selectedBoxTypeId]);
 
-  const activeBoxTypeById = useMemo(
-    () => new Map(boxTypes.map((type) => [type.id, type])),
-    [boxTypes],
-  );
+  // One card per box type: the size is picked on the product page.
+  const cards = useMemo<ShopCard[]>(() => {
+    const productsByType = new Map<number, BoxTypeProduct[]>();
+    for (const product of products) {
+      const list = productsByType.get(product.boxTypeId) ?? [];
+      list.push(product);
+      productsByType.set(product.boxTypeId, list);
+    }
+    return boxTypes.flatMap((boxType) => {
+      const typeProducts = productsByType.get(boxType.id) ?? [];
+      if (typeProducts.length === 0) return [];
+      const prices = typeProducts
+        .map((product) => cardPrice(product.prices))
+        .filter((price): price is number => price != null);
+      return [
+        {
+          boxType,
+          products: typeProducts,
+          minPrice: prices.length > 0 ? Math.min(...prices) : null,
+          sizeSummary: summarizeSizes(typeProducts),
+        },
+      ];
+    });
+  }, [boxTypes, products]);
 
   useEffect(() => {
     return () => {
@@ -263,101 +315,96 @@ function ShopPageContent() {
               <p className="text-sm text-gray-500">{t("shop.loading")}</p>
             ) : loadError ? (
               <p className="text-sm text-red-600">{t("productTable.loadError")}</p>
-            ) : products.length === 0 ? (
+            ) : cards.length === 0 ? (
               <p className="text-sm text-gray-500">{t("shop.emptyFilter")}</p>
             ) : (
               <div className="grid grid-cols-1 items-stretch gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                {products.map((product) => {
-                  const boxType = activeBoxTypeById.get(product.boxTypeId);
-                  const imageUrl = boxType
-                    ? resolvePrimaryImageUrl(backendBaseUrl, boxType.images)
-                    : "/placeholders/box4.png";
-                  const shopPrices = getShopPriceTiers(product.prices);
-                  const firstPrice =
-                    shopPrices.find((price) => price.name === "300") ?? shopPrices[0];
-                  const unitPrice = getMinOrderUnitPrice(product.prices);
-                  const size =
-                    typeof product.internalDimensionsMM?.l === "number" &&
-                    typeof product.internalDimensionsMM?.w === "number" &&
-                    typeof product.internalDimensionsMM?.h === "number"
-                      ? `${product.internalDimensionsMM.l} x ${product.internalDimensionsMM.w} x ${product.internalDimensionsMM.h} mm`
-                      : null;
-                  const boxTypeKey = boxType?.key?.trim() ?? "";
+                {cards.map(({ boxType, products: typeProducts, minPrice, sizeSummary }) => {
+                  const single = typeProducts.length === 1 ? typeProducts[0] : null;
+                  const title = boxTypeTitle(t, boxType.key, boxType.title);
+                  const imageUrl = resolvePrimaryImageUrl(backendBaseUrl, boxType.images);
+                  const boxTypeKey = boxType.key.trim();
                   const detailsHref =
                     boxTypeKey.length > 0
-                      ? `/products/${encodeURIComponent(boxTypeKey)}?itemNo=${encodeURIComponent(product.itemNo)}`
+                      ? `/products/${encodeURIComponent(boxTypeKey)}${
+                          single ? `?itemNo=${encodeURIComponent(single.itemNo)}` : ""
+                        }`
                       : null;
+                  const isAnimated = single != null && animatedProductId === single.id;
                   const card = (
                     <article className="flex h-full flex-col rounded-xl border border-my-light-gray bg-white p-4 shadow-sm transition hover:border-my-yellow hover:shadow-md">
                       <div className="mb-4 h-44 w-full shrink-0 overflow-hidden rounded-lg bg-my-light-gray2">
-                        <img
-                          src={imageUrl}
-                          alt={boxType ? boxTypeTitle(t, boxType.key, boxType.title) : product.productName}
-                          className="h-full w-full object-contain"
-                        />
+                        <img src={imageUrl} alt={title} className="h-full w-full object-contain" />
                       </div>
-                      <p
-                        className="line-clamp-2 min-h-8 text-xs uppercase leading-snug tracking-wide text-gray-500"
-                        title={boxType ? boxTypeTitle(t, boxType.key, boxType.title) : t("shop.boxTypeFallback")}
-                      >
-                        {boxType ? boxTypeTitle(t, boxType.key, boxType.title) : t("shop.boxTypeFallback")}
-                      </p>
                       <h2
-                        className="mt-1 line-clamp-2 min-h-12 text-base font-semibold leading-snug text-black"
-                        title={product.productName}
+                        className="line-clamp-2 min-h-12 text-base font-semibold leading-snug text-black"
+                        title={title}
                       >
-                        {product.productName}
+                        {title}
                       </h2>
                       <p className="mt-1 text-sm text-gray-600">
-                        {t("shop.codeLabel")} {product.itemNo}
+                        {single
+                          ? `${t("shop.codeLabel")} ${single.itemNo}`
+                          : t("shop.sizesAvailable").replace("{{count}}", String(typeProducts.length))}
                       </p>
                       <p className="mt-1 min-h-5 text-sm text-gray-600">
-                        {size ? `${t("shop.sizeLabel")} ${size}` : "\u00a0"}
+                        {sizeSummary
+                          ? single
+                            ? `${t("shop.sizeLabel")} ${sizeSummary}`
+                            : sizeSummary
+                          : "\u00a0"}
                       </p>
                       <div className="mt-auto pt-3">
                         <p className="text-sm font-semibold text-black">
-                          {firstPrice
-                            ? `${t("shop.priceFrom")} ${formatPrice(firstPrice.withTax)}`
+                          {minPrice != null
+                            ? `${t("shop.priceFrom")} ${formatPrice(minPrice)}`
                             : t("shop.priceOnRequest")}
                         </p>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            addCartItem({
-                              itemNo: product.itemNo,
-                              name: product.productName,
-                              unitPrice,
-                              quantity: MIN_ORDER_QTY,
-                              imageUrl,
-                            });
-                            triggerAddToCartAnimation(product.id);
-                          }}
-                          className={`mt-3 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all duration-300 ${
-                            animatedProductId === product.id
-                              ? "border-green-600 bg-green-600 text-white scale-105"
-                              : "border-my-red text-my-red hover:bg-my-red hover:text-white"
-                          }`}
-                        >
-                          {animatedProductId === product.id ? (
-                            <FaCheck className="h-3.5 w-3.5" />
-                          ) : (
-                            <FaShoppingCart className="h-3.5 w-3.5" />
-                          )}
-                          {animatedProductId === product.id
-                            ? t("productTable.addedToCart")
-                            : t("productTable.addToCart")}
-                        </button>
+                        {single ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              addCartItem({
+                                itemNo: single.itemNo,
+                                name: single.productName,
+                                unitPrice: getMinOrderUnitPrice(single.prices),
+                                quantity: MIN_ORDER_QTY,
+                                imageUrl,
+                              });
+                              triggerAddToCartAnimation(single.id);
+                            }}
+                            className={`mt-3 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all duration-300 ${
+                              isAnimated
+                                ? "border-green-600 bg-green-600 text-white scale-105"
+                                : "border-my-red text-my-red hover:bg-my-red hover:text-white"
+                            }`}
+                          >
+                            {isAnimated ? (
+                              <FaCheck className="h-3.5 w-3.5" />
+                            ) : (
+                              <FaShoppingCart className="h-3.5 w-3.5" />
+                            )}
+                            {isAnimated
+                              ? t("productTable.addedToCart")
+                              : t("productTable.addToCart")}
+                          </button>
+                        ) : (
+                          <span className="mt-3 inline-flex items-center gap-2 rounded-lg border border-my-red px-3 py-2 text-xs font-semibold text-my-red transition group-hover:bg-my-red group-hover:text-white">
+                            {t("shop.chooseSize")}
+                            <FaArrowRight className="h-3 w-3" />
+                          </span>
+                        )}
                       </div>
                     </article>
                   );
                   return detailsHref ? (
-                    <Link key={product.id} href={detailsHref} className="block h-full">
+                    <Link key={boxType.id} href={detailsHref} className="group block h-full">
                       {card}
                     </Link>
                   ) : (
-                    <div key={product.id} className="h-full">
+                    <div key={boxType.id} className="h-full">
                       {card}
                     </div>
                   );

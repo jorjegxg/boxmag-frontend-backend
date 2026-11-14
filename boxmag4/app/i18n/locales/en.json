@@ -722,6 +722,8 @@
   "shop.boxTypeFallback": "Box Type",
   "shop.priceFrom": "from",
   "shop.priceOnRequest": "Price on request",
+  "shop.sizesAvailable": "{{count}} sizes available",
+  "shop.chooseSize": "Choose size",
   "header.loading": "Loading...",
   "header.noBoxTypes": "No box types found.",
   "header.noResults": "No results found.",

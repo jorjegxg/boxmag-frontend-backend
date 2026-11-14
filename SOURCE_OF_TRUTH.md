@@ -95,6 +95,8 @@ Schimbare de comportament = update SoT + test pe nivelul potrivit.
 
 Așteptări: min qty 100; prețuri cu taxă pe UI; server recalculează la create-session; guest cere email; VAT + shipping obligatorii.
 
+`/shop` afișează **un card per tip de cutie** (nu per dimensiune): tipurile cu mai multe dimensiuni arată numărul de dimensiuni, intervalul și prețul minim, iar cardul duce pe `/products/[key]` unde se alege dimensiunea; doar tipurile cu o singură dimensiune au „Adaugă în coș” direct pe card. Test: `cypress/e2e/shop.cy.ts`.
+
 ### B2B
 
 ```

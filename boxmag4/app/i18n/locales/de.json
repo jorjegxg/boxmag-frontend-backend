@@ -722,6 +722,8 @@
   "shop.boxTypeFallback": "Kartontyp",
   "shop.priceFrom": "ab",
   "shop.priceOnRequest": "Preis auf Anfrage",
+  "shop.sizesAvailable": "{{count}} Größen verfügbar",
+  "shop.chooseSize": "Größe wählen",
   "header.loading": "Wird geladen...",
   "header.noBoxTypes": "Keine Kartontypen gefunden.",
   "header.noResults": "Keine Ergebnisse gefunden.",

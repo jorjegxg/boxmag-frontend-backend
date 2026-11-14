@@ -3,7 +3,7 @@
  *
  * Acoperă:
  * - loading state
- * - încărcare categorii + produse din API (mock)
+ * - încărcare categorii + un card per tip de cutie (nu per dimensiune)
  * - filtrare pe boxTypeId (query param)
  * - add to cart (persist în localStorage / zustand persist)
  */
@@ -69,6 +69,21 @@ const mockBoxTypes: MockBoxType[] = [
     ],
     isActive: true,
   },
+  {
+    id: 4,
+    title: "Pizza Boxes",
+    key: "pizza",
+    images: [
+      {
+        id: 44,
+        url: "/b2b/boxes/box.png",
+        sortOrder: 1,
+        altText: null,
+        isPrimary: true,
+      },
+    ],
+    isActive: true,
+  },
 ];
 
 const productsByType: Record<number, MockProduct[]> = {
@@ -95,7 +110,17 @@ const productsByType: Record<number, MockProduct[]> = {
       boxTypeId: 3,
       itemNo: "MLR-001",
       productName: "Mailer 250x180",
+      internalDimensionsMM: { l: 250, w: 180, h: 60 },
       prices: [{ id: 3, name: "300", withoutTax: 5, withTax: 5.95 }],
+    },
+  ],
+  4: [
+    {
+      id: 401,
+      boxTypeId: 4,
+      itemNo: "PZ-001",
+      productName: "Pizza Box 320",
+      prices: [{ id: 4, name: "300", withoutTax: 2, withTax: 2.38 }],
     },
   ],
 };
@@ -163,10 +188,23 @@ describe("/shop", () => {
     cy.contains("a", "Custom Mailers").should("exist");
     cy.contains("a", "Inactive Type").should("not.exist");
 
-    // products from both active types
-    cy.contains("Standard Box 300x200").should("exist");
-    cy.contains("Standard Box 400x300").should("exist");
-    cy.contains("Mailer 250x180").should("exist");
+    // one card per box type, not one per size
+    cy.get("article").should("have.length", 3);
+    cy.contains("article", "Standard Boxes").within(() => {
+      cy.contains("2 sizes available").should("exist");
+      // STD-002 has no dimensions, so the range comes from STD-001 only
+      cy.contains("300 x 200 x 150 mm").should("exist");
+      // cheapest "300" tier across sizes
+      cy.contains("from € 11.90").should("exist");
+      cy.contains("Choose size").should("exist");
+      cy.contains("button", "Add to cart").should("not.exist");
+    });
+    cy.contains("article", "Custom Mailers").within(() => {
+      cy.contains("Code: MLR-001").should("exist");
+      cy.contains("Size: 250 x 180 x 60 mm").should("exist");
+      cy.contains("button", "Add to cart").should("exist");
+    });
+    cy.contains("Standard Box 400x300").should("not.exist");
   });
 
   it("filtrează produsele când boxTypeId e setat în query", () => {
@@ -175,8 +213,9 @@ describe("/shop", () => {
     cy.visit("/shop?boxTypeId=3");
     cy.wait(["@getBoxTypes", "@getProducts"]);
 
-    cy.contains("Mailer 250x180").should("exist");
-    cy.contains("Standard Box 300x200").should("not.exist");
+    cy.get("article").should("have.length", 1);
+    cy.contains("article", "Custom Mailers").should("exist");
+    cy.contains("article", "Standard Boxes").should("not.exist");
   });
 
   it("afișează mesaj când filtrul nu are produse", () => {
@@ -216,7 +255,7 @@ describe("/shop", () => {
     cy.visit("/shop");
     cy.wait(["@getBoxTypes", "@getProducts"]);
 
-    cy.contains("article", "Standard Box 300x200")
+    cy.contains("article", "Custom Mailers")
       .contains("button", "Add to cart")
       .click();
 
@@ -227,26 +266,36 @@ describe("/shop", () => {
         state?: { items?: Array<{ itemNo: string; name: string; quantity: number }> };
       };
       const items = parsed.state?.items ?? [];
-      expect(items.some((i) => i.itemNo === "STD-001" && i.quantity >= 100)).to.eq(true);
+      expect(items.some((i) => i.itemNo === "MLR-001" && i.quantity >= 100)).to.eq(true);
     });
   });
 
-  it("click pe card navighează spre /products/<boxTypeKey> cu itemNo, dar click pe Add to cart nu navighează", () => {
+  it("card cu o dimensiune: Add to cart nu navighează, click pe card duce la /products/<key>?itemNo=", () => {
     interceptShopApis();
 
     cy.visit("/shop");
     cy.wait(["@getBoxTypes", "@getProducts"]);
 
     // click pe add-to-cart nu schimbă URL (event.preventDefault/stopPropagation)
-    cy.contains("article", "Standard Box 300x200")
+    cy.contains("article", "Custom Mailers")
       .contains("button", "Add to cart")
       .click();
     cy.location("pathname").should("eq", "/shop");
 
-    // click pe card (link) navighează către detalii (pentru tip cu key valid)
-    cy.contains("Standard Box 300x200").click();
+    cy.contains("article", "Custom Mailers").click();
+    cy.location("pathname").should("match", /\/products\/mailers$/);
+    cy.location("search").should("contain", "itemNo=MLR-001");
+  });
+
+  it("card cu mai multe dimensiuni duce la /products/<key> fără itemNo (dimensiunea se alege pe PDP)", () => {
+    interceptShopApis();
+
+    cy.visit("/shop");
+    cy.wait(["@getBoxTypes", "@getProducts"]);
+
+    cy.contains("article", "Standard Boxes").click();
     cy.location("pathname").should("match", /\/products\/standard$/);
-    cy.location("search").should("contain", "itemNo=STD-001");
+    cy.location("search").should("not.contain", "itemNo=");
   });
 });
 
@@ -258,7 +307,7 @@ describe("/shop → /checkout (produse în coș)", () => {
     cy.visit("/shop");
     cy.wait(["@getBoxTypes", "@getProducts"]);
 
-    cy.contains("article", "Standard Box 300x200")
+    cy.contains("article", "Custom Mailers")
       .contains("button", "Add to cart")
       .click();
 
@@ -267,9 +316,9 @@ describe("/shop → /checkout (produse în coș)", () => {
     cy.wait("@getShippingMethods");
 
     cy.contains("Cart is empty.").should("not.exist");
-    cy.contains("STD-001").should("exist");
-    cy.contains("Standard Box 300x200").should("exist");
-    cy.contains("€ 1000.00").should("exist");
+    cy.contains("MLR-001").should("exist");
+    cy.contains("Mailer 250x180").should("exist");
+    cy.contains("€ 500.00").should("exist");
   });
 
   it("mai multe produse adăugate în shop apar toate în checkout", () => {
@@ -279,10 +328,10 @@ describe("/shop → /checkout (produse în coș)", () => {
     cy.visit("/shop");
     cy.wait(["@getBoxTypes", "@getProducts"]);
 
-    cy.contains("article", "Standard Box 300x200")
+    cy.contains("article", "Custom Mailers")
       .contains("button", "Add to cart")
       .click();
-    cy.contains("article", "Standard Box 400x300")
+    cy.contains("article", "Pizza Boxes")
       .contains("button", "Add to cart")
       .click();
 
@@ -290,12 +339,12 @@ describe("/shop → /checkout (produse în coș)", () => {
     cy.visit("/checkout");
     cy.wait("@getShippingMethods");
 
-    cy.contains("STD-001").should("exist");
-    cy.contains("STD-002").should("exist");
-    cy.contains("Standard Box 300x200").should("exist");
-    cy.contains("Standard Box 400x300").should("exist");
-    // subtotal: (10 + 12) * 100 = 2200 (fără TVA, cum e în coș)
-    cy.contains("€ 2200.00").should("exist");
+    cy.contains("MLR-001").should("exist");
+    cy.contains("PZ-001").should("exist");
+    cy.contains("Mailer 250x180").should("exist");
+    cy.contains("Pizza Box 320").should("exist");
+    // subtotal: (5 + 2) * 100 = 700 (fără TVA, cum e în coș)
+    cy.contains("€ 700.00").should("exist");
   });
 
   it("coșul gol în checkout după ce nu s-a adăugat nimic din shop", () => {
